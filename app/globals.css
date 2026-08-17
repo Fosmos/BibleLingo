@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  --background: #fdfbf8;
+  --foreground: #1a1a1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jakarta);
+  --font-serif: var(--font-playfair);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Editorial contrast: serif headings over sans body/controls, per the
+   Ultra-Minimalist Organic Modern design system. Targets both raw heading
+   tags and the app's own `text-title` heading-scale utility so components
+   using either get the pairing without per-file changes. */
+@layer utilities {
+  h1,
+  h2,
+  h3,
+  .text-title {
+    font-family: var(--font-serif), Georgia, serif;
+    font-weight: 400;
+  }
+
+  .text-caption {
+    color: var(--color-ink-muted, #999999);
+  }
+}

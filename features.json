@@ -1,0 +1,1058 @@
+{
+  "project": "Verses - Bible Verse Memorization App",
+  "version": "1.0.0",
+  "last_updated": "2026-08-08",
+  "status_legend": [
+    "pending",
+    "in_progress",
+    "completed",
+    "blocked"
+  ],
+  "rules": [
+    "Do not begin a phase until all features in the previous phase are 'completed'.",
+    "A feature is only 'completed' when its acceptance_criteria are met AND npm run build / npm run lint pass clean.",
+    "Update 'status' and 'last_updated' fields directly in this file as work progresses.",
+    "Do not delete or renumber feature ids \u2014 append notes instead if scope changes."
+  ],
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Skeleton & Zustand Baseline",
+      "status": "completed",
+      "features": [
+        {
+          "id": "1.1",
+          "name": "Next.js App Router Scaffold",
+          "description": "Initialize Next.js with TypeScript and App Router; configure strict tsconfig.",
+          "status": "completed",
+          "files": [
+            "app/layout.tsx",
+            "app/page.tsx",
+            "tsconfig.json"
+          ],
+          "acceptance_criteria": [
+            "tsconfig has strict: true",
+            "App builds and runs via npm run dev with no console errors"
+          ]
+        },
+        {
+          "id": "1.2",
+          "name": "Tailwind CSS Design Token Setup",
+          "description": "Install and configure Tailwind with base design tokens (colors, spacing, font scale) for the gamified UI.",
+          "status": "completed",
+          "files": [
+            "tailwind.config.ts",
+            "app/globals.css"
+          ],
+          "acceptance_criteria": [
+            "Tailwind utility classes render correctly on a test page",
+            "No inline style attributes used anywhere in scaffold"
+          ]
+        },
+        {
+          "id": "1.3",
+          "name": "Global Type Definitions",
+          "description": "Define shared interfaces: VerseNode, DrillPayload, DrillResult, SRSState, UserProgress, HeartState, StreakState.",
+          "status": "completed",
+          "files": [
+            "types/index.ts"
+          ],
+          "acceptance_criteria": [
+            "No 'any' types present",
+            "All types exported and imported by at least one downstream phase 2/3 file without modification"
+          ]
+        },
+        {
+          "id": "1.4",
+          "name": "Zustand Store Architecture",
+          "description": "Set up Zustand store composed of progress, hearts, and streak slices.",
+          "status": "completed",
+          "files": [
+            "store/useProgressStore.ts"
+          ],
+          "acceptance_criteria": [
+            "Store exposes typed actions for node status updates, heart deduction, and streak increment",
+            "No duplicate state held in more than one slice"
+          ]
+        },
+        {
+          "id": "1.5",
+          "name": "Storage Baseline Wiring",
+          "description": "Create lib/storage.ts with versioned localStorage read/write helpers, wired to store hydration on load (data model only \u2014 full SRS persistence lands in Phase 4).",
+          "status": "completed",
+          "files": [
+            "lib/storage.ts"
+          ],
+          "acceptance_criteria": [
+            "Storage schema includes a version key",
+            "Store hydrates from localStorage on app load without throwing if storage is empty"
+          ]
+        },
+        {
+          "id": "1.6",
+          "name": "App Routing Skeleton",
+          "description": "Create route structure for /, /learn, /lesson/[nodeId], /profile with placeholder content.",
+          "status": "completed",
+          "files": [
+            "app/learn/page.tsx",
+            "app/lesson/[nodeId]/page.tsx",
+            "app/profile/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "All routes render without error",
+            "Dynamic [nodeId] route reads the param correctly"
+          ]
+        },
+        {
+          "id": "1.7",
+          "name": "Base Layout & Navigation Shell",
+          "description": "Global layout with top nav/header shell (no gamification widgets yet, just structural placement).",
+          "status": "completed",
+          "files": [
+            "app/layout.tsx",
+            "components/ui/NavShell.tsx"
+          ],
+          "acceptance_criteria": [
+            "Layout wraps all routes consistently",
+            "NavShell component is under 200 lines and has a typed Props interface"
+          ]
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Gamification Shell & Skill Tree UI",
+      "status": "completed",
+      "features": [
+        {
+          "id": "2.1",
+          "name": "Skill Tree Component",
+          "description": "Render verse nodes as a visual branching/vertical map.",
+          "status": "completed",
+          "files": [
+            "components/gamification/SkillTree.tsx"
+          ],
+          "acceptance_criteria": [
+            "Renders an arbitrary list of nodes from store data",
+            "Layout adapts to mobile viewport widths"
+          ],
+          "notes": "Added lib/verseNodes.ts (seed KJV verse curriculum) and lib/nodeStatus.ts (shared status-derivation helper) \u2014 neither was scoped as its own feature but both were required to render real nodes without duplicating derivation logic between SkillTree and SkillNode."
+        },
+        {
+          "id": "2.2",
+          "name": "Node Status Indicators",
+          "description": "Visual states for locked, available, in_progress, mastered, cracked.",
+          "status": "completed",
+          "files": [
+            "components/gamification/SkillNode.tsx"
+          ],
+          "acceptance_criteria": [
+            "All 5 states have visually distinct treatments",
+            "Status is derived from store/SRS data, not a locally-duplicated flag"
+          ],
+          "notes": "Built alongside 2.1 since SkillTree cannot render without per-node status visuals; not explicitly requested this turn but a direct dependency."
+        },
+        {
+          "id": "2.3",
+          "name": "Streak Counter UI + Loss Modal",
+          "description": "Header streak display plus a modal shown when a streak has been lost.",
+          "status": "completed",
+          "files": [
+            "components/gamification/StreakCounter.tsx",
+            "components/gamification/StreakLossModal.tsx"
+          ],
+          "acceptance_criteria": [
+            "Modal triggers correctly when streak state indicates a break since last session",
+            "Counter updates reactively from store state"
+          ],
+          "notes": "Break detection lives in a new store action, evaluateStreakOnLoad() (lib/streak.ts's daysSinceLastCompletion does calendar-day math), called once from a new components/gamification/ProgressInitializer.tsx (mounted in app/layout.tsx, replacing NavShell's old hydrate() call \u2014 hydration now lives there too). Caught and fixed a real bug during verification: React Strict Mode double-invokes mount effects in dev, and evaluateStreakOnLoad() mutates state as part of its check (consumes a freeze / resets streak), so the first version consumed two freezes for a single missed day. Fixed with a module-level one-time guard, documented in the code. Verified in-browser: streak-loss modal shows correct previous-streak count and resets to 0; Escape key closes it (added for 5.7)."
+        },
+        {
+          "id": "2.4",
+          "name": "Streak Freeze Mechanic",
+          "description": "Inventory display and consumption logic for streak freezes.",
+          "status": "completed",
+          "files": [
+            "components/gamification/StreakFreezeBadge.tsx"
+          ],
+          "acceptance_criteria": [
+            "Freeze auto-consumes on a detected missed day if inventory > 0",
+            "Inventory count persists via store"
+          ],
+          "notes": "Auto-consume logic lives in the same evaluateStreakOnLoad() store action as 2.3 (a 1-day gap with inventory > 0 consumes exactly one freeze and preserves the streak, no modal). Badge only renders when inventory > 0, wired into Header.tsx next to StreakCounter. PRD notes freezes are 'earned via milestones, not purchased' \u2014 wired the earn path into 5.5 (streak milestones grant +1 freeze). Verified in-browser: seeded a 1-day-gap + 2-freeze scenario, confirmed streak preserved and inventory went to exactly 1 (not 0, after the Strict Mode double-invoke fix above)."
+        },
+        {
+          "id": "2.5",
+          "name": "Heart Energy System UI",
+          "description": "5-heart display reflecting real-time depletion.",
+          "status": "completed",
+          "files": [
+            "components/gamification/HeartMeter.tsx"
+          ],
+          "acceptance_criteria": [
+            "Heart loss animates immediately on store update",
+            "Component has no drill-scoring logic embedded"
+          ]
+        },
+        {
+          "id": "2.6",
+          "name": "Heart Regeneration Timer Logic",
+          "description": "Passive heart refill over time, computed from last-regen timestamp.",
+          "status": "completed",
+          "files": [
+            "store/useProgressStore.ts",
+            "lib/storage.ts"
+          ],
+          "acceptance_criteria": [
+            "Regeneration is computed from timestamp delta, not a running interval that resets on reload",
+            "Hearts cap at 5"
+          ],
+          "notes": "Pure calculation in new lib/hearts.ts (calculateHeartRegen, 30-min interval config constant) replaces the old store regenHeart() (which added exactly 1 heart unconditionally and was never actually called anywhere \u2014 dead code). New regenerateHearts() store action is called once on load and re-checked every 60s while the app stays open via ProgressInitializer.tsx \u2014 the periodic timer is just a re-check trigger, not the source of truth, so it satisfies 'not a running interval that resets on reload'. Verified in-browser: seeded 2/5 hearts with lastRegenAt 90 minutes in the past, reload correctly computed 3 regenerated hearts (90\u00f730) capped at max 5."
+        },
+        {
+          "id": "2.7",
+          "name": "Progress HUD",
+          "description": "Persistent top bar combining streak + hearts for use across learn/lesson screens.",
+          "status": "completed",
+          "files": [
+            "components/gamification/ProgressHUD.tsx"
+          ],
+          "acceptance_criteria": [
+            "HUD composes StreakCounter and HeartMeter without duplicating their internal logic",
+            "Under 200 lines"
+          ],
+          "notes": "Built as components/gamification/Header.tsx (explicit user instruction) instead of ProgressHUD.tsx, but same composition contract: composes StreakCounter + HeartMeter, no duplicated logic, 30 lines. Also displays XP, which required adding a new `xp: number` field to UserProgress (types/index.ts, lib/storage.ts) and an `addXP` store action \u2014 XP was not part of the original PRD/type-system scope; no drill exists yet (Phase 3) to actually award it, so it currently always renders 0."
+        },
+        {
+          "id": "2.8",
+          "name": "Book/Chapter Memorization Path Picker",
+          "description": "Home-page section for choosing a memorization path by first selecting a Bible book, then a chapter, routing into the matching lesson.",
+          "status": "completed",
+          "files": [
+            "lib/bibleBooks.ts",
+            "components/gamification/BookList.tsx",
+            "components/gamification/ChapterGrid.tsx",
+            "components/gamification/PathPicker.tsx",
+            "types/index.ts",
+            "lib/verseNodes.ts",
+            "app/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "All 66 canonical books listed, grouped by Old/New Testament",
+            "Selecting a book shows every chapter of that book",
+            "Selecting a chapter with authored content routes to /lesson/[nodeId]",
+            "Chapters without authored content are visibly listed but disabled, not fake or clickable"
+          ],
+          "notes": "Not an originally scoped feature \u2014 added per explicit user request. Content scope limitation flagged to the user before building: the app only has authored verse content for 5 chapters (John 3, Psalm 23, Proverbs 3, Philippians 4, Romans 8), not the full Bible. Implemented the complete, accurate 66-book/chapter picker as requested; chapters without a matching VerseNode render disabled (native `disabled` attribute + muted styling + descriptive aria-label, e.g. \"John chapter 1 \u2014 not yet available\") rather than being hidden or leading to fake content. Added `book`/`chapter` fields to VerseNode and a new BibleBook type (types/index.ts) to support lookup. Verified in-browser: book -> chapter -> real lesson routing works (John 3 -> John 3:16 cloze drill), and disabled chapters correctly block interaction."
+        },
+        {
+          "id": "2.9",
+          "name": "Verses-Per-Day Chapter Lesson Plans",
+          "description": "After choosing a chapter, ask how many verses per day the user wants to memorize and generate a daily lesson tree from it. Each lesson (after the first) reviews previously learned verses in the chapter before teaching the new ones.",
+          "status": "completed",
+          "files": [
+            "lib/chapterContent.ts",
+            "lib/lessonPlan.ts",
+            "lib/buildDrillPayload.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "components/ui/Confetti.tsx",
+            "components/gamification/VersesPerDayPicker.tsx",
+            "components/gamification/ChapterLessonTree.tsx",
+            "components/gamification/ChapterPathScreen.tsx",
+            "components/gamification/ChapterLessonLoader.tsx",
+            "components/gamification/ChapterLessonSessionController.tsx",
+            "components/gamification/ChapterLessonCompleteScreen.tsx",
+            "components/gamification/PathPicker.tsx",
+            "app/chapter/[book]/[chapterNum]/page.tsx",
+            "app/chapter/[book]/[chapterNum]/lesson/[lessonNumber]/page.tsx",
+            "types/index.ts"
+          ],
+          "acceptance_criteria": [
+            "Selecting an available chapter prompts for verses-per-day before showing a lesson list",
+            "Lesson tree is generated by chunking the chapter's verses into groups of the chosen size",
+            "Every lesson after the first includes a review pass over all previously learned verses in that chapter, followed by the full learn sequence for the new verses",
+            "Lessons unlock sequentially and progress persists across reloads"
+          ],
+          "notes": "Not an originally scoped feature \u2014 added per explicit user request, with content scope confirmed via clarifying question (user chose to author full verse-by-verse text for all 5 existing chapters rather than a single demo chapter or architecture-only stub). Authored 139 individual KJV verses (John 3: 36, Psalm 23: 6, Proverbs 3: 35, Philippians 4: 23, Romans 8: 39) in lib/chapterContent.ts from training knowledge of the public-domain KJV text \u2014 verse counts were verified programmatically against known chapter lengths, but the exact wording was not cross-checked against a reference Bible line-by-line, so there is elevated risk of minor wording drift, especially in less commonly quoted passages (e.g. Proverbs 3:19-35). Recommend spot-checking against a physical/official KJV before relying on this for real memorization. Reused the existing VerseSegment type ({id, reference, text}) for individual chapter verses rather than inventing a new type. Refactored lib/buildDrillPayload.ts to expose buildDrillPayloadForSegment so the new chapter-lesson flow reuses the exact same cloze/scramble/audio-mask generation logic as the original single-verse lessons, rather than duplicating it. Extracted the confetti animation out of LessonCompleteScreen.tsx into components/ui/Confetti.tsx (verse-agnostic primitive) so both completion screens share it. Bumped storage.ts SCHEMA_VERSION to 2 (adds chapterPlans to UserProgress) \u2014 existing saved progress from before this change resets to defaults via the existing schema-mismatch handling, by design. New chapter-lesson completions also increment the existing streak/XP/heart systems for consistency with the original lesson flow. Verified end-to-end in-browser: John 3 at 1 verse/day generates 36 lessons with correctly increasing review counts; completed Lesson 1 (cloze, sentence builder, first-letter, audio, final recitation) and confirmed Lesson 2 opens with a review-of-John-3:1 step before the new verse's learn sequence, matching the requested review-then-learn ordering. SUPERSEDED by 2.10: the user clarified the actual desired UX was substantially different (vertical day-path diagram, chained first-letter review, fixed 5-stage rep drills, speech recognition, boss battle, stickers), so this entire implementation (lib/lessonPlan.ts, ChapterLessonTree/SessionController/Loader/CompleteScreen.tsx, the lesson/[lessonNumber] route) was deleted and rebuilt \u2014 see 2.10."
+        },
+        {
+          "id": "2.10",
+          "name": "Memorization Day Path (review chain, rep drills, speech recognition, boss battle, stickers)",
+          "description": "Full rebuild of the chapter memorization flow per detailed user spec: Begin Memorizing entry point, book/chapter/version selection, a vertical day-path diagram, a chained first-letter review section, a fixed 5-stage rep-drill learning section per verse, a whole-chapter review day, a spoken boss-battle day, and a sticker-book reward.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/dayPlan.ts",
+            "lib/bibleVersions.ts",
+            "lib/speechRecognition.ts",
+            "lib/chapterContent.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "app/page.tsx",
+            "app/begin/page.tsx",
+            "app/chapter/[book]/[chapterNum]/page.tsx",
+            "app/chapter/[book]/[chapterNum]/day/[dayNumber]/page.tsx",
+            "app/profile/page.tsx",
+            "components/gamification/PathPicker.tsx",
+            "components/gamification/VersionPicker.tsx",
+            "components/gamification/DayPathDiagram.tsx",
+            "components/gamification/ChapterPathScreen.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/DaySessionController.tsx",
+            "components/gamification/LearnVerseStage.tsx",
+            "components/gamification/VictoryScreen.tsx",
+            "components/gamification/StickerBook.tsx",
+            "components/gamification/Sticker.tsx",
+            "components/drills/ReadRep.tsx",
+            "components/drills/WriteRep.tsx",
+            "components/drills/FirstLetterWriteRep.tsx",
+            "components/drills/SpeakRep.tsx",
+            "components/drills/ReviewChain.tsx",
+            "components/drills/ChapterReviewStage.tsx",
+            "components/drills/BossBattleStage.tsx",
+            "components/drills/GroupRecitationCheck.tsx",
+            "components/drills/MistakeDiff.tsx",
+            "components/ui/AutoCompleteButton.tsx",
+            "components/gamification/DaySectionCluster.tsx",
+            "components/gamification/DaySectionLoader.tsx",
+            "components/gamification/DaySectionController.tsx",
+            "components/gamification/ReviewSection.tsx",
+            "components/gamification/LearnSection.tsx",
+            "components/gamification/PopQuizSectionPlaceholder.tsx",
+            "app/chapter/[book]/[chapterNum]/day/[dayNumber]/[section]/page.tsx",
+            "components/drills/FirstLetterTypeRep.tsx",
+            "lib/wordBankRounds.ts",
+            "components/drills/WordBankRound.tsx"
+          ],
+          "acceptance_criteria": [
+            "Home page has a Begin Memorizing CTA leading to book \u2192 chapter \u2192 version selection (KJV selectable, others visibly disabled)",
+            "Choosing verses/day generates a vertical, connected day-path diagram with a visual indicator of the current/next day and completed days filled green",
+            "Every learn day after the first opens with a chained review (type first letter of each word across all previously learned verses, live word reveal on correct letter, red flash + blocking retry on wrong letter, reference-typing checkpoints between verses, ending in an accuracy percentage) before teaching new verses",
+            "New-verse learning runs 5 stages per verse: speak it with the verse visible, type it with the verse visible, 3 rounds of tap-to-fill (round 1 blanks ~1/3 of the words, round 2 ~2/3, round 3 all of them, each round tapping the missing words in order from a word bank rather than dragging), type the whole verse one first letter at a time with each correct letter revealing its full word, then speak the whole verse blind",
+            "Wrong answers (typed or spoken) show a word-level diff against the correct verse rather than a generic error; the review chain shows the expected next letter",
+            "Days with more than one new verse insert a cumulative spoken group-recitation check after each verse beyond the first",
+            "A penultimate Chapter Review day drills first letters across the whole chapter then a spoken whole-chapter check; the final Boss Battle day requires a perfect spoken reference+verse recitation for every verse in sequence",
+            "Completing the boss battle shows a victory screen and awards a sticker visible on the Profile sticker book"
+          ],
+          "notes": "This fully replaces feature 2.9's implementation (see its note) per the user's detailed follow-up spec \u2014 CLAUDE.md's own working agreement says a deviation gets documented rather than silently reinterpreted, and this is large enough that it's recorded as its own feature rather than an edit to 2.9's notes. Used EnterPlanMode given the size (new data model, ~28 new/changed files, a new browser capability) and confirmed two open questions with the user before building: (1) speech recognition has no cross-browser fallback \u2014 built against the Web Speech API (Chrome/Edge only), feature-detected so it disables gracefully rather than crashing on unsupported browsers, with no typed-input substitute, per the user's explicit choice; (2) the version selector is real, not a placeholder \u2014 KJV selectable, NIV/ESV/NASB/NLT visibly listed but disabled, mirroring the existing disabled-chapter pattern. Reused VerseSegment (not a new per-verse type), lib/chapterContent.ts's verse data untouched, lib/textMatch.ts's fuzzyMatch reused as-is for speech-transcript matching (already normalizes case/punctuation/whitespace \u2014 the same caveat about un-verified exact KJV wording from 2.9 still applies here since drills match against that same authored text). Two interpretive calls made and stated here rather than silently assumed: the accuracy formula is (totalWords \u2212 wordsWrong) / totalWords, counting each word wrong once no matter how many retries it took; and the reference-typing checkpoint appears before every verse in a review chain, including the first, not just between verses. The group-recitation and chapter-wide spoken checks default to 1 rep (spec didn't give an explicit count for those, unlike the fixed 5/5/5/3/3 per-verse sequence). No heart loss anywhere in this new flow \u2014 it's retry-until-correct/mastery-gated by design, matching the spec's description, unlike the original /learn skill-tree flow which still uses hearts unchanged. Bumped storage.ts SCHEMA_VERSION to 3 (adds stickers, restructures chapterPlans with version+completedDays) \u2014 existing saved progress resets via the existing schema-mismatch handling, same accepted precedent as before. Fixed one bug caught during verification: DayPathDiagram initially reused the app's existing bg-mastery-500 (purple) token for completed days out of habit \u2014 the user's spec explicitly says green, so it was changed to bg-brand-600 (the app's actual green). Verified in-browser end-to-end: Begin Memorizing \u2192 Psalms \u2192 23 \u2192 KJV \u2192 2 verses/day generates the correct 5-node path (3 learn days + Chapter Review + Boss Battle); Day 1 skips review and runs the full 5-phase rep sequence for Psalm 23:1 (confirmed each phase transition, and the first-letter phase's red-flash-then-reveal behavior with a deliberate wrong letter); Day 2 opens with the review chain (reference checkpoint \u2192 word-by-word reveal, same red-flash/retry behavior confirmed); Chapter Review and Boss Battle days render correctly when reached; the sticker book renders awarded stickers with correct chapter labels. Speech recognition itself could not be verified with a real spoken pass \u2014 the Browser pane blocks microphone access \u2014 but clicking the mic button was confirmed to fail gracefully (resolves to an empty transcript, shows a retry prompt) rather than crashing or hanging, which is the one thing that was testable without live audio. FOLLOW-UP FIXES from user testing: (1) real bug \u2014 the JSX for LearnVerseStage inside DaySessionController had no key tied to verse id, so on multi-verse days React reused the same component instance across verses instead of remounting it; phaseIndex (and the nested SpeakRep's completedReps) carried over from the previous verse, which is why verse 2 opened straight on 'Speak' and only needed one rep instead of three. Fixed with key={step.verse.id}. (2) Removed the write-with-no-scaffold phase that used to run immediately after Read, per explicit request \u2014 the per-verse sequence is now read x5 \u2192 first-letter-scaffold write x5 \u2192 write x3 \u2192 speak x3 (the remaining write phase absorbed the 'blind write' label since it's now the only from-memory typing step). (3) lib/textMatch.ts gained diffWords (positional word-level comparison against the target) and a new components/drills/MistakeDiff.tsx to render it; wired into WriteRep, FirstLetterWriteRep, and SpeakRep so a wrong answer shows the correct verse with the specific mismatched word(s) highlighted, and ReviewChain now shows the expected letter inline on a wrong keystroke instead of a generic message. (4) lib/speechRecognition.ts rewritten from a one-shot listenOnce() to startListening(onInterim), using continuous:true + interimResults:true so recognition no longer auto-stops on a short pause between words or sentences; SpeakRep now shows the live transcript as it's recognized and exposes a manual Stop button instead of the mic auto-ending the attempt. (5) Speech-transcript matching switched from exact fuzzyMatch to a new looseMatch (lib/textMatch.ts wordMatchRatio, 85% word-match threshold) for all SpeakRep-based checks, since the user reported the browser's recognition engine \u2014 a real, inherent limitation of the Web Speech API, not something in this app's control \u2014 frequently mis-transcribes individual words; typed drills (WriteRep, FirstLetterWriteRep, ReviewChain) still require an exact match since those test actual memorization rather than microphone/engine accuracy. Verified all five fixes in-browser: faked the SpeechRecognition constructor (since the Browser pane still can't grant real mic access) to confirm a 2-verse day now correctly cycles Read\u2192First Letters\u2192Write\u2192Speak per verse with fresh rep counts each time; confirmed the mistake diff renders with the wrong word bolded/underlined on a deliberate wrong submission; confirmed looseMatch passes a transcript with 2 of 16 words altered (87.5%) and correctly fails/shows the diff on a nonsense transcript; confirmed ReviewChain's new expected-letter hint text on a wrong keystroke. STRUCTURAL REDESIGN: each \"learn\" day is no longer a single circle \u2014 it's 4 sequentially-unlocked sections (Review, Learn, Test, Pop Quiz), each its own circle in DayPathDiagram (extracted to DaySectionCluster.tsx) with its own route (/chapter/[book]/[chapterNum]/day/[dayNumber]/[section]) and its own lock state via ChapterPlanProgress.sectionsCompleted (dayNumber -> completed DaySectionKind[]; lib/dayPlan.ts's isSectionUnlocked checks that every prior section in DAY_SECTION_ORDER is done). chapter_review/boss_battle days are unchanged single circles \u2014 the 4-section split only applies to regular learn days per the request. Review reuses ReviewChain unchanged, except Day 1 (and any day with zero prior verses) now shows an explicit 'Nothing to review yet' screen with a Continue button instead of rendering an empty chain (ReviewChain returns null when there's nothing to review, which would have been a silent dead-end otherwise). Learn reuses the existing per-verse rep sequence + group-recitation-check logic (moved from the old monolithic DaySessionController into a new LearnSection.tsx, unchanged in behavior). Test and Pop Quiz are explicit placeholders (TestSectionPlaceholder.tsx, PopQuizSectionPlaceholder.tsx) that say plainly there's nothing there yet \u2014 matching the user's own 'this currently has nothing in it' framing for Test, extended the same way to Pop Quiz since its real mechanic (a random push notification to the user's phone, with a 5-minute countdown to respond) needs infrastructure this app doesn't have and wasn't part of this request: real cross-app push notification requires a service worker, a push subscription, VAPID keys, and something server-side to trigger sends at random times while the app is closed, which is a genuinely separate build (this app is still 100% client-side/localStorage, no backend). Did not attempt a fake or partial version of that \u2014 flagged it instead of silently building something that wouldn't match what was asked for. Finishing the 4th (last) section still runs the same day-completion logic as before (completeDay, XP, streak increment, streak-milestone check) via a trimmed-down DaySessionController that now only handles chapter_review/boss_battle; a parallel DaySectionController handles the per-section completion + transition screens for learn days. Bumped SCHEMA_VERSION to 4 for the sectionsCompleted addition to ChapterPlanProgress, same reset-on-mismatch precedent as before. Fixed two ESLint react-hooks/static-components errors caught by npm run lint: DayPathDiagram and DaySectionCluster were both selecting a Lucide icon component into a local variable inside render (`const Icon = ...`) and rendering it inline, which the linter flags because a locally-assigned component reference isn't guaranteed stable across renders \u2014 replaced both with small dedicated icon subcomponents (DayStatusIcon, SectionStatusIcon) declared outside the parent's render. Verified in-browser end-to-end on Psalm 23 at 2 verses/day: every learn day renders as 4 circles under one 'Day N' + verse-reference label; only Review is unlocked on a fresh Day 1, the rest show lock icons; completing Review (via its empty-state Continue button) unlocks Learn only, not Test/Pop Quiz; used the auto-complete button to clear Learn, then manually completed Test and Pop Quiz's placeholder Continue buttons; completing Pop Quiz (the last section) correctly fired 'Day 1 complete!' with streak 0\u21921 and XP 0\u219230, and returning to the path showed Day 1 fully green (checkmarks on all 4) with Day 2's Review circle now unlocked and Day 3 plus Chapter Review/Boss Battle still fully locked. FURTHER FOLLOW-UP: (1) added components/ui/AutoCompleteButton.tsx, a testing-only affordance (dashed border, muted styling, flask icon) wired into every rep/drill component (ReadRep, WriteRep, FirstLetterWriteRep, SpeakRep, ReviewChain) that immediately calls that component's onComplete, skipping all remaining reps/validation for that section \u2014 composite stages (ChapterReviewStage, BossBattleStage, GroupRecitationCheck) get it for free since they render these components directly. It's always visible (not gated behind an env flag) since the app has no production deployment yet and this is explicitly for the user's own testing. (2) ReviewChain rebuilt per explicit request: removed the per-verse reference-typing checkpoint entirely (previously required typing e.g. '23:2' between verses), and flattened all review verses into one continuous word stream \u2014 the first-letter chain now runs straight through every previously-learned verse back-to-back with no interruption, and the revealed-words display grows as one continuous block spanning verse boundaries instead of resetting per verse. The current verse's reference is still shown as a passive label ('Now in: Psalm 23:2') that updates automatically as the chain crosses into a new verse, since the user asked only to remove the typing requirement, not the reference context entirely. Accuracy scoring unchanged in spirit (same (total \u2212 wrong)/total formula) but now keyed by a single combined word index instead of a per-verse composite key, since there's no longer a verse-segmented structure to key against. Verified in-browser: auto-complete blitzed an entire 2-verse Day 1 (8 rep-phases plus the group-recitation check) in a handful of clicks straight to 'Day 1 complete!'; Day 2's review chain opens directly on the letter input with no reference prompt, and typing through all of Psalm 23:1 flows straight into 23:2 with the revealed text staying as one unbroken block and the 'Now in' label updating automatically. LATEST FOLLOW-UP: (1) removed the XP system entirely per explicit request (\"for now\" \u2014 treated as a real removal, not a feature flag, per this repo's established no-flags convention) \u2014 deleted the xp field from UserProgress, the addXP store action, its Header.tsx display, and every award call across DaySessionController, DaySectionController, and the original /learn flow's LessonSessionController (which also awarded XP per drill pass and on mastery). Bumped SCHEMA_VERSION to 5 for the UserProgress shape change, same reset-on-mismatch precedent as before. Grepped the whole app afterward to confirm zero remaining xp/addXP references. (2) Learn section rebuilt from the old 4-phase rep system (read/first-letter/write/speak, each repeated 3-5x) into the 3 stages the user specified: Stage 1 types the whole verse with it visible on screen (WriteRep reused with a new showVerse prop, 1 pass, not 5 \u2014 the new spec gives no repeat count so none was assumed); Stage 2 is 3 rounds of fill-in-the-blank (new components/drills/ClozeFillRound.tsx + lib/clozeRounds.ts's getBlankIndicesForRound, which interleaves blanks by word-index modulo 3 so round 1/2/3 blank indices 0,3,6.../1,4,7.../2,5,8... respectively \u2014 every word gets blanked exactly once across the 3 rounds); Stage 3 is a single spoken check of the full verse (SpeakRep reused, reps dropped from 3 to 1 to match \"you must say the full verse,\" not repeated). Deleted ReadRep.tsx and FirstLetterWriteRep.tsx as dead code once LearnVerseStage.tsx stopped referencing them (confirmed via a repo-wide search first that nothing else imported either). The multi-verse \"say them together\" group-recitation checkpoint (GroupRecitationCheck, inserted after each verse beyond the first) was left untouched \u2014 the request confirmed it stays, and it lives in LearnSection.tsx's step-sequencing, which this change didn't touch. Verified in-browser end-to-end on a 2-verse Psalm 23 day: Header no longer shows XP anywhere, including on the Day-complete screen; Stage 1 shows the verse and requires exactly 1 correct submission; Stage 2 Round 1 on a 9-word verse correctly blanked indices 0/3/6 (\"The\"/\"my\"/\"shall\"), Round 2 correctly blanked 1/4/7, and a deliberately wrong entry revealed the correct missing word; auto-complete-blitzed through the remaining rounds and Stage 3 for verse 1, confirmed verse 2 started fresh at Stage 1 (no state bleed from the earlier key={step.verse.id} fix), confirmed a 16-word verse split into 6/5/5 blanks across its 3 rounds, and confirmed the group-recitation checkpoint still appears after verse 2 before the day completes; completing the full day still fired \"Day 1 complete!\" with the streak incrementing and no XP/crash.\n\nLATEST FOLLOW-UP (Test zone removed, Learn redesigned to 5 stages): Per user request, the Test day-section was removed entirely (not hidden behind a flag) -- DaySectionKind dropped \"test\" from its union, DAY_SECTION_ORDER in lib/dayPlan.ts now reads [review, learn, pop_quiz], DaySectionCluster/DaySectionController no longer reference it, and TestSectionPlaceholder.tsx was deleted. Each day now shows exactly 3 circles: Review, Learn, Pop Quiz. The Learn section's per-verse flow was rebuilt from 3 stages to 5, replacing the prior type-with-view -> 3x typed-cloze -> speak sequence: Stage 1 speaks the verse while it stays visible on screen (added a showVerse prop to SpeakRep, mirroring the prop WriteRep already had); Stage 2 types the verse while visible (reused WriteRep with showVerse, unchanged from before); Stage 3 is 3 rounds of drag-and-drop instead of typed fill-in-the-blank -- lib/dragDropRounds.ts's getDragDropIndicesForRound(totalWords, round) blanks words where i % 3 < round, so round 1 blanks ~1/3 of the words, round 2 cumulatively blanks ~2/3 (adds another third on top of round 1's blanks rather than swapping to a different third), and round 3 blanks all of them -- matching the user's \"round 1 removes 33%, round 2 adds another 33%, round 3 removes all\" spec exactly. Each round is a fresh DragDropRound mount (keyed by round) so the blank/placed state resets between rounds. The old typed-cloze mechanic (lib/clozeRounds.ts, components/drills/ClozeFillRound.tsx) is now obsolete for this flow and was deleted rather than left dead. DragDropRound renders the verse as a flex-wrap paragraph of static words and dashed drop-target spans (each tagged data-slot-index), plus a shuffled tray of DragWordTile components below it. DragWordTile wraps a Framer Motion motion.div with drag, dragSnapToOrigin, and dragElastic so an incorrect drop simply springs back to the tray with no state change (playIncorrectSfx fires but nothing else happens). On a correct drop the tile's original word-index is added to a placed Set, which both removes it from the tray and swaps the target slot to show the real word; when the placed set covers every blank index for that round, onComplete() advances to the next round/stage. Drop-target hit-testing uses document.elementsFromPoint(x, y) (the full z-order stack at the drop point, not just the topmost element) filtered down to the first element carrying data-slot-index -- this sidesteps the dragged tile itself (which carries no such attribute) shadowing the slot underneath it at drop time, without needing any pointer-events trickery. Stage 4 types the whole verse against a first-letter scaffold (new FirstLetterTypeRep.tsx -- shows each word with only its first letter kept and the rest of its alphabetic characters replaced with underscores, punctuation preserved as-is, then a textarea validated with fuzzyMatch against the full verse, same mistake-diff-on-wrong pattern as WriteRep). Stage 5 speaks the whole verse blind, reusing SpeakRep exactly as it behaved before this phase (showVerse omitted/false). The multi-verse group-recitation checkpoint between verses in LearnSection.tsx was untouched -- out of scope for this request. Verified in-browser end to end: walked a fresh Day 1 through Review -> all 5 Learn stages -> confirmed Pop Quiz is the section unlocked next, with the day-path screen showing only Review/Learn/Pop Quiz circles for every day (no Test circle anywhere, including the Chapter Review and Boss Battle days, which were already single-section and unaffected). Confirmed round 1/2/3 blank counts against a 14-word verse (John 3:1) matched the i % 3 < round formula exactly (5, then 10, then all 14 blanked). Confirmed the drop-target hit-testing resolves each slot's own on-screen coordinates back to itself via elementsFromPoint. Genuine end-to-end mouse/touch dragging through Framer Motion's gesture recognizer could not be reliably faked with synthetic pointer events in the sandboxed Browser pane (Framer's PanSession did not register a drag from either a single-jump left_click_drag or a scripted multi-step PointerEvent sequence), so that specific interaction -- an actual finger/mouse drag completing successfully -- should be spot-checked by the user in a real browser; the underlying index math and drop-target resolution it depends on were verified directly. npm run build and npm run lint both passed clean with zero errors after all changes.\n\nLATEST FOLLOW-UP (Stage 3 drag-and-drop replaced with tap-to-fill; Stage 4 reworked to per-word first-letter reveal): user found the drag interaction not to their liking and asked for a click-based alternative, plus asked Stage 4 to work by typing one letter at a time with each correct letter popping the full word into view, rather than typing the whole verse into a textarea against a static scaffold. Stage 3: lib/dragDropRounds.ts was renamed to lib/wordBankRounds.ts (same cumulative i % 3 < round blanking logic, unchanged), and components/drills/DragDropRound.tsx + DragWordTile.tsx were deleted and replaced by components/drills/WordBankRound.tsx. The verse still renders as static words plus dashed blank spans, and the word bank tray below it still holds the missing words shuffled -- but tiles are now plain buttons instead of Framer Motion drag handles. Blanks must be filled strictly left-to-right: clicking a tray tile compares its word text against words[blankIndices[placedCount]] (the next not-yet-filled blank in verse order); a match consumes that tile and advances placedCount, revealing the word in its slot; a mismatch flashes that specific tile red (bg-heart-500, tracked via a wrongTileId state) and does nothing else -- no elementsFromPoint hit-testing or drag gesture recognition needed anymore, which also removes the earlier phase's noted gap where genuine mouse/touch dragging couldn't be verified in the sandboxed Browser pane. Stage 4: components/drills/FirstLetterTypeRep.tsx was rewritten to match the word-by-word reveal mechanic already used by the Review section's ReviewChain.tsx -- a single maxLength=1 input, typing the correct first letter of the current word (case-insensitive) appends that full word to a revealedWords line and advances to the next word; a wrong letter shows a red-bordered input plus 'Not quite -- the next word starts with \"X\".' and does not advance. No letters are shown ahead of time for the current or future words (unlike the prior static scaffold), so the user must recall each letter from memory before it's revealed. The reps prop still loops the whole verse chain again if reps > 1, though every call site currently passes reps={1}. LearnVerseStage.tsx's phase keys were renamed drag_1/drag_2/drag_3 -> fill_1/fill_2/fill_3 to match the new mechanic; STAGE_NUMBERS and the render switch were updated accordingly, everything else in the 5-phase sequencing (Speak with view -> Type with view -> 3x fill round -> first letter -> Speak blind) is unchanged. Verified in-browser: tapped 'There' onto blank 0 (correct, filled), tapped 'a' as a decoy for blank 1 (rejected, that specific tile flashed red, blank stayed empty), then tapped 'man' (correct, filled, decoy tile's flash cleared); confirmed round 3 blanks all 14 words as tap-to-fill tiles. For Stage 4, dispatched a real input event of 'T' -> 'There' popped into the revealed line; dispatched a wrong letter 'x' -> error message named the correct expected letter 'w' and nothing revealed; dispatched the correct 'w' -> 'There was' shown and error cleared. Full Day 1 Learn section completed end-to-end afterward with no console errors from the new code. npm run build and npm run lint both passed clean."
+        },
+        {
+          "id": "2.11",
+          "name": "App-Wide Bottom Tab Navigation (Home, Path, Memorized, Profile)",
+          "description": "Replaced the top NavShell with a persistent fixed bottom tab bar per user spec, and rebuilt Home/Memorized Verses/Profile as dedicated screens fed by pure derived-state summaries of chapter progress.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "lib/progressSummary.ts",
+            "components/ui/BottomTabBar.tsx",
+            "components/gamification/ChapterPathScreen.tsx",
+            "components/gamification/TodayVersesCard.tsx",
+            "components/gamification/ReviewNeededCard.tsx",
+            "components/gamification/MemorizedStats.tsx",
+            "app/layout.tsx",
+            "app/page.tsx",
+            "app/memorized/page.tsx",
+            "app/stickers/page.tsx",
+            "app/profile/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "A fixed bottom tab bar with a persistent top border line stays visible on every screen with 4 tabs: Home, Path, Memorized, Profile",
+            "The Path tab links directly to whichever chapter the user is currently working on (tracked as activeChapterKey, set whenever a chapter's path screen is visited), or to Begin Memorizing if no chapter has been started yet",
+            "Home shows 'Welcome back!' with a streak counter in the header, then two equal-height rounded cards: today's verses for the active path (capped at 2 verses with a '+N more today' note, or a 'Choose your path' prompt if none) with a button to the path, and chapters needing review (or 'No chapters') with a button to Memorized Verses",
+            "Memorized Verses shows total chapters/verses/words memorized (derived at read time from completed learn days across all chapter plans), a Sticker Book button, and a button into the active daily review if one is pending",
+            "Profile shows streak/heart stats and a Settings section with a working Reset all progress action",
+            "Sticker Book moved to its own /stickers route, linked from Memorized Verses instead of living on Profile"
+          ],
+          "notes": "Built per explicit user layout spec (4-tab bottom nav with persistent divider; Home split into a top half 'today's verses' card and bottom half 'needs reviewing' card; Memorized Verses page with chapter/verse/word counts + sticker book + daily review button; Profile with general stats and settings). Deleted the old top NavShell.tsx (superseded, not left as dead code) -- the per-page streak/heart Header.tsx bar used inside the actual drill/lesson flow (begin, learn, chapter, day, section, lesson routes) was left untouched since the request only concerned top-level app navigation, not those in-flow screens. Data model: added activeChapterKey: string | null to UserProgress (schema bumped 5->6, existing saved progress resets via the already-established schema-mismatch handling -- same accepted precedent used every previous schema change this session). A new setActiveChapter store action is called unconditionally from ChapterPathScreen's mount effect (regardless of whether a plan already exists for that chapter), so the Path tab and Home page always reflect whichever chapter the user most recently visited, not just whichever chapter they first configured -- this matters because chapterPlans is a dictionary that can hold multiple in-progress chapters simultaneously. lib/progressSummary.ts holds three pure, framework-agnostic functions (mirroring lib/dayPlan.ts's style): getActivePathSummary (resolves activeChapterKey + its plan into the verses due 'today', i.e. buildDayPlan's day at index min(completedDays+1, totalDays)), getChaptersNeedingReview (scans all chapterPlans, includes a chapter only if its current day has reviewVerses, that day isn't already fully completed, and its review section hasn't been completed yet today), and computeMemorizedStats (sums newVerses and their word counts across every completed learn day in every chapter plan, paired with stickers.length for the chapters count). All three take the specific store slices they need as plain arguments rather than a whole UserProgress object, so components can select narrowly and avoid re-rendering on unrelated store changes. Reset all progress on the new Profile page routes through a new resetProgress store action (which calls the also-new lib/storage.ts clearProgress() then resets in-memory state to defaults) rather than having the component touch localStorage directly, per this codebase's rule that only store actions call into the storage layer; gated behind a window.confirm since it's destructive. Verified in-browser end to end at both desktop and mobile (375x812) viewports, light and dark color schemes: confirmed the no-path 'Choose your path' state, then set John 3 at 3 verses/day and confirmed the top card showed the first 2 verses plus '+1 more today'; completed Day 1's review+learn+pop_quiz sections and confirmed the streak incremented, Home flipped to Day 2's verses, and the review card correctly began listing 'John 3' once Day 2 had review material pending; confirmed Memorized Verses showed 3 verses / 76 words / 0 chapters (no boss battle finished yet) with a working gold 'Continue Daily Review' button targeting the right day/section URL; confirmed the Sticker Book page and Profile's stats + working reset button; confirmed the bottom tab bar's active-tab highlighting and its Path href recomputing correctly once a chapter became active. npm run build and npm run lint both passed clean."
+        },
+        {
+          "id": "2.12",
+          "name": "Book/Chapter/Verse/Topic Path Selection (skill-tree flow removed)",
+          "description": "Deleted the original skill-tree /learn flow entirely per user request, and rebuilt path selection around a top-level Book/Chapter/Verse/Topic choice \u2014 including 3 sample topics (Anxiety, Depression, Glory) with curated KJV verse sets \u2014 all sharing one generalized day-plan/drill engine via a pathKey abstraction.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "lib/memorizationContent.ts",
+            "lib/progressSummary.ts",
+            "lib/chapterContent.ts",
+            "components/gamification/BeginFlow.tsx",
+            "components/gamification/PathKindPicker.tsx",
+            "components/gamification/GuidedPathFlow.tsx",
+            "components/gamification/TopicPicker.tsx",
+            "components/gamification/VersePicker.tsx",
+            "components/gamification/BookList.tsx",
+            "components/gamification/ChapterGrid.tsx",
+            "components/gamification/VersionPicker.tsx",
+            "components/gamification/VersesPerDayPicker.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayPathDiagram.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/DaySectionLoader.tsx",
+            "components/gamification/DaySectionController.tsx",
+            "components/gamification/DaySessionController.tsx",
+            "components/gamification/VictoryScreen.tsx",
+            "components/gamification/StickerBook.tsx",
+            "components/drills/ChapterReviewStage.tsx",
+            "components/ui/BottomTabBar.tsx",
+            "components/gamification/TodayVersesCard.tsx",
+            "components/gamification/ReviewNeededCard.tsx",
+            "components/gamification/MemorizedStats.tsx",
+            "app/begin/page.tsx",
+            "app/path/[key]/page.tsx",
+            "app/path/[key]/day/[dayNumber]/page.tsx",
+            "app/path/[key]/day/[dayNumber]/[section]/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "The original skill-tree /learn and /lesson/[nodeId] routes, SkillTree/SkillNode/ReviewQueue/LessonSessionController/LessonCompleteScreen, the 5 old drill components (ClozeTest, SentenceBuilder, FirstLetterPrompt, AudioRecitation, FinalRecitation), and lib/srs.ts, lib/verseNodes.ts, lib/buildDrillPayload.ts, lib/nodeStatus.ts are deleted, not just unlinked",
+            "Choosing a path from /begin first asks Book, Chapter, Verse, or Topic before any book/chapter picking happens",
+            "Topic offers exactly 3 samples \u2014 Anxiety, Depression, Glory \u2014 each a curated set of real KJV verses, and behaves identically to Book/Chapter/Verse from that point on (same day-plan, drills, review, boss battle, sticker)",
+            "Book mode concatenates all authored chapters of a chosen book into one continuous path, tracked separately from Chapter mode's per-chapter progress",
+            "Verse mode lets the user pick one specific verse and skips the now-meaningless 'how many per day' question, going straight to a single-day plan",
+            "Every path kind is addressed by one generalized route tree (/path/[key]/...) keyed by a `${kind}:${identifier}` pathKey, replacing the old chapter-only /chapter/[book]/[chapterNum]/... tree",
+            "Home, Memorized Verses, Sticker Book, and the bottom tab bar's Path link all work correctly for paths of every kind, not just chapters"
+          ],
+          "notes": "User request (verbatim): \"Remove learn flow. When selecting a path provide 4 options: Memorize a book, a chapter, a verse, or a topic and provide 3 sample topics. Anxiety, Depression, Glory.\" Two closely related changes landed together since the second reshaped the exact layer the first sat on top of. \n\nRemoval: confirmed via repo-wide grep that NodeProgress/NodeStatus/VerseNode/DrillType/DrillPayload/DrillResult/SRSState and every component/lib file built on them (lib/srs.ts's SM-2 algorithm, lib/verseNodes.ts, lib/buildDrillPayload.ts, lib/nodeStatus.ts, SkillTree/SkillNode/ReviewQueue/LessonSessionController/LessonCompleteScreen, and the 5 old drill components) had zero consumers outside that flow before deleting -- all removed outright per this session's established 'delete unused code, don't leave it dead' pattern, not hidden behind a flag. The `nodes` field was dropped from UserProgress and the store's ensureNode/setNodeStatus/completeReview actions removed with it. Confetti.tsx had a stray comment referencing the now-deleted lib/buildDrillPayload.ts (never an actual import, confirmed by checking real consumers) -- cleaned up in passing since the file was already being touched. \n\nGeneralization: previously the entire day-plan/drill engine (buildDayPlan, DayPathDiagram, DaySectionController, LearnSection, ReviewSection, drills, ChapterReviewStage, BossBattleStage, VictoryScreen, stickers) was threaded through explicit book/chapter props and a chapterKey = `${book}|${chapter}` format everywhere -- ChapterPathScreen, DayLoader, DaySectionLoader, DaySectionController, DaySessionController, the /chapter/[book]/[chapterNum]/... route tree, BottomTabBar, lib/progressSummary.ts, MemorizedStats.tsx. Adding Book/Verse/Topic meant generalizing this to a `${kind}:${identifier}` pathKey (lib/memorizationContent.ts's pathKey/parsePathKey/resolvePath) understood by one route tree (/path/[key]/...) instead of forking three near-duplicate route trees. The actual day-plan/drill/review/boss-battle machinery needed zero logic changes -- it already operated generically on VerseSegment[]/MemorizationDay, only the outer wrapper layer (renamed props from book/chapter to pathKey/label, ~12 files) had to change. UserProgress.chapterPlans/activeChapterKey were renamed to paths/activePathKey (ChapterPlanProgress -> PathProgress) since 'chapter' was no longer accurate for what they hold; schema bumped 6->7, resetting existing local progress per the same accepted precedent used at every prior schema change this session. \n\nBook mode: lib/memorizationContent.ts's getBookVerses(book) concatenates every authored chapter for that book (via the existing availableChaptersForBook) in chapter order into one VerseSegment[] list, given its own book:${name} pathKey tracked completely separately from that same book's individual chapter:${name}|${n} plans. Since every book in this app currently has at most one authored chapter, Book and Chapter mode produce identical verse sets today for any given book -- but they are structurally distinct paths with independent progress, and Book mode will automatically span multiple chapters with no further code changes whenever more chapters get authored. BookList.tsx gained an availableBooks prop so books with zero authored content gray out the same way ChapterGrid already grays out unavailable chapters -- previously all 66 books were clickable dead ends for a book with no content; this was a pre-existing gap made newly visible (and worth fixing) by Book/Verse mode's book-first flow. \n\nVerse mode: a new VersePicker.tsx (grid of verse numbers, mirrors ChapterGrid's layout) is the third step after Book -> Chapter for verse mode specifically. Since a 1-verse path has no meaningful 'how many per day' choice, PathOverviewScreen now auto-creates a single-day plan via an effect and skips straight to the day-path diagram when verses.length <= 1, rather than showing a picker with only a redundant '1' option. \n\nTopic mode: TOPICS in lib/memorizationContent.ts hardcodes exactly the 3 requested topics -- Anxiety (Philippians 4:6-7, 1 Peter 5:7, Matthew 6:34), Depression (Psalm 34:17-18, Psalm 42:11, Isaiah 41:10), Glory (Romans 8:18, 1 Corinthians 10:31, Psalm 19:1) -- all real public-domain KJV text (Philippians 4:6-7 and Romans 8:18 copied verbatim from the already-authored PHILIPPIANS_4/ROMANS_8 arrays in lib/chapterContent.ts to guarantee consistent wording, the rest transcribed fresh). Topic paths flow through the exact same resolvePath -> PathOverviewScreen -> day-plan machinery as every other kind, so a topic gets real, working review/learn/pop-quiz days, a full-review day, a boss battle, and a sticker on completion, not a stub. \n\nGuidedPathFlow.tsx unifies what would otherwise have been three near-identical Book/Chapter/Verse wizard components into one mode-driven component sharing the Book -> [Chapter] step, branching only at the final step (navigate immediately for book mode, VersionPicker for chapter mode, VersePicker for verse mode) -- avoids the triplication that a copy-per-mode approach would have produced. BeginFlow.tsx is the new top-level state machine on /begin: shows PathKindPicker first, then delegates to GuidedPathFlow or TopicPicker, each wired with its own '<- Choose a different way' back link to the kind picker. PathPicker.tsx (the old book/chapter-only picker) was deleted, superseded by this structure. \n\nAlso fixed in passing while touching these files: VictoryScreen's 'View sticker book' button pointed at the old /profile sticker-book location from before the nav-restructure phase moved it to /stickers -- stale link, now corrected. The 'chapter_review' day kind's UI label was neutralized from 'Chapter Review' to 'Full Review' (DayPathDiagram, TodayVersesCard, ChapterReviewStage's SpeakRep copy) since that day kind now also fires for book/verse/topic paths where 'chapter' doesn't apply. Also fixed a latent VersesPerDayPicker bug surfaced by topic mode: a path with exactly 4 verses (Anxiety, Depression) had no way to select 'all 4' since 4 was neither one of the [1,2,3,5] quick-picks nor greater than the max quick-pick(5) -- changed the 'All N' button's condition from `totalVerses > maxQuickPick` to `!QUICK_PICKS.includes(totalVerses)`. \n\nVerified in-browser end to end for all 4 kinds: Topic -> Anxiety showed the correct 4 verses and 'All 4' now appears; selecting it landed on a correct 3-day plan (Day 1 learn with all 4 references, Day 2 'Full Review', Day 3 'Boss Battle') at pathKey topic:anxiety. Chapter -> John -> 3 -> KJV reproduced the exact pre-existing behavior unchanged. Verse -> John -> 3 -> verse 16 skipped the per-day picker entirely and landed directly on a working single-verse day-path. Book -> John landed on the 36-verse per-day picker labeled plainly 'John' (not 'John 3') at pathKey book:John, confirming it's tracked as a distinct path from chapter:John|3. Confirmed Home, /memorized, and /stickers all render correctly with real (zero, since schema bump reset local progress) computed data and no console errors from live navigation. Confirmed /learn now 404s cleanly (Next.js not-found page, no crash) rather than partially rendering a broken skill tree. npm run build and npm run lint both passed clean with zero errors."
+        },
+        {
+          "id": "2.13",
+          "name": "Spaced Repetition for Memorized Verses",
+          "description": "Once a path (book/chapter/verse/topic) is fully completed, its verses move into the Memorized section as contiguous per-chapter entities \u2014 merging with an already-memorized neighboring verse where one exists \u2014 each independently tracked by a fixed-cadence spaced repetition schedule (daily for a week, then weekly for a month, then monthly indefinitely) that surfaces what's due for long-term review.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/chapterContent.ts",
+            "lib/memorizationContent.ts",
+            "lib/srs.ts",
+            "lib/memorizedEntities.ts",
+            "lib/progressSummary.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "components/gamification/SrsOverview.tsx",
+            "components/gamification/SrsReviewSession.tsx",
+            "app/memorized/page.tsx",
+            "app/memorized/review/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "A path's verses only enter the Memorized section once the entire path is finished (every day through the final boss-battle day), not incrementally as each verse is learned",
+            "When a newly-memorized verse is immediately before or after an already-memorized verse in the same book+chapter, it merges into that verse's entity rather than becoming a separate one",
+            "Entities never span more than one chapter \u2014 merging is scoped to book+chapter, so finishing one chapter's worth of verses and then starting a new chapter (or a new book) always begins a fresh entity",
+            "Each entity carries its own fixed-cadence spaced repetition schedule (daily for the first 7 successful reviews, weekly for the next 4, then monthly forever after) independent of the path-level day-to-day Review section \u2014 a failed review drops the schedule back to daily",
+            "The Memorized Verses page shows which verse groups are currently due for review and lets the user start a review session that walks through them one at a time",
+            "A verse reached via two different paths (e.g. a chapter path and a topic that happens to include one of its verses) is tracked as a single shared entity, not duplicated"
+          ],
+          "notes": "User request (verbatim, across two messages): \"After a verse/verses are memorized and reviewed in the path then it gets added to the 'memorized' section, within the memorized section create a spaced repetition system that determines what verses need reviewing. Whenever new verses are added to the memorized section always first check to see if the verse before/after is already there, if so add it to that entity for the SRS do this only up to a full chapter, after that they start a new chapter\" -- then, mid-implementation, a clarifying correction: \"After a path is complete have the book, chapter or verse(s) move to the memorized section where it enters a Spaced review system that determines what verses need reviewing.\" The second message simplified the trigger from an incremental 'verse learned + one more day completed' condition (my first-pass reading) to the simpler, stricter rule actually implemented: a path's verses all move to Memorized together, only once the whole path -- including its final boss-battle day -- is done. This lines up with the existing sticker system, which already awards on that same boss-battle-complete event, so a fully memorized path always gets both a sticker and its verses added to the SRS pool at once. \n\nStructural prerequisite: VerseSegment previously only carried a human-readable reference string (e.g. \"John 3:16\") and an id slug -- not enough to reliably group verses by book+chapter+number for merging (parsing it back out of the reference string is lossy for Psalms, where the display label reads \"Psalm\" singular but the real book name is \"Psalms\"). Added explicit book/chapter/verseNumber fields to VerseSegment instead, set once at each construction site (lib/chapterContent.ts's buildVerseSegments, and by hand across the 11 topic verses in lib/memorizationContent.ts) rather than parsed at read time. \n\nlib/memorizedEntities.ts's addVerseToEntities is the merge algorithm: for a newly-memorized verse, look for an existing entity in the same book+chapter whose endVerse is one less (predecessor) or whose startVerse is one more (successor); extend/bridge into either, both, or neither. Entities are scoped to book+chapter by construction, so the 'cap at a full chapter, start fresh for the next chapter' part of the request falls out naturally -- there's no explicit cap to enforce since verse numbers can't exceed the chapter's real length, and cross-chapter adjacency is never checked at all. syncMemorizedEntities rebuilds the full entity list from scratch off current path progress every time (cheap at this app's scale, and avoids incremental-diff bugs): an entity's id encodes its exact range (e.g. \"John|3|1-2\"), so a range that didn't change keeps its previous SRS schedule via that same id, while a range that just grew via a merge gets a fresh SRS schedule under its new id -- content changed, so its review history resets. This sync runs inside the store's completeDay action, the only action that can push a path across the 'fully complete' threshold. \n\nlib/srs.ts is a freshly authored SM-2-style scheduler (the original lib/srs.ts from the old skill-tree flow was deleted earlier this session along with the rest of that system) -- deliberately simplified to a pass/fail signal rather than SM-2's classic 0-5 quality grade, because every review mechanic already in this app (ReviewChain, BossBattleStage, SpeakRep) is retry-until-correct with no concept of a graded or failed attempt; matching that, an SRS review always resolves as a pass once SpeakRep's loose-match recitation succeeds, and the interval simply grows (1 day -> 6 days -> previous interval * easiness factor). \n\nBecause entities are keyed by the verse's actual book+chapter+number rather than by which path reached it, a verse memorized via two different paths (for instance a chapter path and a topic that happens to include one of that chapter's verses) collapses into one shared entity instead of being tracked twice -- an emergent property of the design, not special-cased. \n\nUI: a new 'Spaced Review' card on /memorized (SrsOverview.tsx) lists verse groups currently due and links to /memorized/review, which steps through them one at a time via SrsReviewSession.tsx (reusing SpeakRep for a blind spoken recitation of each entity's full range) and calls the new recordSrsReview store action after each. This is a distinct, separate concept from the existing 'Continue Daily Review' button on the same page, which is about a path's own short-term day-to-day Review section during active learning -- the Spaced Review card is long-term maintenance for verses that have already graduated out of active learning. \n\nVerified in-browser end to end: completed the full 3-day path (learn -> full review -> boss battle) for John 3:1 as its own verse-path and confirmed it created a single-verse memorized entity with a freshly-due SRS schedule; then completed the same full path for John 3:2 as a separate verse-path and confirmed the two merged into one John|3|1-2 entity (not two separate ones); confirmed /memorized's Spaced Review card listed exactly 'John 3:1-2' as due; ran the review session (SpeakRep's Auto-complete testing button, standing in for real speech input as established earlier this session) and confirmed the entity's SRS state advanced correctly (repetitionCount 0->1, intervalDays 0->1, nextDueAt pushed to tomorrow) and the due list correctly emptied to 'All caught up!' afterward. Schema bumped 7->8 for the new memorizedEntities field, resetting existing local progress per the same accepted precedent used at every prior schema change this session. npm run build and npm run lint both passed clean.\n\nFollow-up user request (verbatim): \"Make it so that once verses enter the SRS they are reviewed everyday for a week, then once a week for a month, then once a month.\" Replaced the original SM-2-style growing-interval algorithm in lib/srs.ts (interval = previous interval * easiness factor, unbounded growth) with a fixed three-tier cadence keyed off repetitionCount: reviews 1-7 use a 1-day interval (daily for a week), reviews 8-11 use a 7-day interval (four more reviews \u2248 a month of weekly review), and review 12 onward use a fixed 30-day interval (monthly, indefinitely) \u2014 tier boundaries picked so the counts line up with the request's own \"a week\" / \"a month\" framing rather than counting literal calendar days. A failed review still resets repetitionCount to 0 and drops back to a 1-day interval, matching the existing 'retry relearns from the top' pattern used everywhere else in the app. Since easinessFactor was only ever read by the old growth formula, it was removed from SRSState entirely (types/index.ts) rather than left unused \u2014 confirmed via repo-wide grep that nothing else referenced it. Schema bumped 9->10 since SRSState's persisted shape changed, resetting existing local progress per the same accepted precedent used at every prior schema change this session. Verified by seeding memorizedEntities directly in localStorage and stepping through recordSrsReview via the review session's Auto-complete button at both tier boundaries: repetitionCount 7->8 correctly switched intervalDays from 1 to 7, and repetitionCount 11->12 correctly switched intervalDays from 7 to 30 (and stays there on further reviews, since the fallback branch is unbounded). npm run build and npm run lint both passed clean."
+        },
+        {
+          "id": "2.14",
+          "name": "One Lesson Per Verse (Review+Learn combined, no Pop Quiz, no per-day pacing)",
+          "description": "Collapsed the day-section structure inside a path (separate Review/Learn/Pop Quiz sections, a 'how many verses per day' picker, and Day-N labeling) into a single continuous lesson per verse \u2014 review everything learned so far, then learn that one verse \u2014 labeled on the path diagram by the verse's own reference instead of a day number.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/dayPlan.ts",
+            "lib/storage.ts",
+            "lib/progressSummary.ts",
+            "store/useProgressStore.ts",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayPathDiagram.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/DaySessionController.tsx",
+            "components/gamification/VerseLessonFlow.tsx",
+            "components/gamification/LearnSection.tsx",
+            "components/gamification/MemorizedStats.tsx",
+            "app/path/[key]/day/[dayNumber]/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "Selecting a path never asks 'how many verses per day' \u2014 it goes straight to the path diagram with one lesson already created per verse",
+            "The path diagram shows one circle per verse labeled with that verse's own reference (e.g. 'John 3:1'), not 'Day 1' / 'Day 2'",
+            "Tapping a verse's circle runs review of everything learned so far immediately followed by learning that one verse, as a single uninterrupted flow \u2014 no separate Review/Learn/Pop Quiz buttons to pick between",
+            "Pop Quiz is gone entirely from the path flow",
+            "The path's final Full Review and Boss Battle days are unaffected by this change"
+          ],
+          "notes": "User request (verbatim): \"In the current path section remove the pop quiz and remove the chosing of verses per day and remove the day 1, day 2. Have it so that you have a lesson for each verse labeled as the verse. This lesson is the combined 'review and learn' that is already there.\" \n\nThis removed an entire routing/data layer rather than just hiding UI: deleted DaySectionCluster.tsx, DaySectionController.tsx, DaySectionLoader.tsx, PopQuizSectionPlaceholder.tsx, VersesPerDayPicker.tsx, and the /path/[key]/day/[dayNumber]/[section] route entirely -- every day now routes through /path/[key]/day/[dayNumber] directly with no section sub-navigation. DaySectionKind, sectionsCompleted, and versesPerDay were removed from PathProgress/the store (schema bumped 8->9, existing local progress resets per the established precedent). \n\nlib/dayPlan.ts's buildDayPlan dropped its versesPerDay parameter -- it's hardcoded to exactly one new verse per learn day now, always followed by the same chapter_review and boss_battle days as before (unaffected by this change, since the user only asked about the per-verse lesson structure, not the capstone days). PathOverviewScreen.tsx's existing 'auto-create the plan instead of asking' effect (built for the single-verse-path edge case in an earlier phase) is now applied unconditionally to every path, since there's no longer any pacing choice to make. \n\nThe combined review+learn lesson is a new small component, VerseLessonFlow.tsx: renders the existing ReviewSection first, and once its onComplete fires, swaps to the existing LearnSection for that same day -- both components were already generic over a MemorizationDay and needed no changes themselves. Wired into DaySessionController.tsx (previously only used for chapter_review/boss_battle days) via a new 'learn' branch, so one controller now owns completion bookkeeping (streak, sticker, victory screen) for all three day kinds. Because every learn day has exactly one new verse now, LearnSection's old group-recitation branch (which only ever fired for multi-verse days) became permanently unreachable dead code -- simplified LearnSection.tsx down to just rendering LearnVerseStage for that single verse, and deleted the now-orphaned GroupRecitationCheck.tsx. \n\nDayPathDiagram.tsx no longer branches between a 3-icon DaySectionCluster (learn days) and a single circle (capstone days) -- every day, learn included, renders through one DayCircle component now, removing DaySectionCluster.tsx as a file entirely. Its label comes from a dayLabel() function: learn days show day.newVerses[0].reference, chapter_review shows 'Full Review', boss_battle shows 'Boss Battle' -- the redundant 'Day N' caption that used to sit below every circle is gone. getPathsNeedingReview in lib/progressSummary.ts dropped its sectionsCompleted-based check (that concept no longer exists) in favor of the simpler 'next day isn't completed yet' condition it already had alongside it; MemorizedStats.tsx's 'Continue Daily Review' button URL dropped its now-nonexistent /review suffix to match. \n\nVerified in-browser end to end: chose John 3 as a chapter path and landed directly on the diagram with 38 lesson circles (John 3:1 through John 3:36, then Full Review, then Boss Battle) and zero per-day picker screen; opened lesson 1 and confirmed it started immediately with Review ('Nothing to review yet' for the first lesson) and flowed straight into the 5-stage Learn sequence with no Pop Quiz step in between; completed it and saw 'Lesson complete!' with the streak incrementing; confirmed the path diagram then showed John 3:1 checked off and John 3:2 unlocked next, still labeled by verse reference throughout. npm run build and npm run lint both passed clean."
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Interactive Drill Engines",
+      "status": "completed",
+      "features": [
+        {
+          "id": "3.1",
+          "name": "Cloze Test Drill",
+          "description": "Fill-in-the-blank drill with multiple-choice word bank per blank.",
+          "status": "completed",
+          "files": [
+            "components/drills/ClozeTest.tsx"
+          ],
+          "acceptance_criteria": [
+            "Accepts typed DrillPayload prop",
+            "Reports DrillResult via onComplete callback, no direct store access"
+          ],
+          "notes": "Blank/choice generation lives in lib/buildDrillPayload.ts (new, not separately scoped) using a deterministic seeded RNG \u2014 plain Math.random() caused an SSR/hydration text mismatch since this is a client component server-rendered on first load; fixed and verified in-browser."
+        },
+        {
+          "id": "3.2",
+          "name": "Sentence Builder Drill",
+          "description": "Drag/tap word tiles into correct sequential order.",
+          "status": "completed",
+          "files": [
+            "components/drills/SentenceBuilder.tsx"
+          ],
+          "acceptance_criteria": [
+            "Supports both tap-to-place and drag reordering",
+            "Validates full sequence match before allowing submission"
+          ],
+          "notes": "Drag reordering uses framer-motion's Reorder.Group/Reorder.Item on the placed-word row; tap-to-place/tap-to-remove moves tiles between bank and placed row. Both interaction modes verified in-browser."
+        },
+        {
+          "id": "3.3",
+          "name": "First-Letter Prompt Drill",
+          "description": "Scaffolded recall showing only first letters of each word.",
+          "status": "completed",
+          "files": [
+            "components/drills/FirstLetterPrompt.tsx"
+          ],
+          "acceptance_criteria": [
+            "Displays first-letter scaffold generated from verse text, not hardcoded per verse",
+            "Fuzzy-matches recall input (whitespace/punctuation tolerant)"
+          ],
+          "notes": "Fuzzy match extracted to lib/textMatch.ts (new, shared with FinalRecitation) rather than duplicated."
+        },
+        {
+          "id": "3.4",
+          "name": "Audio Recitation Drill",
+          "description": "Plays verse audio with masked spoken words for user completion.",
+          "status": "completed",
+          "files": [
+            "components/drills/AudioRecitation.tsx"
+          ],
+          "acceptance_criteria": [
+            "Uses lib/audio.ts for playback, no direct Howler calls inside the component",
+            "Masked-word inputs are validated against the verse-segment answer key"
+          ],
+          "notes": "lib/audio.ts (scoped for Phase 5.2) was built now since this drill's own acceptance criteria hard-depend on it \u2014 see 5.2 note. No real narration audio files exist yet (out of scope, needs a separate sourcing/production pipeline), so payload.audioUrl is empty and playback no-ops via lib/audio.ts's missing-asset handling; masked-word text validation works independent of playback and was verified in-browser."
+        },
+        {
+          "id": "3.5",
+          "name": "Final Recitation Challenge Drill",
+          "description": "Full free-recall drill; mastery gate for a node, reused for SRS review.",
+          "status": "completed",
+          "files": [
+            "components/drills/FinalRecitation.tsx"
+          ],
+          "acceptance_criteria": [
+            "Passing this drill is the only path that flips a node to mastered",
+            "Reusable in a review context (accepts a flag/prop distinguishing first-mastery vs. SRS review)"
+          ],
+          "notes": "The drill itself only reports pass/fail via onComplete (per CLAUDE.md, drills never touch the store); the mastered-status flip happens in LessonSessionController.tsx when it receives a passed final_recitation result \u2014 verified end-to-end in-browser."
+        },
+        {
+          "id": "3.6",
+          "name": "Lesson Session Controller",
+          "description": "Orchestrates drill sequencing, scoring, and heart deduction across a lesson.",
+          "status": "completed",
+          "files": [
+            "app/lesson/[nodeId]/page.tsx",
+            "components/gamification/LessonSessionController.tsx"
+          ],
+          "acceptance_criteria": [
+            "Deducts exactly 1 heart per failed drill result",
+            "Locks the lesson and redirects/blocks when hearts reach 0"
+          ],
+          "notes": "Not explicitly requested this session (user asked only for the 5 drill files) but built anyway \u2014 it's the only architecturally correct place for heart deduction and XP awarding per CLAUDE.md's 'drills never touch the store' contract, and is exactly what the user's 'deduct heart / award XP' request needed. Also awards XP: 10 per passed drill, +30 bonus on mastery (XP economy not in original PRD, stubbed pending real design). Blocks (does not redirect) at 0 hearts. Heart-loss and the 0-heart lock screen both verified in-browser."
+        },
+        {
+          "id": "3.7",
+          "name": "Drill Result Feedback UI",
+          "description": "Correct/incorrect visual and animated feedback shared across drill types.",
+          "status": "completed",
+          "files": [
+            "components/drills/DrillFeedback.tsx"
+          ],
+          "acceptance_criteria": [
+            "Single shared component reused by all 5 drills (not duplicated per drill)",
+            "Feedback timing does not block the next drill from loading beyond a brief animation"
+          ]
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "SRS Engine & Local Storage Persistence",
+      "status": "completed",
+      "features": [
+        {
+          "id": "4.1",
+          "name": "SM-2 Algorithm Implementation",
+          "description": "Pure, framework-agnostic SM-2 functions for interval/easiness-factor calculation.",
+          "status": "completed",
+          "files": [
+            "lib/srs.ts"
+          ],
+          "acceptance_criteria": [
+            "Zero React/Next imports in this file",
+            "Covers repetition count, easiness factor, interval, and next-due-date calculation"
+          ],
+          "notes": "Only import is `import type { SRSState } from \"@/types\"` (type-only, erased at compile time). Our drills report boolean pass/fail rather than a graded 0-5 recall, so scheduleReview() maps pass\u2192quality 5 / fail\u2192quality 2 onto the canonical quality-based calculateNextReview() core \u2014 verified against hand-computed SM-2 math in-browser (rep 2\u21923, EF 2.5\u21922.6, interval 6\u219216 days matched exactly)."
+        },
+        {
+          "id": "4.2",
+          "name": "Review Scheduling Data Model",
+          "description": "Per-node SRS metadata attached to UserProgress type and store.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "store/useProgressStore.ts"
+          ],
+          "acceptance_criteria": [
+            "Every mastered node carries repetition, easiness factor, interval, last-reviewed, next-due fields",
+            "No SRS math performed inside components or the store directly \u2014 store calls lib/srs.ts"
+          ],
+          "notes": "SRSState/NodeProgress fields already existed on the type since Phase 1, but nothing ever called lib/srs.ts \u2014 not explicitly requested this turn, but added a `completeReview(nodeId, passed)` store action (calls lib/srs.ts's scheduleReview) since without it no due date would ever be set and 'cracked' could never trigger. Wired into LessonSessionController.tsx in place of the old direct setNodeStatus('mastered') call, for both pass and fail of the final_recitation drill (a fail still reschedules as an SM-2 lapse)."
+        },
+        {
+          "id": "4.3",
+          "name": "Cracked Node Trigger Logic",
+          "description": "Derive cracked visual state from next-due-date at render/read time.",
+          "status": "completed",
+          "files": [
+            "lib/srs.ts",
+            "components/gamification/SkillNode.tsx"
+          ],
+          "acceptance_criteria": [
+            "Cracked state is computed, not stored as an independent boolean",
+            "SkillTree reflects cracked nodes without requiring a manual refresh"
+          ],
+          "notes": "isCracked() added to lib/srs.ts; lib/nodeStatus.ts's deriveNodeStatus() (not listed in this feature's files, but the actual read-time derivation point used by SkillTree/SkillNode since Phase 2) now returns 'cracked' for a stored-mastered node whose SRS due date has passed \u2014 computed on every render, nothing stored. SkillNode.tsx needed no changes: its 5-state visual treatment already existed from Phase 2 and simply became reachable. Verified in-browser by backdating a node's nextDueAt: it rendered cracked immediately with no manual refresh, and passing its review cleared it back to mastered."
+        },
+        {
+          "id": "4.4",
+          "name": "Full Local Storage Persistence Layer",
+          "description": "Persist all progress, SRS, streak, and heart state with schema versioning.",
+          "status": "completed",
+          "files": [
+            "lib/storage.ts"
+          ],
+          "acceptance_criteria": [
+            "Full state survives a hard page reload",
+            "A version mismatch does not crash the app on load"
+          ],
+          "notes": "Already built and repeatedly verified since Phase 1 (every store action persists the full UserProgress \u2014 nodes, SRS, hearts, streak, xp \u2014 via lib/storage.ts's saveProgress, schema-versioned). Nothing new needed here beyond the 4.6 hardening below; re-verified this turn with a hard reload in a fresh tab (streak/XP/mastered status/SRS all survived intact)."
+        },
+        {
+          "id": "4.5",
+          "name": "Review Session Flow",
+          "description": "Surfaces due/cracked nodes into a review queue distinct from new-lesson flow.",
+          "status": "completed",
+          "files": [
+            "app/learn/page.tsx",
+            "components/gamification/ReviewQueue.tsx"
+          ],
+          "acceptance_criteria": [
+            "Review queue only contains nodes with an expired interval",
+            "Completing a review recalculates SRS interval via lib/srs.ts"
+          ],
+          "notes": "Filters VERSE_NODES to deriveNodeStatus(...) === 'cracked' (nodes with an expired SRS interval); renders nothing when the list is empty. SRS recalculation on completion already existed via completeReview() (Phase 4). Verified in-browser: seeded a cracked node, confirmed the queue card ('1 verse due for review') rendered above the skill tree and its Review link routed into the correct 1-drill review sequence."
+        },
+        {
+          "id": "4.6",
+          "name": "Data Migration/Versioning Safety",
+          "description": "Guard rails for future schema changes without wiping existing user progress.",
+          "status": "completed",
+          "files": [
+            "lib/storage.ts"
+          ],
+          "acceptance_criteria": [
+            "Unknown/older schema versions degrade gracefully (reset with warning, not silent crash)"
+          ],
+          "notes": "The graceful-degradation-to-defaults logic already existed since Phase 1; it was silent, which conflicted with this criterion's explicit 'not silent crash' wording, so added console.warn on both schema-version mismatch and JSON parse failure. Still resets rather than migrating (no migration logic exists yet since schema is still v1 \u2014 nothing to migrate from)."
+        }
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Audio-Visual Polish & Celebration Screens",
+      "status": "completed",
+      "features": [
+        {
+          "id": "5.1",
+          "name": "Framer Motion Micro-interactions",
+          "description": "Transitions for node unlocks, button presses, and drill feedback.",
+          "status": "completed",
+          "files": [
+            "components/ui/*",
+            "components/gamification/*"
+          ],
+          "acceptance_criteria": [
+            "Animations do not introduce layout shift or block interaction",
+            "Consistent easing/duration tokens reused across components"
+          ],
+          "notes": "New lib/motionTokens.ts (MOTION_DURATION, MOTION_EASE, TAP_SCALE, FADE_UP, MODAL_BACKDROP/CARD) is the shared token source, applied to DrillFeedback, HeartMeter, SkillNode, and both new modals. Extracted a shared components/ui/Button.tsx (Link + whileTap pill button) to replace 3 duplicated ad-hoc CTA implementations (homepage, LessonCompleteScreen, out-of-hearts screen). Added whileTap press feedback to every drill's primary action buttons and choice/tile buttons (previously only SkillNode had any tap feedback). All animations use transform/opacity (no layout-affecting properties), so no layout shift."
+        },
+        {
+          "id": "5.2",
+          "name": "Howler.js Audio Integration",
+          "description": "Verse narration playback wrapper used by Audio Recitation drill.",
+          "status": "completed",
+          "files": [
+            "lib/audio.ts"
+          ],
+          "acceptance_criteria": [
+            "Playback controls (play/pause/seek) exposed as simple typed functions",
+            "Handles missing/unloaded audio assets without throwing"
+          ],
+          "notes": "Pulled forward out of order during Phase 3 \u2014 components/drills/AudioRecitation.tsx (3.4) has a hard dependency on this file per its own acceptance criteria and couldn't be built without it. Howler installed; loadAudio() returns a no-op controller for empty/failed URLs (no real narration audio assets exist yet \u2014 sourcing/production is a separate, unscoped effort) and guards against SSR (no `window`)."
+        },
+        {
+          "id": "5.3",
+          "name": "Lesson Complete Celebration Screen",
+          "description": "End-of-lesson summary and celebration state.",
+          "status": "completed",
+          "files": [
+            "components/gamification/LessonCompleteScreen.tsx"
+          ],
+          "acceptance_criteria": [
+            "Displays hearts remaining and drills completed for the session",
+            "Routes back to Skill Tree cleanly"
+          ],
+          "notes": "Not explicitly requested this turn (user asked for confetti on lesson completion specifically), but extracted from LessonSessionController.tsx's inline JSX into this dedicated file since that's this feature's natural home and let it pick up the hearts-remaining/drills-completed display this feature's acceptance criteria require, which the prior inline version didn't have. Confetti built here via Framer Motion (24 pieces, quantized to 5 literal Tailwind color classes + motion-driven x/y/opacity/rotate \u2014 deliberately avoids inline `style` props per CLAUDE.md, since Tailwind's static JIT scanner can't pick up runtime-interpolated arbitrary values like `left-[${x}%]`). Verified in-browser: reached via the real tap-a-node flow, confirmed 24 confetti spans in the DOM and correct hearts/drill-count text."
+        },
+        {
+          "id": "5.4",
+          "name": "Node Mastery Unlock Animation",
+          "description": "Skill Tree animation when a node flips to mastered and unlocks the next node.",
+          "status": "completed",
+          "files": [
+            "components/gamification/SkillTree.tsx"
+          ],
+          "acceptance_criteria": [
+            "Animation triggers exactly once per mastery event, not on every re-render"
+          ],
+          "notes": "Implemented in components/gamification/SkillNode.tsx, not SkillTree.tsx \u2014 the per-node status-transition tracking (a ref holding the previous status, compared on each status change) belongs with the node that animates, and SkillTree.tsx already just maps derived status into SkillNode without holding per-node history itself. Also covers the 'unlocks the next node' half of this feature's own description (locked\u2192non-locked transition gets the same one-shot pop), not just the mastered transition. The ref+effect comparison guarantees the animation only fires on the actual transition, never on unrelated re-renders where status is unchanged."
+        },
+        {
+          "id": "5.5",
+          "name": "Streak Milestone Celebration",
+          "description": "Special celebration treatment at 7/30/100-day streak milestones.",
+          "status": "completed",
+          "files": [
+            "components/gamification/StreakMilestoneModal.tsx"
+          ],
+          "acceptance_criteria": [
+            "Milestone thresholds are config values, not hardcoded inline in JSX"
+          ],
+          "notes": "STREAK_MILESTONES = [7, 30, 100] lives in lib/streak.ts (shared with 2.3's break-detection math), imported by LessonSessionController.tsx which checks the post-increment streak count against it. Also grants +1 streak freeze on hit (addStreakFreeze action) \u2014 ties this into 2.4's freeze-earning path, since freezes had no other way to be earned. Verified in-browser end-to-end: drove a streak from 6\u21927 via a real review completion, confirmed the modal, the freeze grant (badge went from hidden to showing '1'), and the XP/streak numbers all landed correctly in the same render."
+        },
+        {
+          "id": "5.6",
+          "name": "Sound Effects Layer",
+          "description": "Correct/incorrect/streak/heart-loss audio cues.",
+          "status": "completed",
+          "files": [
+            "lib/audio.ts"
+          ],
+          "acceptance_criteria": [
+            "SFX playback is decoupled from narration playback (independent channels)"
+          ],
+          "notes": "All 4 cues built. Correct/incorrect (per-drill, via DrillFeedback.tsx) were built first; streak (ascending two-note chime, fires on incrementStreak()) and heart-loss (descending two-note tone, fires when hearts hit 0 and the lesson locks \u2014 deliberately NOT on every wrong answer, since that would double up with the incorrect cue for the same event) were added to complete this feature. All via raw Web Audio API oscillator tones (no SFX asset files exist), on the same dedicated SFX AudioContext, fully independent of the Howl narration instances. Verified in-browser: no console errors across all four trigger paths exercised this session."
+        },
+        {
+          "id": "5.7",
+          "name": "Accessibility & Responsive Pass",
+          "description": "Mobile-first responsive audit and basic a11y pass (contrast, focus states, aria labels on interactive drill elements).",
+          "status": "completed",
+          "files": [
+            "components/**/*"
+          ],
+          "acceptance_criteria": [
+            "All interactive elements reachable via keyboard",
+            "No color-only state indication (status also conveyed via icon/shape per Section 4.2 of CLAUDE.md)"
+          ],
+          "notes": "Scoped as a basic pass, not exhaustive: fixed SentenceBuilder.tsx's Reorder.Item (was a non-focusable, keyboard-inert <li> with only an onClick \u2014 added tabIndex, role=\"button\", aria-label, and Enter/Space handling, verified via a real dispatched KeyboardEvent); fixed ClozeTest.tsx's selected-choice indicator, which was color-only (bg-brand-500 vs bg-zinc-100 with no other differentiator) \u2014 added a Check icon; strengthened focus-visible rings on textareas/inputs that had `focus:outline-none` with only a border-color change as their sole indicator; added Escape-to-close on both new modals. Did not do a full mobile-viewport audit or a systematic contrast check beyond the existing design tokens \u2014 those would need dedicated passes."
+        },
+        {
+          "id": "2.15",
+          "name": "All Books/Chapters Fetched Live in 5 Versions (api.bible)",
+          "description": "Book/Chapter/Verse paths are no longer limited to a handful of hand-authored chapters in KJV only \u2014 all 66 books and every real chapter are selectable, and a translation (KJV/NIV/ESV/NASB/NLT) is chosen at selection time. Verse text is fetched live from api.bible when a path is chosen (not bundled into the repo) and cached in localStorage so it's read synchronously everywhere else in the app afterward.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/bibleBooks.ts",
+            "lib/bibleVersions.ts",
+            "lib/bibleContentCache.ts",
+            "lib/bibleApiClient.ts",
+            "lib/fetchWithConcurrency.ts",
+            "lib/chapterContent.ts",
+            "lib/memorizationContent.ts",
+            "app/api/bible/chapter/route.ts",
+            "components/gamification/VersionPicker.tsx",
+            "components/gamification/BookList.tsx",
+            "components/gamification/ChapterGrid.tsx",
+            "components/gamification/GuidedPathFlow.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/StickerBook.tsx",
+            "components/ui/FetchStatus.tsx",
+            "app/path/[key]/page.tsx",
+            "app/path/[key]/day/[dayNumber]/page.tsx",
+            ".env.local.example"
+          ],
+          "acceptance_criteria": [
+            "Every one of the 66 books and every real chapter within them is selectable in Book/Chapter/Verse mode \u2014 nothing is grayed out as unavailable",
+            "Book, Chapter, and Verse mode all offer a version picker (KJV/NIV/ESV/NASB/NLT) before fetching content \u2014 previously Book mode had no version step at all and Verse mode silently defaulted to KJV",
+            "Verse text is fetched from api.bible on demand at selection time (via a server-side proxy route that holds the API key), not bundled/hardcoded in the repo",
+            "Fetched content is cached in localStorage (separate from the versioned progress schema) so every other screen (day lessons, review, SRS, stickers) reads it synchronously with no further network calls",
+            "Missing or invalid API key, or a translation not present in the account's api.bible catalog, surfaces as a clear in-app error with a retry button \u2014 never a silent failure or crash",
+            "A path reached without its content pre-fetched (direct link, cleared cache) falls back to fetching on the day/overview page itself rather than showing broken content"
+          ],
+          "notes": "User request (verbatim): \"Now lets make the system so that all books and chapters in 5 different versions are available to be chosen. Make it so that its least intesteive on the code, maybe a download externally when chosing.\" \n\nBefore building, flagged a real constraint: NIV/ESV/NASB/NLT are modern copyrighted translations with no free, key-less API \u2014 asked the user how to proceed. They chose to use api.bible (scripture.api.bible) with their own API key, added later (not available during this session), so the server route and error states were built and verified against the *absence* of a key rather than live translated text. \n\nArchitecture, kept deliberately minimal per the request: previously only 5 hand-picked chapters had any verse text at all (hardcoded in lib/chapterContent.ts, KJV only) \u2014 every other book/chapter was grayed out. lib/bibleBooks.ts already had accurate chapter counts for all 66 books, so no book/chapter *metadata* fetching was ever needed \u2014 only verse *text* needed to become fetchable, which is the single narrow thing this change actually does. \n\napp/api/bible/chapter/route.ts is a server-only Next.js Route Handler (the only place BIBLE_API_KEY is ever read \u2014 never sent to the browser). It resolves our internal version code (KJV/NIV/ESV/NASB/NLT) to whatever bibleId that translation has in the caller's api.bible account by searching GET /v1/bibles?language=eng for a matching abbreviation/name (cached in-memory per server process, since account bibleIds aren't fixed UUIDs we can hardcode), then fetches GET /v1/bibles/{bibleId}/chapters/{USFM}.{chapter}?content-type=html&include-verse-numbers=true and parses the verse-number <span> markers out of the returned HTML into a plain per-verse text array. HTML content-type was chosen over api.bible's plain-text mode specifically because the verse-number span is an unambiguous, documented boundary to split on \u2014 the plain-text mode concatenates verse numbers directly against the following word with no reliable separator, which would make splitting fragile. This parsing could not be tested against real translated text in this session (no live key) \u2014 flagged clearly to the user to spot-check once their key is added, with the regex isolated to one function (parseChapterHtml) if it needs adjusting. \n\nCaching: lib/bibleContentCache.ts is a separate localStorage key (verses:bibleContentCache) from verses:progress on purpose \u2014 it's fetched content, not user progress, so it isn't versioned or reset by the progress schema's SCHEMA_VERSION bump mechanism. It's keyed by book+chapter only, not version \u2014 a deliberate simplification matching the app's existing one-version-per-pathKey design (a given book+chapter path already only ever has one PathProgress.version at a time), accepted as a documented tradeoff rather than threading a version dimension through the whole cache and every downstream reader. \n\nlib/chapterContent.ts's getChapterVerses(book, chapter) changed from a static lookup into a pure, synchronous cache read \u2014 it returns undefined until lib/bibleApiClient.ts's ensureChapterLoaded has fetched that chapter at least once. This let every existing downstream consumer (lib/progressSummary.ts's day-plan/review-due/memorized-verses functions, SrsReviewSession, MemorizedStats) keep working completely unchanged, since by the time a path exists in the store its content is guaranteed already fetched. The only real ripple was at the two entry points: app/path/[key]/page.tsx and .../day/[dayNumber]/page.tsx are Next.js Server Components and cannot read localStorage at all, so they were simplified to call a new resolvePathLabel(key) (pure, no cache dependency \u2014 computes a path's display label from just its book/chapter/verse numbers, no verse text needed) instead of the old verses-returning resolvePath, and verse resolution moved client-side into PathOverviewScreen.tsx and DayLoader.tsx (each now resolves from cache, or calls lib/bibleApiClient.ts's ensurePathVerses as a fallback fetch, with loading/error UI via the new components/ui/FetchStatus.tsx). \n\nGuidedPathFlow.tsx now fetches-then-navigates for all three modes: Chapter mode fetches one chapter; Verse mode fetches one chapter then shows the verse grid from the real fetched verse count (previously VersePicker.tsx's grid length came from data that only existed for 5 hardcoded chapters); Book mode fetches every chapter of the book via lib/fetchWithConcurrency.ts (concurrency capped at 4, with a per-chapter loading label) before navigating \u2014 a real, disclosed scalability caveat: a 150-chapter book like Psalms means 150 sequential-ish requests and, once loaded, a 150+ lesson day-plan, which was already a latent property of Book mode's one-lesson-per-verse design and is now actually reachable instead of only ever running for single-chapter books. \n\nBook mode also gained a version-picker step it never had before (it previously navigated immediately, hardcoded to \"KJV\"), and Verse mode gained one too (previously skipped straight from chapter to verse grid, silently KJV) \u2014 both fixed in passing since the infrastructure now exists and the user asked for all 5 versions to be available everywhere, not just in Chapter mode. VersionPicker.tsx's props were generalized from book+chapter to a single title string to support this reuse across all three modes. BookList.tsx and ChapterGrid.tsx had their availableBooks/availableChapters gating props and disabled-button branches deleted outright (not left as dead code) since every book and chapter is selectable now that content is fetched on demand rather than pre-authored. \n\nVerified in-browser end to end without a live key: all 66 books (including previously-unavailable ones like Genesis) render as fully selectable with no grayed-out entries; Genesis's ChapterGrid correctly shows all 50 chapters selectable; Chapter, Book, and Verse mode all correctly reach a VersionPicker step listing all 5 versions enabled; selecting a version in each mode correctly hits GET /api/bible/chapter, receives the expected 501 with a clear \"no BIBLE_API_KEY configured\" message, and surfaces it through FetchError with a working Try again retry button rather than crashing or hanging; confirmed the same graceful error also appears when navigating directly to a pre-existing in-progress path whose content isn't in the new cache (the ensurePathVerses fallback-fetch path on PathOverviewScreen/DayLoader), rather than showing broken/empty content. npm run build and npm run lint both passed clean with zero errors."
+        },
+        {
+          "id": "2.16",
+          "name": "Book Mode: Verses/Day + Sliding-Window/Rotation/Weekly/Monthly Review",
+          "description": "Book mode now asks how many verses per day once its content is fetched, chunks lessons accordingly, and reviews with a distinct spaced-repetition-like schedule scoped to book mode only: each lesson reviews the previous chapter in full plus the current chapter's progress so far, plus one chapter cycling through a 7-slot daily rotation; every 8 chapters that graduate out of daily rotation form a weekly-review batch (shown as its own circle), and each superseded weekly batch is absorbed into an ever-growing monthly review.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/bookReviewSchedule.ts",
+            "lib/bookDayPlan.ts",
+            "lib/dayPlan.ts",
+            "lib/chapterContent.ts",
+            "lib/progressSummary.ts",
+            "lib/storage.ts",
+            "store/useProgressStore.ts",
+            "components/gamification/VersesPerDayPicker.tsx",
+            "components/gamification/GuidedPathFlow.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/DaySessionController.tsx",
+            "components/gamification/DayPathDiagram.tsx",
+            "app/path/[key]/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "Choosing Book mode asks how many verses per day (quick picks + \"All N\") once the whole book has been fetched and its true verse count is known",
+            "Each learn-lesson's review section covers the previous chapter in full plus the current chapter's verses learned so far, anchored on the first new verse of that lesson's chunk",
+            "Once a chapter is no longer covered by that sliding window, it joins a 7-chapter daily rotation (a ring buffer that never empties) reviewed one chapter at a time, round robin",
+            "Every time an 8th chapter would need to join daily rotation, the oldest of the 7 evicts into a separate, growing weekly-batch accumulator \u2014 once 8 have accumulated, that batch becomes the active weekly review, shown as its own circle on a fixed cadence",
+            "When a second batch of 8 chapters completes and becomes the new weekly review, the previous weekly batch is promoted into an ever-growing monthly review bucket instead of disappearing",
+            "This entire system is scoped to book-mode paths only \u2014 chapter/verse/topic paths are completely unaffected, still one verse per lesson reviewing everything learned so far",
+            "The path diagram labels multi-verse lessons with a verse range (e.g. \"Genesis 1:1-5\", or \"Philippians 3:21\u2013Philippians 4:4\" when a chunk crosses a chapter boundary) and gives weekly/monthly review circles their own distinct icon"
+          ],
+          "notes": "User request (verbatim): \"For memorizing a book lets make it a bit different. When they chose the book they chose a number of verses per day. The lessons now get split into this amount of verses. For the review part of the lesson, they review all previous verses starting at the beginning of the previous chapter, for example if todays verse is Gen 4:3, the review section is Gen 3:1-4:2. Once a chapter leaves this review section (like Gen 1&2) it gets added to a daily rotation included in the review section that reviews one previous chapter, so for Gen 4:3 it may be chapter 1, then the next day it goes to chapter 2, and then back to chapter 1. Once 8 Chapters are Complete, these chapters get bunched together and reviewed on a weekly basis. This review is added as a separate circle when applicable. Any new chapters that are added to the daily rotation after this replace the earliest added chapter, for ex ch 8 would replace ch 1, ch 9 would replace ch 2, etc. If a book completes another 8 chapters the original 8 chapters are now added to a monthly review and the new 8 chapters are added to a weekly review. This goes until the book is complete.\" Then, mid-implementation, a clarifying follow-up: \"The weekly review of 8 chapters is seperate from the daily.\"\n\nThe spec had one genuine internal ambiguity worth surfacing before building: \"once 8 chapters are complete, bunched into weekly\" reads as the daily pool filling to 8 and emptying, while \"ch8 replaces ch1, ch9 replaces ch2\" reads as a ring buffer that never empties. Asked the user directly; they clarified the daily pool caps at 7 (not 8) specifically because the previous chapter is already covered by the sliding window and doesn't need its own rotation slot, and confirmed it never empties. Cap 7 resolves the arithmetic exactly as given: departure 8 evicts departure 1, departure 9 evicts departure 2, etc. Their later message confirmed the weekly-batch-of-8 accumulator is a separate track from the 7-slot daily ring buffer, not the same pool relabeled -- exactly what had already been designed from the cap-7 resolution.\n\nAlgorithm (lib/bookReviewSchedule.ts): chapters depart the sliding window in order as the book progresses (chapter K departs at the first lesson whose anchor chapter exceeds K+1). Departures feed a 7-slot FIFO ring buffer (the daily rotation) that never empties; once full, each new arrival evicts the oldest member into a separate weekly-batch accumulator. Once that accumulator reaches 8, it becomes the current weekly-review batch and resets; if a currentWeeklyBatch already existed at that point, it gets folded into the (ever-growing) monthly bucket first. lib/bookDayPlan.ts chunks verses into versesPerDay-sized lessons, computes the sliding-window review (previous chapter in full + current chapter up to the chunk's first verse) plus one rotation chapter chosen round-robin from the daily pool for that lesson, and inserts weekly_review days every 7 lessons (once a batch exists) and monthly_review days every 30 (once the monthly bucket is non-empty) -- cadences chosen to fit this app's existing lesson-indexed \"day\" convention (a lesson-count, not a real calendar day, matching how every other day-plan in the app already works) since the user's own \"weekly\"/\"monthly\" wording doesn't map to literal calendar time here.\n\nVerified end-to-end two ways: (1) a temporary debug route (deleted before finishing) fed the real buildBookDayPlan a synthetic 40-chapter book and confirmed the full lifecycle exactly -- chapters 1-8 became the weekly batch, repeated on the 7-lesson cadence, then correctly promoted to monthly once chapters 9-16 completed and became the new weekly batch, and the monthly bucket kept growing (1-16) once a third batch (17-24) later superseded batch 2 as the active weekly. Rotation alternation (chapter1, chapter2, chapter1...) matched the user's own example exactly once pool cap 7 was in place. (2) Live-tested against real fetched KJV content: selected Philippians (4 chapters, 104 verses -- matching the real KJV verse count exactly, confirming the HTML-parsing pipeline from the prior phase works against live translated text), picked 5 verses/day, confirmed the resulting 21-lesson path diagram correctly range-labels multi-verse chunks (\"Philippians 1:1-5\") including one that crosses a chapter boundary (\"Philippians 3:21\u2013Philippians 4:4\"), and opened lesson 1 to confirm the review section correctly shows \"Nothing to review yet\" (no prior chapter exists) followed by the real fetched verse text (\"Paul and Timotheus, the servants of Jesus Christ...\") in the Learn stage. Philippians itself is too short to exercise weekly/monthly review (needs 8+ completed chapters), which is expected and correctly absent from its diagram.\n\nPathProgress gained an optional versesPerDay field (book-kind paths only); buildPathDayPlan(key, verses, plan) in lib/dayPlan.ts is the single dispatch point now used everywhere a day-plan is built (PathOverviewScreen, DayLoader, lib/progressSummary.ts's three functions) so book-mode paths get correct day counts for progress/review-due/memorized-verse detection instead of silently falling back to the generic one-verse-per-lesson plan. DaySessionController reuses the existing generic ReviewSection component for the two new day kinds (it was already purely driven by day.reviewVerses with no kind-checking, so no new review-rendering component was needed). Schema bumped 11->12 for the PathProgress shape change, resetting existing local progress per the established precedent used at every prior schema change this session. npm run build and npm run lint both passed clean."
+        },
+        {
+          "id": "2.17",
+          "name": "Testing: Clickable Locked Lessons + Verse Reference Display Setting",
+          "description": "Any lesson circle on the path diagram can now be clicked and played through regardless of lock state (still visually muted/locked so normal progression reads clearly), and a new Settings toggle on Profile lets the user prefix every verse's displayed/typed/spoken text with its \"chapter:verse \" reference, applied once at verse-resolution time so every drill downstream picks it up automatically.",
+          "status": "completed",
+          "files": [
+            "types/index.ts",
+            "lib/storage.ts",
+            "lib/chapterContent.ts",
+            "store/useProgressStore.ts",
+            "components/gamification/DayPathDiagram.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/SrsReviewSession.tsx",
+            "components/ui/ToggleSwitch.tsx",
+            "app/profile/page.tsx"
+          ],
+          "acceptance_criteria": [
+            "Every lesson circle (including chronologically locked ones) is clickable and loads/plays its real lesson content, while still showing a lock icon and muted styling so it's visually distinguishable from completed/next-up lessons",
+            "A new toggle in Profile > Settings lets the user turn verse references on/off, persisted like every other preference",
+            "When enabled, every verse's text used in Learn stages, Review chains, Full Review, Boss Battle, and Spaced Review is prefixed with its \"chapter:verse \" reference (e.g. \"3:1 Finally, my brethren...\"), applied once at the point each screen resolves its verses rather than touching every individual drill component"
+          ],
+          "notes": "User request (verbatim): \"Add it so that I can test click on a locked lesson and go through it to verify it works how I intend. and also add it so that in settings I can determine If i want to include verse references in my memorization. This looks like adding to each verse the chapter number and verse number, for exmaple ephesiasn 1;1 would look like '1:1 Paul ...1:2 Grace ...'\"\n\nLocked-lesson testing: DayLoader already didn't enforce lock state (any dayNumber present in the day-plan renders fine) -- the only real gate was DayPathDiagram's disabled button. Removed the disabled/isInteractive gating entirely rather than adding a separate settings toggle for it, matching this app's existing pattern of always-visible, clearly-labeled testing affordances (the \"Auto-complete (testing)\" buttons already used throughout every drill) rather than a hidden dev-mode flag. Locked circles keep their muted color and lock icon so normal day-to-day use still reads as gated, but nothing blocks navigating ahead. Noted a real side effect worth flagging: completeDay's existing Math.max(existing.completedDays, dayNumber) logic means finishing a jumped-ahead lesson marks every earlier lesson as \"completed\" too (green checkmarks) even though they were never actually done -- an existing design property (needed so replaying an old lesson doesn't regress progress), not something newly introduced, but worth knowing before testing on a path you care about the progress of.\n\nVerse references: added includeVerseReferences: boolean to UserProgress (default false) with a setIncludeVerseReferences store action, and a pure applyReferencePreference(verses, includeReferences) helper in lib/chapterContent.ts that maps VerseSegment[] to a copy with text prefixed \"{chapter}:{verseNumber} \" -- applied at exactly three call sites (PathOverviewScreen, DayLoader, SrsReviewSession) right where each screen already resolves its verses, immediately before they're handed to buildPathDayPlan or used to build SpeakRep's target text. Every drill component (ReadRep, WriteRep, SpeakRep, FirstLetterTypeRep, WordBankRound, ReviewChain, ChapterReviewStage, BossBattleStage) already operates purely on verse.text with zero kind-specific logic, so none of them needed any changes -- the transformation propagates automatically. formatVerseRangeLabel and DayPathDiagram's labels read verse.reference, not verse.text, so labels are unaffected by the setting. Built a small reusable components/ui/ToggleSwitch.tsx (checked/onChange/label/description) for the Profile Settings card, matching this app's existing ui/ primitives pattern. Schema bumped 12->13 for the new UserProgress field, resetting existing local progress per the established precedent used at every prior schema change this session.\n\nVerified end to end together: seeded to a Philippians book-mode path, clicked a chronologically locked lesson circle far ahead of actual progress (Philippians 2:16-20, then separately 3:1-5) and confirmed it's clickable (not disabled) and loads/plays its full Review->Learn flow correctly; with the reference toggle turned on via Profile Settings, confirmed the Learn stage's displayed/spoken text for a fresh lesson read exactly '3:1 Finally, my brethren, rejoice in the Lord...' -- the reference prefix applied correctly to real fetched KJV text. npm run build and npm run lint both passed clean.\n\nSeparately, in response to \"How can I add the ESV?\": tested live against the user's real api.bible key and confirmed their account's catalog (39 English translations) has KJV, NIV, and NLT working, but genuinely does not include ESV or NASB -- both require separate publisher approval that most api.bible accounts don't have by default, not something fixable in code. Followed up on \"Is there any way for me to get Mark in ESV for free to test\" by researching Crossway's own separate ESV API (api.esv.org, distinct from api.bible) -- free for non-commercial/personal use (5,000 queries/day, 500 verses per query, requires an ESV.org account + API application under account settings, copyright notice + esv.org link required). This is a real, legitimate path but would need its own separate integration (different auth header, different response format with bracketed verse numbers e.g. '[35] Jesus wept.') -- not yet built, offered to the user as a follow-up if they want it."
+        },
+        {
+          "id": "2.18",
+          "name": "ESV via Crossway's Separate api.esv.org Integration",
+          "description": "Added a second, independent Bible-text provider specifically for ESV \u2014 Crossway's own free API at api.esv.org, distinct from api.bible (which doesn't carry ESV at all in this account). Selecting ESV now routes to this provider automatically; api.bible remains the path for KJV/NIV/NASB/NLT.",
+          "status": "completed",
+          "files": [
+            "lib/bibleProviders/apiBible.ts",
+            "lib/bibleProviders/esv.ts",
+            "app/api/bible/chapter/route.ts",
+            ".env.local.example"
+          ],
+          "acceptance_criteria": [
+            "Selecting ESV as a version calls api.esv.org instead of api.bible, using a separate ESV_API_KEY env var",
+            "ESV verse text is parsed from Crossway's bracketed verse-number format (\"[35] Jesus wept.\") rather than api.bible's HTML span format",
+            "Missing ESV_API_KEY surfaces its own clear, actionable error (sign-up URL + env var name) distinct from the generic api.bible key-missing error",
+            "KJV/NIV/NASB/NLT continue working exactly as before through api.bible \u2014 verified no regression from splitting the provider code into its own file"
+          ],
+          "notes": "Follow-up to \"How can I add the ESV?\" and \"Is there any way for me to get Mark in ESV for free to test\". Live-confirmed the user's api.bible account catalog (39 English translations) doesn't include ESV or NASB at all -- not fixable in code. Researched Crossway's own separate ESV API at api.esv.org: free for personal/non-commercial use, 5,000 queries/day, 500 verses per query, requires signing up for an ESV.org account and creating an API application to get a key (a step only the user can do). Confirmed with the user before building since it's a second, separate integration (different auth scheme -- 'Authorization: Token X' vs api.bible's 'api-key' header -- and a materially different response format) rather than something addable to the existing api.bible flow.\n\nSplit the previously-inline api.bible logic out of app/api/bible/chapter/route.ts into lib/bibleProviders/apiBible.ts (to stay under this project's 200-line-per-file rule once ESV logic was added, and because the route handler splitting into two genuinely separate provider implementations is a natural seam) and added lib/bibleProviders/esv.ts alongside it. Both are commented SERVER ONLY since they read secret env vars via process.env and are only ever safe to import from the Route Handler itself -- no server-only package is installed in this project, so this relies on the same discipline-not-enforcement pattern the original api.bible integration already used. route.ts is now a thin ~40-line dispatcher: version === 'ESV' routes to fetchFromEsv (ESV_API_KEY), everything else to fetchFromApiBible (BIBLE_API_KEY) -- both raise a typed error class the route catches uniformly.\n\nESV verse parsing was actually simpler and more reliable to write than api.bible's: with include-headings/footnotes/passage-references/short-copyright all set false, Crossway's response is just the passage text with '[N] ' markers directly in front of each verse -- a plain, well-documented, unambiguous boundary, parsed via a straightforward regex split (no HTML involved at all, unlike api.bible's verse-number <span> tags).\n\nVerified: without an ESV_API_KEY set, requesting ESV correctly returns its own distinct, actionable error message (sign-up URL, env var name, restart instruction) rather than either crashing or showing the unrelated generic api.bible message. Regression-checked KJV against the refactored apiBible.ts provider and confirmed it still returns correct real verse text, unaffected by the file split. The user still needs to sign up at api.esv.org themselves and provide the key before ESV will actually return text -- .env.local already has a blank ESV_API_KEY= line waiting for it. npm run build and npm run lint both passed clean."
+        },
+        {
+          "id": "2.19",
+          "name": "ESV Crossway License Compliance Safeguards",
+          "status": "completed",
+          "description": "Adds a real Crossway api.esv.org key, enforces the free-tier license's local-storage cap via a self-managing rolling cache, and displays the required copyright attribution wherever ESV text appears.",
+          "files": [
+            "lib/esvUsageLimits.ts",
+            "lib/esvCacheTracker.ts",
+            "lib/bibleApiClient.ts",
+            "lib/bibleContentCache.ts",
+            "components/ui/EsvAttribution.tsx",
+            "components/gamification/DayLoader.tsx",
+            "components/gamification/SrsReviewSession.tsx",
+            ".env.local (real key added, gitignored)"
+          ],
+          "acceptance_criteria": [
+            "A real ESV_API_KEY is present in .env.local; ESV chapters fetch real Crossway text",
+            "Total persisted ESV text per book never exceeds Crossway's cap (500 verses, or half the book, whichever is less)",
+            "When the cap would be exceeded, the least-recently-used cached ESV chapters for that book are evicted (not blocked) to make room",
+            "Evicted chapters are transparently re-fetched by ensurePathVerses the next time they're needed, so nothing in the UI breaks",
+            "Book-mode ESV memorization is fully supported (no longer blocked) despite no single book fitting entirely under the cap at once",
+            "An in-memory (non-persisted) session cache avoids re-fetching a full book on every navigation within the same tab visit",
+            "The required Crossway copyright notice + esv.org link renders during any lesson/review session using ESV text",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User pasted a real Crossway api.esv.org API key directly in chat, along with: \"please make sure the proper safeties are in place as to not violate crossways conditions for it\". Wrote the key to .env.local (gitignored, never echoed back in plaintext). Researched api.esv.org's actual terms of use via WebFetch (docs page + the standard published copyright notice) rather than relying on assumption, confirming: max 500 verses per query or per book stored locally (whichever is less, both figures apply \u2014 cap = min(500, floor(totalBookVerses/2))), non-commercial use only, and a required copyright notice + esv.org link wherever text is displayed. First pass (before this feature's final form) blocked ESV entirely for Book-mode selection, since fetching an entire book structurally can't fit under a half-book cap. The user pushed back mid-turn: \"Instead of out right blocking the ESV book, make an different way of downlaoding and storing the verses so that it abides by the rules but you can still learn the book in ESV\" \u2014 this was a real, reasonable request since Crossway's terms cap what's *locally stored*, not what's fetched or displayed, and their own docs explicitly anticipate apps 'periodically clearing cache'. Redesigned as a rolling LRU eviction cache: lib/esvCacheTracker.ts now tracks per-book chapters in least-recently-used order (not just counts); lib/bibleApiClient.ts's ensureChapterLoaded evicts the least-recently-used cached ESV chapter(s) for a book (via the new removeCachedChapter in bibleContentCache.ts) whenever a new fetch would push that book's persisted total over its cap, rather than refusing the fetch. This required fixing a correctness bug this design would otherwise introduce: lib/memorizationContent.ts's getBookVerses() requires ALL of a book's chapters to be simultaneously present in the persistent cache, which eviction structurally prevents for any book whose total exceeds the cap. Fixed by having ensurePathVerses's book branch build its return value directly from each ensureChapterLoaded call's own return value (verses are always correct even if immediately evicted afterward) instead of re-reading through resolvePath()'s cache-only aggregation. Also added an in-memory-only (never persisted to localStorage) session cache for assembled full-book results, keyed by version+book, so repeat navigation within the same tab visit doesn't re-fetch the whole book every time \u2014 this is compliant since Crossway's cap is specifically about persistent local storage, not transient in-memory state that dies with the tab. Verified live end-to-end in the browser: fetched real Mark 1 ESV text confirming the new key works; seeded a fake tracker value near the cap and confirmed the eviction math via a real Chapter-mode fetch; then did a full real run \u2014 Book mode, Mark, ESV, all 673 verses fetched successfully, tracker afterward showed only 337/339 verses persisted (8 of 16 chapters evicted), the 137-lesson day plan for the WHOLE book still resolved correctly despite most chapters being evicted, and opening Day 1's lesson showed real ESV text ('The beginning of the gospel of Jesus Christ, the Son of God.') plus the required Crossway copyright/esv.org attribution notice. Also reverted the earlier Book-mode ESV block in VersionPicker.tsx and GuidedPathFlow.tsx back to their original unrestricted form once the eviction approach made blocking unnecessary."
+        },
+        {
+          "id": "2.20",
+          "name": "Per-Chapter Book Path View + Event-Triggered Batch Reviews",
+          "status": "completed",
+          "description": "Book-mode paths now show one chapter's lessons at a time (not the whole book at once), each chapter ending in its own boss battle before a Continue button reveals the next chapter. Weekly/monthly 8-chapter batch reviews are now inserted exactly when a batch completes, not on a fixed lesson-count interval.",
+          "files": [
+            "types/index.ts",
+            "lib/bookDayPlan.ts",
+            "components/gamification/DayPathDiagram.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DaySessionController.tsx"
+          ],
+          "acceptance_criteria": [
+            "Book-mode path overview shows only the current chapter's lessons + that chapter's boss battle, not the entire book's lesson list",
+            "A lesson chunk that spans a chapter boundary (versesPerDay doesn't divide evenly) is fine \u2014 it still belongs to its anchor chapter's group",
+            "Each chapter's boss battle reviews only that chapter's verses, independent of the whole-book Full Review/Boss Battle capstone at the end",
+            "Completing a chapter's boss battle shows a 'Chapter N boss battle complete!' screen with a Continue button that reveals the next chapter",
+            "The progress counter ('X of Y lessons complete') is scoped to the visible chapter, not the whole book",
+            "A weekly_review day is inserted exactly when a fresh batch of 8 chapters forms (not every 7 lessons by count)",
+            "A monthly_review day is inserted exactly when the monthly bucket grows by absorbing a superseded weekly batch (not every 30 lessons by count)",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User request (verbatim): \"When learning a book, instead of displaying every lesson on the screen, only have a chapter at a time and when they finish that chapter have a boss battle at the end again and then they click a button to move to the next chapter, if the daily verse amount means that they progress passed a chapter border that is fine, also make sure that whenever there is the 8 chapter weekly/monthly review (the one that has all 8 at once) there is a deticated lesson space for it that is built into the path.\" Two changes: (1) MemorizationDay gained an optional chapterGroup field (types/index.ts); lib/bookDayPlan.ts now tags every learn day with the chapter its chunk is anchored in (chunk[0].chapter \u2014 spillover into the next chapter via a boundary-crossing chunk is accepted per the user's explicit permission), and inserts a new 'chapter_boss_battle' day (reviewVerses = only that chapter's verses) right after the last lesson anchored to each chapter. PathOverviewScreen filters the full day plan down to whichever chapter's group the next incomplete day belongs to, so only one chapter's circles render at a time; DayPathDiagram shows a 'Chapter N of M' label and scopes its 'X of Y lessons complete' count to the visible subset instead of the whole book. DaySessionController treats chapter_boss_battle like the existing boss_battle kind for the drill itself (reused BossBattleStage unmodified) but does NOT award the whole-book sticker or show VictoryScreen \u2014 those stay reserved for the final whole-book 'boss_battle' capstone after the last chapter. Its completion screen reads 'Chapter N boss battle complete!' with a 'Continue' button (same href as the existing 'Back to path' button, just relabeled) that naturally reveals the next chapter since PathOverviewScreen re-derives the visible group from progress on every render. (2) The previous weekly/monthly review insertion used a fixed lesson-count interval (every 7 / every 30 lessons) that was only loosely tied to when a batch of 8 chapters was actually ready, per an earlier design gap. Replaced with direct state-change detection: lib/bookDayPlan.ts now compares each lesson's bucketState.currentWeeklyBatch / monthlyBucket content against the previous lesson's and inserts the corresponding review day exactly when it changes, guaranteeing 'whenever there is the 8 chapter weekly/monthly review... a dedicated lesson space' appears at the moment that batch completes, not on an approximate schedule. Verified live in the browser: Titus (3 chapters, 46 verses) at 10 verses/day showed 'Chapter 1 of 3' with only 2 lessons + a Chapter Boss Battle circle (0 of 3), the second lesson's label correctly read 'Titus 1:11\u2013Titus 2:4' (crossing into chapter 2, confirmed as intended), completing both lessons advanced the counter to '2 of 3', the Chapter Boss Battle correctly ran through all 16 of chapter 1's verses only, its completion screen read 'Chapter 1 boss battle complete!' with a Continue button, and clicking it revealed 'Chapter 2 of 3' with a fresh '0 of 3' counter and chapter 2's own lessons."
+        },
+        {
+          "id": "2.21",
+          "name": "Daily Rotation Review Ordering + Memorized Verses Cleanup",
+          "status": "completed",
+          "description": "The book-mode daily rotation chapter now reviews before the two-chapter sliding window inside the lesson itself, and the lesson-based 'Continue Daily Review' shortcut was removed from Memorized Verses so that page's review content is exclusively SRS-driven.",
+          "files": [
+            "lib/bookDayPlan.ts",
+            "components/gamification/MemorizedStats.tsx"
+          ],
+          "acceptance_criteria": [
+            "A learn day's reviewVerses order the daily rotation chapter before the two-chapter sliding window",
+            "Memorized Verses page no longer shows a lesson-based 'Continue Daily Review' button",
+            "Memorized Verses page's only review-related section is SrsOverview's 'Spaced Review', driven exclusively by isDue(entity.srs)",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User request (verbatim): \"The 'daily review' for when memorizing books should not be in the 'memorized verses' section rather it should be a part of the lesson review, right before the 2 chapters are reviewed. As well the needs reviewing section under memorized verses should only contain verses that need reviewing via the SRS, not from the review session in the lessons.\" Traced 'daily review... in the memorized verses section' to MemorizedStats.tsx's 'Continue Daily Review' button, which used lib/progressSummary.ts's getPathsNeedingReview() (a lesson-based helper \u2014 'does this path's current day have any reviewVerses') to link straight into today's lesson. That's a different, unrelated concept from the page's actual SRS-based review tracking (SrsOverview's 'Spaced Review' section, which correctly filters memorizedEntities by isDue(entity.srs)) \u2014 the two were sitting side by side on the same page, mixing lesson-review shortcuts with genuine spaced-repetition due-dates. Removed the button and its getPathsNeedingReview()/activePathKey logic from MemorizedStats.tsx entirely, leaving the page with just stats + Sticker Book + the SRS-only Spaced Review section. In lib/bookDayPlan.ts, swapped reviewVerses from [...windowReview, ...rotationReview] to [...rotationReview, ...windowReview] so the daily rotation chapter (the 'daily review') is presented before the two-chapter sliding window inside the lesson's own review section, matching 'right before the 2 chapters are reviewed.' Note left un-touched and flagged rather than silently changed: components/gamification/ReviewNeededCard.tsx on the Home page (app/page.tsx) is also labeled 'Needs Reviewing' and also sources from the same lesson-based getPathsNeedingReview() rather than SRS \u2014 same underlying mismatch, but the user's request was scoped specifically to 'under memorized verses,' and ReviewNeededCard lives on Home, not the Memorized Verses page, so it was left as-is pending explicit direction. Verified via npm run build/lint (clean) and a live check of /memorized, confirming the button is gone and only stats, Sticker Book, and 'Spaced Review' (correctly showing 'Nothing memorized yet' for a fresh profile) remain."
+        },
+        {
+          "id": "2.22",
+          "name": "SRS-Only Home Review Card + Custom Verses/Day Input",
+          "status": "completed",
+          "description": "Home page's Needs Reviewing card now sources exclusively from SRS due-entities (matching the earlier Memorized Verses fix), and the book-mode verses-per-day picker gained a free-text input alongside its quick picks.",
+          "files": [
+            "components/gamification/ReviewNeededCard.tsx",
+            "components/gamification/SrsOverview.tsx",
+            "lib/chapterContent.ts",
+            "lib/progressSummary.ts",
+            "components/gamification/VersesPerDayPicker.tsx"
+          ],
+          "acceptance_criteria": [
+            "Home page's Needs Reviewing card lists only memorizedEntities where isDue(entity.srs) is true, matching SrsOverview's logic",
+            "Its button links to /memorized/review when something is due, /memorized otherwise",
+            "getPathsNeedingReview and PathReviewSummary removed from lib/progressSummary.ts (no longer used anywhere)",
+            "formatVerseSpanLabel extracted to lib/chapterContent.ts and reused by both SrsOverview and ReviewNeededCard instead of each defining its own copy",
+            "VersesPerDayPicker has a number input + Start button that accepts any custom verses/day amount (clamped to 1..totalVerses), in addition to the existing quick-pick buttons",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User request (verbatim): \"Review needed card on home page is only from SRS, when selecting how many verses you want to learn a day in the book path have a text box that you can type how many verses.\" First clause confirmed and closed out the note left at the end of the previous phase (2.21) about ReviewNeededCard.tsx on the Home page sharing MemorizedStats' old bug: it was labeled 'Needs Reviewing' but sourced from lib/progressSummary.ts's getPathsNeedingReview() (lesson-based \u2014 'does today's lesson have review content'), not real SRS due-dates. Rewrote it to filter memorizedEntities by isDue(entity.srs), identical logic to SrsOverview.tsx's already-correct 'Spaced Review' section on the Memorized Verses page. Extracted the book/chapter/startVerse/endVerse range-label formatter (previously duplicated verbatim in both SrsOverview.tsx and the old ReviewNeededCard.tsx) into a single formatVerseSpanLabel() in lib/chapterContent.ts, used by both. Since getPathsNeedingReview() had no remaining callers anywhere in the codebase after this, deleted it and its PathReviewSummary type from lib/progressSummary.ts outright rather than leaving unused code. Second clause: added a number input + Start button to VersesPerDayPicker.tsx, next to the existing 1/3/5/10/20/All quick-pick buttons \u2014 submitting parses and clamps the value to 1..totalVerses before calling the same onSelect callback the quick picks use, so no other file needed to change. Verified live in the browser: Home page's Needs Reviewing card now reads 'Nothing needs reviewing right now' (previously would have shown lesson-based content) with a fresh profile; and selecting Book mode -> Philemon -> KJV -> typing '7' into the new field -> Start produced a day plan chunked at exactly 7 verses per lesson ('Philemon 1:1-7' as lesson 1, 5 total lessons for Philemon's 25 verses at 7/day)."
+        },
+        {
+          "id": "2.23",
+          "name": "Choose New Path Link, 2-Stage Daily/Chapter Review, Rotation Order Fix, Shekel Source Cleanup",
+          "status": "completed",
+          "description": "Adds a 'Choose a different path' link to any path overview; splits book-mode lesson review into two sequential stages (daily rotation chapter, then the two-chapter window); fixes the daily rotation chapter picker to cycle strictly in order instead of jumping around; and scopes shekel rewards to new-verse completion and SRS review only, removing them from the lesson's internal review.",
+          "files": [
+            "components/gamification/DayPathDiagram.tsx",
+            "types/index.ts",
+            "lib/bookDayPlan.ts",
+            "components/gamification/ReviewSection.tsx",
+            "components/drills/ReviewChain.tsx",
+            "components/gamification/DaySessionController.tsx"
+          ],
+          "acceptance_criteria": [
+            "Any path overview screen shows a 'Choose a different path' link to /begin",
+            "A book-mode learn day with both a daily-rotation chapter and a sliding-window review presents them as two sequential ReviewChain stages, each completed before the next starts",
+            "Stage labels read 'Daily Review (1 of 2)' then 'Chapter Review (2 of 2)' when both are present; a single stage (or the 'nothing to review' case) is unaffected for non-book paths",
+            "The daily rotation chapter advances strictly in pool order (1st member, 2nd, 3rd, ... wrapping back to the 1st) via a dedicated cursor, instead of the book-wide lesson index modulo pool size",
+            "Completing a lesson's new verses awards shekels; completing its internal review (daily rotation + window) does not; SRS spaced review still awards shekels via the store's existing recordSrsReview",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User request (verbatim): \"When on a path have an option to chose new path. In the review section of the lesson have the dailty rotaion chapter nad the previous 2 chapters in 2 stages. Also in testih=ng the daily review went from ch1 - ch3, it should go in order 1, 2, 3, 4 .. etc until it reaches all the chapters in the daily review then it resets at 1.\" Mid-turn follow-ups refined shekel scope: \"Only verses reviewed in SRS get shekels\" then \"New verses get shekels\" \u2014 net result: shekels come from new-verse completion (kept) and SRS spaced review (already correct, store-side), not from a lesson's internal review portion (removed). 1) Added a 'Choose a different path' link to DayPathDiagram.tsx (rendered on every path overview, book or otherwise) pointing at /begin. 2) Added MemorizationDay.reviewStages (ReviewStage[] \u2014 {label, verses}) alongside the existing flat reviewVerses. lib/bookDayPlan.ts now builds two stages per learn day when applicable: 'Daily Review' (rotation chapter) then 'Chapter Review' (sliding window), only including non-empty ones. ReviewSection.tsx now sequences through day.reviewStages (falling back to a single implicit 'Review' stage over reviewVerses when reviewStages is absent, e.g. for chapter/verse/topic paths \u2014 fully backward compatible), remounting ReviewChain per stage via a key={stageIndex} to reset its internal state, and only calling the day's onComplete after the last stage. ReviewChain.tsx gained an optional label prop (default 'Review') used in both its in-progress and 'complete' headings, driven by ReviewSection with a '(N of M)' suffix when there's more than one stage. 3) Root-caused the ordering bug in the old lib/bookDayPlan.ts: rotationChapter was picked via `state.dailyPool[index % state.dailyPool.length]`, where index was the book-wide chunk index \u2014 since dailyPool.length changes over the book's life (grows 1\u21927 as chapters depart the sliding window) while index keeps climbing regardless, the modulo's effective starting phase shifted unpredictably every time the pool changed size, producing non-sequential jumps. Fixed with a dedicated rotationCursor local to buildBookDayPlan, incremented by exactly one only on lessons where the pool is non-empty, indexing `dailyPool[rotationCursor % dailyPool.length]` \u2014 guarantees strict 1st, 2nd, 3rd, ... cycling through whatever's currently in the pool, wrapping cleanly once it's been through all of them. 4) DaySessionController.tsx's finishDay(): removed the `earnShekels(day.reviewVerses.length * SHEKELS_PER_VERSE_REVIEWED)` call entirely (lesson-internal review no longer earns shekels) while keeping `earnShekels(day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED)` (new-verse completion still does); SRS review already awarded shekels independently via useProgressStore's recordSrsReview action, which was left untouched. SHEKELS_PER_VERSE_REVIEWED remains used there. Verified live end-to-end: confirmed the 'Choose a different path' link renders and points at /begin on a path overview; ran through 1 Thessalonians at versesPerDay=15 (chosen for its short chapters, so the daily pool populates within just 3-4 lessons instead of dozens) \u2014 lesson 2 (chunk index1, pool still empty) showed a single 'CHAPTER REVIEW' stage as expected; lesson 3 (chunk index2, chapter1 just departed into the pool) showed 'DAILY REVIEW (1 OF 2)' starting at 1 Thessalonians 1:1 followed by 'CHAPTER REVIEW (2 OF 2)' starting at 2:1 \u2014 both stages present and sequential; lesson 4 (chunk index3, chapter2 just departed) then showed 'DAILY REVIEW (1 OF 2)' starting at 1 Thessalonians 2:1, confirming the rotation cursor correctly advanced from chapter1 to chapter2 rather than repeating or jumping. Also confirmed the shekel total only increased on new-verse-completion lessons (150\u2192225 after a lesson with new verses) and did not increase further from boss-battle/review-only days."
+        },
+        {
+          "id": "2.24",
+          "name": "Perfect-Only SRS Shekels, Boss Battle Shekels, Next-Chapter Testing Button",
+          "status": "completed",
+          "description": "SRS spaced review only pays shekels when completed with zero mistakes; both chapter and whole-book boss battles now award 200 shekels; and a testing-only 'Next chapter' button lets a tester preview later chapters in a book path without completing earlier ones.",
+          "files": [
+            "lib/economy.ts",
+            "store/useProgressStore.ts",
+            "components/drills/SpeakRep.tsx",
+            "components/gamification/SrsReviewSession.tsx",
+            "components/gamification/DaySessionController.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayPathDiagram.tsx"
+          ],
+          "acceptance_criteria": [
+            "recordSrsReview only awards shekels when both passed and perfect (zero mistaken attempts) are true",
+            "SpeakRep tracks whether any attempt across its lifetime missed and reports it to onComplete(hadMistake)",
+            "Completing a chapter_boss_battle or the final boss_battle awards SHEKELS_PER_BOSS_BATTLE (200)",
+            "A 'Next chapter (testing) \u2192' button appears on book-mode path overviews when a later chapter exists, and clicking it previews that chapter's circles without requiring the current chapter's lessons/boss battle to be completed",
+            "The override is local-only (never persisted) and resets when navigating to a different path",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User requests across this turn (verbatim): \"Only verses reviewed with no mistakes in SRS earn shekels. Boss battles also earn 200 Shekels\" followed shortly after by \"have a button to go to the next chapter page when memorizing a book for me the tester to test stuff.\" 1) SpeakRep.tsx previously called onComplete() with no signal about mistakes \u2014 its internal 'mistake' state was only used for the on-screen diff display. Added a hadMistakeRef (a ref, not state, so the value read at completion is never stale from an async speech-recognition callback) set true the first time a transcript mismatches, and changed the onComplete prop type from () => void to (hadMistake: boolean) => void, calling onComplete(hadMistakeRef.current) on both the real completion path and the Auto-complete (testing) bypass. This is a widening change \u2014 TypeScript's standard 'fewer params assignable to more params' function-type rule meant BossBattleStage.tsx, ChapterReviewStage.tsx, and LearnVerseStage.tsx (all pass 0-arg local callbacks) needed no changes, confirmed by a clean build. useProgressStore.ts's recordSrsReview gained a third `perfect: boolean` parameter and now gates the existing shekel payout on `passed && perfect` instead of just `passed`. SrsReviewSession.tsx's call site updated to `onComplete={(hadMistake) => recordSrsReview(entity.id, true, !hadMistake)}`. Note on verification: this specific behavior (mistake -> no shekels) couldn't be exercised live in the headless browser, since real speech mismatches require actual Web Speech API recognition input the automation can't produce, and the Auto-complete (testing) bypass exists precisely to skip that; the perfect-pass path (no mistake -> shekels) is exercised every time Auto-complete is used, and the gating logic itself is a small, deterministic boolean check reviewed directly rather than exhaustively fuzzed. 2) Added SHEKELS_PER_BOSS_BATTLE = 200 to lib/economy.ts; DaySessionController.tsx's finishDay() now calls earnShekels(SHEKELS_PER_BOSS_BATTLE) whenever day.kind is 'boss_battle' OR 'chapter_boss_battle' (covers both the per-chapter boss battles from an earlier phase and the whole-book capstone), independent of the existing awardSticker call which stays scoped to the whole-book 'boss_battle' only. 3) PathOverviewScreen.tsx gained a local, non-persisted chapterOverride state \u2014 when set, it substitutes for the progress-derived 'next incomplete day's chapter' when filtering which chapter's circles to show. DayPathDiagram.tsx gained an optional onNextChapter prop; when provided (i.e. a later chapter exists), it renders a 'Next chapter (testing) \u2192' button next to the existing 'Choose a different path' link. Clicking it advances chapterOverride to the next chapter in the book's chapterGroup list, bypassing the completedDays gate entirely \u2014 locked circles were already clickable for testing (an earlier phase), so this closes the remaining gap where a tester couldn't even SEE a later chapter's circles without finishing every prior one. The override resets when the path key changes, implemented via React's recommended 'adjust state during render when a prop changes' pattern (comparing key against a stored overrideResetKey and calling setState conditionally in the render body) rather than a useEffect, since eslint's react-hooks/set-state-in-effect rule flagged the original useEffect-based reset as an anti-pattern. Verified live end-to-end on the in-progress 1 Thessalonians test path: clicking 'Next chapter (testing) \u2192' on chapter 4 (with chapter 4's own boss battle still incomplete) immediately jumped the view to 'Chapter 5 of 5' with a fresh '0 of 2' counter, and no Next-chapter button (correctly, since it's the last chapter); completing chapter 5's boss battle (via the locked-circle click + Auto-complete) moved the shekel total from 225 to exactly 425, confirming the +200 boss-battle award."
+        },
+        {
+          "id": "2.25",
+          "name": "Review-Mistakes Option + Confirmed Locked-Day Completion Semantics + Previous-Chapter Testing Nav",
+          "status": "completed",
+          "description": "Each review stage's completion screen now offers a 'Review mistakes' toggle showing exactly which words were missed. Also confirmed (and closed a navigation gap while doing so) that completing a locked day via the testing shortcuts correctly treats every day before it as completed, since progress is tracked as a single monotonic 'highest day reached' counter.",
+          "files": [
+            "components/drills/ReviewChain.tsx",
+            "components/gamification/PathOverviewScreen.tsx",
+            "components/gamification/DayPathDiagram.tsx"
+          ],
+          "acceptance_criteria": [
+            "ReviewChain's finished screen shows a 'Review mistakes' toggle when at least one word was missed, revealing the full text with missed words highlighted (reusing MistakeDiff)",
+            "The toggle is absent when accuracy was 100% (nothing to review)",
+            "Applies uniformly everywhere ReviewChain is used: per-stage book-mode reviews, weekly/monthly reviews, and ChapterReviewStage's whole-chapter review",
+            "Completing a locked/skipped-ahead day (via the existing testing affordances) sets the path's completedDays counter high enough that every earlier day renders as 'completed' with a checkmark, confirmed live",
+            "A 'Previous chapter (testing)' control exists so a tester can navigate back to inspect an earlier chapter's circles after progress has moved past it, including from the final whole-book capstone view",
+            "npm run build and npm run lint both pass clean"
+          ],
+          "notes": "User request (verbatim): \"After each stage in the review lesson section have an option to review mistakes. confirm that whenever a locked one is clicked on for testing purposes it acts as if everything before it has been completed.\" 1) ReviewChain.tsx already tracked wrongWordIndices (word indices ever mistyped) for the accuracy percentage but never surfaced which words they were. Added a 'Review mistakes' toggle to its finished screen (shown only when wrongWordIndices.size > 0) that reveals the full word sequence via the existing MistakeDiff component (already used elsewhere for SpeakRep mismatches, for visual consistency), marking each word correct/incorrect based on whether its index is in wrongWordIndices. Since ReviewSection.tsx (built in an earlier phase) already renders one ReviewChain per stage and ChapterReviewStage.tsx also reuses ReviewChain unmodified, this single change point covers every review context \u2014 per-stage book-mode reviews, weekly/monthly reviews, and whole-chapter reviews \u2014 without touching those other files. Note: the existing Auto-complete (testing) bypass still skips the finished screen entirely (calls onComplete directly), so no mistakes are ever recorded or reviewable when a stage is fast-forwarded that way \u2014 intentional, since nothing was actually attempted. 2) Traced the confirmation request to store/useProgressStore.ts's completeDay action: `completedDays = Math.max(existing.completedDays, dayNumber)` \u2014 a single monotonic 'highest day number reached' counter, not a per-day completed-set. Combined with DayPathDiagram's `isCompleted = day.dayNumber <= completedDays` check, completing any day (locked or not) necessarily marks every earlier day number as completed too, by construction \u2014 confirmed correct with no code changes needed for the underlying mechanism. While confirming this live, discovered the per-chapter view (built in an earlier phase) has no way back into an earlier chapter's circles once progress moves past it, since the 'Previous chapter (testing)' control (added alongside the existing 'Next chapter (testing)' one from the prior phase) only appeared when a defined chapterGroup was showing \u2014 at the final whole-book capstone (chapterGroup undefined) there was no button at all. Extended PathOverviewScreen.tsx so 'Previous chapter (testing)' also appears from the capstone view, jumping to the last chapter, closing that gap. Verified live end-to-end on a fresh Titus (3 chapters) path: jumped via 'Next chapter (testing)' straight to chapter 3 without touching chapters 1 or 2, completed chapter 3's boss battle directly (locked-circle click), then used 'Previous chapter (testing)' from the resulting whole-book capstone view to step back through chapter 2 ('3 of 3 lessons complete') and chapter 1 ('3 of 3 lessons complete') \u2014 reading each circle's aria-label directly confirmed all three of chapter 1's items report 'Titus 1:1-10 \u2014 completed', 'Titus 1:11\u2013Titus 2:4 \u2014 completed', 'Chapter Boss Battle \u2014 completed', despite never having been played."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_features": 52,
+    "completed_features": 52
+  }
+}
