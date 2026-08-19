@@ -12,6 +12,7 @@ const VERSION_MATCHERS: Record<string, { abbreviations: string[]; nameContains: 
   NIV: { abbreviations: ["NIV"], nameContains: ["new international version"] },
   NASB: { abbreviations: ["NASB", "NASB1995", "NASB2020"], nameContains: ["new american standard"] },
   NLT: { abbreviations: ["NLT"], nameContains: ["new living translation"] },
+  CSB: { abbreviations: ["CSB"], nameContains: ["christian standard bible"] },
 };
 
 interface ApiBibleSummary {
