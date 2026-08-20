@@ -3,7 +3,7 @@
 // hunting through 25+ component files.
 export const INFO_TIPS = {
   speakRep:
-    "Speak the verse aloud. Uses your browser's speech recognition (Chrome/Edge only) to check what you said against the verse text — no exact match required, close is fine.",
+    "Speak the verse aloud. Uses your browser's speech recognition to check what you said against the verse text — no exact match required, close is fine. If microphone access is declined, you can skip to the next exercise.",
   writeRep:
     "Type the verse from memory (or copy it, on the first rep when it's shown). Checked with fuzzy matching, so minor typos/punctuation differences still pass.",
   wordBankRound:
