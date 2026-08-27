@@ -85,15 +85,21 @@ export function WordBankRound({ verse, round, onComplete }: WordBankRoundProps) 
       </p>
       <div className="flex flex-wrap gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900">
         {tray
-          .filter((entry) => !usedTileIds.has(entry.tileId))
+          // For each word missing from the verse, create a button in a grid
           .map((entry) => (
             <motion.button
               key={entry.tileId}
               type="button"
               whileTap={TAP_SCALE}
-              onClick={() => handleTileClick(entry.tileId, entry.word)}
+              onClick={() => {
+                // Only handle clicks for tiles not already used
+                if (!usedTileIds.has(entry.tileId)) handleTileClick(entry.tileId, entry.word)
+              }}
               className={`rounded-lg px-3 py-2 text-base font-medium text-white ${
-                wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500"
+                // Color the incorrect tile red
+                wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500" } ${
+                // Hide the used tiles, so that the grid doesn't shift
+                usedTileIds.has(entry.tileId) ? "invisible" : "bg-brand-500" // Could also show the already used button greyed out, if that's useful
               }`}
             >
               {stripPunctuation(entry.word)}
