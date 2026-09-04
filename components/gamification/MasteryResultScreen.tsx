@@ -35,7 +35,7 @@ export function MasteryResultScreen({
   const mastered = cleared && isFinalLevel;
 
   return (
-    <div className="relative mx-auto flex w-full max-w-lg flex-col items-center gap-4 overflow-hidden p-8 text-center">
+    <div className="relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 overflow-hidden p-8 text-center">
       {mastered && <Confetti />}
       {mastered ? (
         <>

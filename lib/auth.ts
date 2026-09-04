@@ -15,6 +15,16 @@ export function generateSalt(): string {
 }
 
 export async function hashPassword(password: string, salt: string): Promise<string> {
+  // crypto.subtle only exists in a secure context (https://, or http://localhost) — a plain
+  // http:// LAN address (e.g. an iPad hitting the dev server's own LAN IP) has no subtle
+  // crypto at all, so this would otherwise throw a cryptic TypeError deep inside importKey.
+  // Surfacing it here with a clear, actionable message is what lets the calling form show it
+  // instead of hanging forever waiting on a promise that already rejected.
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    throw new Error(
+      "Creating or signing into an account needs a secure connection (https://, or http://localhost) — a plain http:// LAN address can't do this. Run the dev server with `npm run dev:https` and use https:// on this device instead.",
+    );
+  }
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const derived = await crypto.subtle.deriveBits(

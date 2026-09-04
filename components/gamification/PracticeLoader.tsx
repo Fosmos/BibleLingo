@@ -8,6 +8,7 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
+import { usePericopesReady } from "@/lib/usePericopesReady";
 import { PracticeChain } from "@/components/drills/PracticeChain";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
@@ -21,7 +22,10 @@ interface PracticeLoaderProps {
 // Mirrors DayLoader's fetch/build logic, but renders the redoable first-letter practice
 // drill instead of the real lesson session — no completeDay/streak/shekel side effects,
 // and reachable regardless of lock state, since practice is meant to be revisited anytime
-// both before and after a boss battle.
+// both before and after a boss battle. Also doubles as the "Review" button's target for a
+// completed learn lesson (see DayCircle.tsx) — practiceVerses below picks whichever field
+// actually holds this day's own content: newVerses for a learn day (that lesson's own
+// verses), falling back to reviewVerses for boss-battle days (newVerses is empty there).
 export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProps) {
   const router = useRouter();
   const plan = useProgressStore((state) => state.paths[pathKey]);
@@ -62,9 +66,11 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
     };
   }, [pathKey, plan, label, verses, retryToken]);
 
+  const pericopesReady = usePericopesReady(verses);
+
   if (!plan) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-title">Start this path first</h1>
         <Button href={pathHref}>Back to {label}</Button>
       </div>
@@ -84,23 +90,29 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   }
 
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
+  if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
 
   const days = buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan);
   const day = days.find((candidate) => candidate.dayNumber === dayNumber);
+  const practiceVerses = day ? (day.newVerses.length > 0 ? day.newVerses : day.reviewVerses) : [];
+  // Matches whichever button got the reader here — DayCircle.tsx's Practice (boss battles)
+  // or Review (a completed learn lesson's own verses).
+  const drillLabel = day?.kind === "learn" ? "Review" : "Practice";
 
-  if (!day || day.reviewVerses.length === 0) {
+  if (!day || practiceVerses.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
-        <h1 className="text-title">Nothing to practice yet</h1>
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
+        <h1 className="text-title">Nothing to {drillLabel.toLowerCase()} yet</h1>
         <Button href={pathHref}>Back to {label}</Button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
       <PracticeChain
-        verses={day.reviewVerses}
+        verses={practiceVerses}
+        label={drillLabel}
         onExit={() => router.push(pathHref)}
         sessionKey={`${pathKey}:${dayNumber}:practice`}
       />

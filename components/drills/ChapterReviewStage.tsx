@@ -16,28 +16,21 @@ interface ChapterReviewStageProps {
   pathKey: string;
   label: string;
   verses: VerseSegment[];
-  // The immediately preceding learn day's new verses — reviewed on their own, in the same
-  // ReviewChain format, before the full-chapter review below (see
-  // MemorizationDay.previousVerses). Omitted or empty skips straight to "words".
-  previousVerses?: VerseSegment[];
   onComplete: () => void;
   sessionKey?: string;
 }
 
-const ALL_PHASES = ["previous", "words", "speak", "summary"] as const;
-type Phase = (typeof ALL_PHASES)[number];
+const PHASES = ["words", "speak", "summary"] as const;
+type Phase = (typeof PHASES)[number];
 
-export function ChapterReviewStage({
-  pathKey,
-  label,
-  verses,
-  previousVerses = [],
-  onComplete,
-  sessionKey,
-}: ChapterReviewStageProps) {
-  const phases = previousVerses.length > 0 ? ALL_PHASES : ALL_PHASES.slice(1);
+// Building view's once-a-day chapter recap (see DailyChapterReviewGate.tsx, its only caller):
+// type every word of the chapter learned so far by first letter, then recite it all aloud,
+// then a results screen. The day-to-day path's own end-of-chapter review is a plain
+// ReviewChain instead (see DaySessionController.tsx) — just the first phase here, with no
+// speak-aloud or results screen wrapping it.
+export function ChapterReviewStage({ pathKey, label, verses, onComplete, sessionKey }: ChapterReviewStageProps) {
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "phaseIndex", 0);
-  const phase: Phase = phases[phaseIndex];
+  const phase: Phase = PHASES[phaseIndex];
   const [accuracy, setAccuracy] = useCheckpointField(sessionKey, "accuracy", 0);
   const recordChapterReviewAccuracy = useProgressStore((state) => state.recordChapterReviewAccuracy);
   const bestAccuracy = useProgressStore((state) => state.chapterReviewBestAccuracy[pathKey] ?? 0);
@@ -47,23 +40,13 @@ export function ChapterReviewStage({
     return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
   }
 
-  if (phase === "previous") {
-    return (
-      <ReviewChain
-        verses={previousVerses}
-        label="Yesterday's verses"
-        onComplete={() => celebrate(() => setPhaseIndex(phaseIndex + 1), "Previous verses reviewed")}
-      />
-    );
-  }
-
   if (phase === "words") {
     return (
       <ReviewChain
         verses={verses}
         onComplete={(wordAccuracy) => {
           setAccuracy(wordAccuracy);
-          celebrate(() => setPhaseIndex(phaseIndex + 1), "Previous chapter reviewed");
+          celebrate(() => setPhaseIndex(1), "Previous chapter reviewed");
         }}
       />
     );
@@ -79,7 +62,7 @@ export function ChapterReviewStage({
         reps={1}
         onComplete={() => {
           recordChapterReviewAccuracy(pathKey, accuracy);
-          celebrate(() => setPhaseIndex(phaseIndex + 1));
+          celebrate(() => setPhaseIndex(2));
         }}
       />
     );

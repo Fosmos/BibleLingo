@@ -4,10 +4,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Map, ChevronLeft, ChevronRight } from "lucide-react";
 import type { MemorizationDay } from "@/types";
-import { getDayProgress } from "@/lib/dayProgress";
+import { useProgressStore } from "@/store/useProgressStore";
 import { MOTION_DURATION } from "@/lib/motionTokens";
-import { DayCircle } from "@/components/gamification/DayCircle";
-import { PathMilestoneDivider } from "@/components/gamification/PathMilestoneDivider";
+import { PathDayList } from "@/components/gamification/PathDayList";
+import { BuildingRoomView } from "@/components/gamification/BuildingRoomView";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
@@ -16,53 +16,57 @@ interface DayPathDiagramProps {
   days: MemorizationDay[];
   completedDays: number;
   pathKey: string;
-  sessionCheckpoints: Record<string, Record<string, number>>;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
-  chapterLabel?: string;
+  // Book mode only: fraction (0-1) of the current chapter's own verses memorized so far —
+  // shown as a "N% Memorized" bar instead of the plain lessons-complete count/bar every
+  // other path kind gets, and folded together with the chapter number into `label` itself
+  // (e.g. "Mark 14") rather than a separate "Chapter 14 of 16" line — see
+  // PathOverviewScreen.tsx.
+  chapterMemorizedFraction?: number;
   onNextChapter?: () => void;
   onPreviousChapter?: () => void;
 }
 
-const MILESTONE_EVERY = 5;
-
 const navPillClass =
   "flex items-center gap-1 rounded-full bg-mist px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-line dark:bg-zinc-800 dark:text-zinc-300";
 
+// The path view's header (progress + nav) plus its body — either a plain lesson-circle list
+// grouped into memory-loci "rooms" (see components/gamification/PathDayList.tsx), or, when
+// the "Building path view" setting is on, BuildingRoomView's one-room-per-screen chapter ->
+// building, pericope -> room, verse -> item hierarchy.
 export function DayPathDiagram({
   label,
   days,
   completedDays,
   pathKey,
-  sessionCheckpoints,
   onSelectDay,
   onPracticeDay,
-  chapterLabel,
+  chapterMemorizedFraction,
   onNextChapter,
   onPreviousChapter,
 }: DayPathDiagramProps) {
+  const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   // completedDays is a path-wide counter, but `days` may be a single chapter's subset —
   // scope the visible count to what's actually rendered here.
   const visibleCompletedCount = days.filter((day) => day.dayNumber <= completedDays).length;
   const overallProgress = days.length > 0 ? visibleCompletedCount / days.length : 0;
+  const progressFraction = chapterMemorizedFraction ?? overallProgress;
+  const progressLabel =
+    chapterMemorizedFraction !== undefined ? `${Math.round(chapterMemorizedFraction * 100)}% Memorized` : `${visibleCompletedCount} of ${days.length} lessons complete`;
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col items-center">
-      {/* Consolidated, sticky banner — title, chapter progress, and path navigation stay
-          visible instead of scrolling away above a long list of lesson nodes. */}
-      <div className="sticky top-14 z-20 flex w-full flex-col items-center gap-2 bg-paper/95 px-8 pb-3 pt-4 backdrop-blur dark:bg-zinc-950/95">
+    <div className="flex flex-1 flex-col">
+      <div className="z-20 flex w-full flex-col items-center gap-2 px-8 pb-3 pt-4">
         <h1 className="flex items-center gap-1.5 text-title">
           {label} <InfoTip text={INFO_TIPS.dayPathDiagram} />
         </h1>
-        {chapterLabel && <p className="text-sm font-medium text-brand-600">{chapterLabel}</p>}
-        <p className="text-sm text-ink-muted">
-          {visibleCompletedCount} of {days.length} lessons complete
-        </p>
+        <p className="text-sm text-ink-muted">{progressLabel}</p>
         <div className="h-1.5 w-full max-w-[14rem] overflow-hidden rounded-full bg-mist dark:bg-zinc-700">
           <motion.div
             className="h-full rounded-full bg-brand-500"
             initial={{ width: 0 }}
-            animate={{ width: `${overallProgress * 100}%` }}
+            animate={{ width: `${progressFraction * 100}%` }}
             transition={{ duration: MOTION_DURATION.base }}
           />
         </div>
@@ -82,43 +86,11 @@ export function DayPathDiagram({
           )}
         </div>
       </div>
-      <div className="flex flex-col items-center px-8 pb-8">
-        {days.map((day, index) => {
-          const isCompleted = day.dayNumber <= completedDays;
-          const isUnlocked = day.dayNumber === completedDays + 1;
-          const progress = isUnlocked
-            ? getDayProgress(day, `${pathKey}:${day.dayNumber}`, sessionCheckpoints)
-            : 0;
-          const isMilestone = (index + 1) % MILESTONE_EVERY === 0 && index !== days.length - 1;
-
-          return (
-            <motion.div
-              key={day.dayNumber}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: MOTION_DURATION.base }}
-              className="flex flex-col items-center"
-            >
-              {index > 0 && <div className="h-8 w-1 bg-mist dark:bg-zinc-700" aria-hidden="true" />}
-              <DayCircle
-                day={day}
-                isCompleted={isCompleted}
-                isUnlocked={isUnlocked}
-                progress={progress}
-                offset={index % 2 === 0 ? "left" : "right"}
-                onSelect={() => onSelectDay(day.dayNumber)}
-                onPractice={() => onPracticeDay(day.dayNumber)}
-              />
-              {isMilestone && (
-                <>
-                  <div className="h-4 w-1 bg-mist dark:bg-zinc-700" aria-hidden="true" />
-                  <PathMilestoneDivider count={index + 1} />
-                </>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
+      {buildingViewEnabled ? (
+        <BuildingRoomView days={days} completedDays={completedDays} pathKey={pathKey} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
+      ) : (
+        <PathDayList days={days} completedDays={completedDays} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
+      )}
     </div>
   );
 }

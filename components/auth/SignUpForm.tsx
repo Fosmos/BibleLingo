@@ -23,9 +23,17 @@ export function SignUpForm() {
       return;
     }
     setSubmitting(true);
-    const result = await useAuthStore.getState().signUp(username, password);
-    setSubmitting(false);
-    if (!result.ok) setError(result.error ?? "Something went wrong.");
+    try {
+      const result = await useAuthStore.getState().signUp(username, password);
+      if (!result.ok) setError(result.error ?? "Something went wrong.");
+    } catch (error) {
+      // signUp can reject outright (e.g. hashPassword's secure-context check) rather than
+      // resolving with { ok: false } — without this, that left the button stuck on
+      // "Creating account…" forever instead of ever reaching setSubmitting(false) below.
+      setError(error instanceof Error ? error.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

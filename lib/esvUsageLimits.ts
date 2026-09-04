@@ -1,7 +1,9 @@
 // Crossway's api.esv.org free-tier terms (https://api.esv.org/docs/) cap both a single
-// query and total local storage at "500 verses or half of any book, whichever is less."
-// Enforced in lib/bibleApiClient.ts before anything gets cached — see esvCacheTracker.ts
-// for the running per-book tally this checks against.
+// query and total local storage at "500 verses per query, or half a book, whichever is
+// less" — but that page explicitly EXCEPTS single-chapter and double-chapter books from
+// the half-book half, leaving just the flat 500-verse cap for them (which no book that
+// short ever approaches). Enforced in lib/bibleApiClient.ts before anything gets cached —
+// see esvCacheTracker.ts for the running per-book tally this checks against.
 
 // Standard KJV/ESV versification verse counts per book. ESV occasionally differs from
 // KJV by a verse or two in a handful of books (footnote/versification choices) — these
@@ -78,7 +80,13 @@ const BOOK_VERSE_COUNTS: Record<string, number> = {
 
 const MAX_STORED_VERSES = 500;
 
-export function getEsvBookVerseCap(book: string): number {
+// `chapterCount` is the BOOK's total chapter count (from lib/bibleBooks.ts), not the
+// chapter being loaded — it only decides whether the single/double-chapter exception
+// applies, matching api.esv.org's own carve-out. Every one- or two-chapter book (Obadiah,
+// Philemon, 2 John, 3 John, Jude, Haggai, ...) is short enough that the flat 500-verse cap
+// never binds either, so this effectively lets them load in full.
+export function getEsvBookVerseCap(book: string, chapterCount: number): number {
+  if (chapterCount <= 2) return MAX_STORED_VERSES;
   const totalVerses = BOOK_VERSE_COUNTS[book] ?? MAX_STORED_VERSES * 2;
   return Math.min(MAX_STORED_VERSES, Math.floor(totalVerses / 2));
 }

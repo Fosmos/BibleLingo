@@ -7,7 +7,7 @@ interface EsvAttributionProps {
 export function EsvAttribution({ visible }: EsvAttributionProps) {
   if (!visible) return null;
   return (
-    <p className="mx-auto w-full max-w-lg px-6 pb-4 text-center text-xs text-ink-muted">
+    <p className="mx-auto w-full max-w-2xl px-6 pb-4 text-center text-xs text-ink-muted">
       Scripture quotations are from The ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a
       publishing ministry of Good News Publishers. Used by permission. All rights reserved.{" "}
       <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="underline">

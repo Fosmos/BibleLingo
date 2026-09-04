@@ -1,5 +1,5 @@
 import type { MemorizationDay, MemorizedEntity, PathProgress, VerseSegment } from "@/types";
-import { resolvePath } from "@/lib/memorizationContent";
+import { parsePathKey, resolvePath } from "@/lib/memorizationContent";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
@@ -26,18 +26,28 @@ export interface MemorizedVerseEntry {
   version: string;
 }
 
-// A path's verses only move into "memorized" once the whole path is finished — every day
-// completed through the final boss-battle day, not just individual learn days along the way.
-// Each verse is paired with the translation it was actually completed in — a book+chapter's
-// cache slot holds only one translation at a time (see lib/bibleContentCache.ts), so
-// entities built from these need to remember which one this specific path used, rather than
-// trusting whatever happens to be cached there by the time they're later reviewed.
+// A chapter/verse/topic path's verses only move into "memorized" once the whole path is
+// finished — every day completed through the final boss-battle day, not just individual
+// learn days along the way. Book mode is the exception (see getMemorizedBookVerses below):
+// each chapter graduates on its own as soon as it's fully learned, since a whole book can
+// take far longer to finish than any one chapter is worth waiting on. Each verse is paired
+// with the translation it was actually completed in — a book+chapter's cache slot holds only
+// one translation at a time (see lib/bibleContentCache.ts), so entities built from these need
+// to remember which one this specific path used, rather than trusting whatever happens to be
+// cached there by the time they're later reviewed.
 export function getMemorizedVerses(paths: Record<string, PathProgress>): MemorizedVerseEntry[] {
   const memorized: MemorizedVerseEntry[] = [];
   for (const [key, plan] of Object.entries(paths)) {
     const resolved = resolvePath(key);
     if (!resolved) continue;
     const days = buildPathDayPlan(key, resolved.verses, plan);
+    const pathKind = parsePathKey(key).kind;
+
+    if (pathKind === "book") {
+      memorized.push(...getMemorizedBookVerses(resolved.verses, days, plan));
+      continue;
+    }
+
     if (plan.completedDays >= days.length) {
       memorized.push(...resolved.verses.map((verse) => ({ verse, version: plan.version })));
     }
@@ -45,18 +55,39 @@ export function getMemorizedVerses(paths: Record<string, PathProgress>): Memoriz
   return memorized;
 }
 
-// Manual entries (see lib/memorizedEntities.ts) store a book/chapter/verse range rather
-// than the verse text itself — this resolves each one against the persistent chapter cache,
-// same source LearnVerseStage etc. already fetch from. A chapter that was fetched once at
-// add-time but has since been evicted or overwritten with a different translation (only
-// possible under the ESV storage cap, or by browsing the same chapter under another
-// version) is skipped rather than counted with the wrong text, so word/verse totals never
-// silently include a phantom or mistranslated entity — they just undercount until that
-// chapter is fetched again under the entity's own version.
-export function getManuallyMemorizedVerses(entities: MemorizedEntity[]): VerseSegment[] {
+// Book mode has no per-chapter path day left to gate on (the old daily-rotation review and
+// chapter boss battle were removed in favor of SRS handling that recall instead) — so a
+// chapter counts as memorized once every "learn" day tagged with it has completed, found by
+// the highest dayNumber among that chapter's learn days.
+function getMemorizedBookVerses(verses: VerseSegment[], days: MemorizationDay[], plan: PathProgress): MemorizedVerseEntry[] {
+  const lastLearnDayByChapter = new Map<number, number>();
+  for (const day of days) {
+    if (day.kind !== "learn" || day.chapterGroup === undefined) continue;
+    const current = lastLearnDayByChapter.get(day.chapterGroup) ?? 0;
+    lastLearnDayByChapter.set(day.chapterGroup, Math.max(current, day.dayNumber));
+  }
+
+  const completedChapters = new Set(
+    [...lastLearnDayByChapter.entries()]
+      .filter(([, lastDayNumber]) => plan.completedDays >= lastDayNumber)
+      .map(([chapter]) => chapter),
+  );
+
+  return verses.filter((verse) => completedChapters.has(verse.chapter)).map((verse) => ({ verse, version: plan.version }));
+}
+
+// A memorized entity (see lib/memorizedEntities.ts) — manual or path-derived alike, every
+// one carries `srs` and is under active spaced review — stores a book/chapter/verse range
+// rather than the verse text itself, so this resolves each one against the persistent
+// chapter cache, same source LearnVerseStage etc. already fetch from. A chapter that was
+// fetched once at add-time but has since been evicted or overwritten with a different
+// translation (only possible under the ESV storage cap, or by browsing the same chapter
+// under another version) is skipped rather than counted with the wrong text, so the word
+// total never silently includes a phantom or mistranslated entity — it just undercounts
+// until that chapter is fetched again under the entity's own version.
+export function getMemorizedEntityVerses(entities: MemorizedEntity[]): VerseSegment[] {
   const memorized: VerseSegment[] = [];
   for (const entity of entities) {
-    if (!entity.manual) continue;
     if (getCachedChapterVersion(entity.book, entity.chapter) !== entity.version) continue;
     const verses = getChapterVerses(entity.book, entity.chapter);
     if (!verses) continue;
@@ -71,29 +102,23 @@ export interface MemorizedStats {
   words: number;
 }
 
-// Verse and chapter counts come straight from path progress / entity ranges — never from
-// re-resolving cached chapter text — so they're accurate even for a manually-added book
-// whose chapters exceed the ESV storage cap (see ensureChapterLoaded) and have since evicted
-// each other from the cache. Word count is the one figure that genuinely needs the verse
-// text, so it alone can undercount an evicted manual chapter until that chapter is fetched
-// again — everything else about "how much is memorized" stays correct regardless.
-export function computeMemorizedStats(
-  paths: Record<string, PathProgress>,
-  memorizedEntities: MemorizedEntity[],
-): MemorizedStats {
-  const pathVerses = getMemorizedVerses(paths).map((entry) => entry.verse);
-  const manualEntities = memorizedEntities.filter((entity) => entity.manual);
-
+// Counted straight from memorizedEntities — every entity in that list (manual or
+// path-derived) is, by definition, under active SRS tracking, so any verse in there counts
+// as memorized. This is deliberately NOT re-derived from live path resolution
+// (getMemorizedVerses) the way it used to be: that depends on each path's chapter/book
+// content already being cached (see lib/memorizationContent.ts's resolvePath), so it can
+// silently undercount whenever content isn't cached yet, while memorizedEntities is the
+// eagerly-synced, persisted source of truth (see store/useProgressStore.ts's completeDay/
+// completeBookChapter). Verse and chapter counts come straight from the entities' own
+// ranges, so they're accurate even for content the ESV storage cap has since evicted from
+// cache — word count is the one figure that genuinely needs the verse text, so it alone can
+// undercount an evicted chapter until it's fetched again.
+export function computeMemorizedStats(memorizedEntities: MemorizedEntity[]): MemorizedStats {
   const chapterKeys = new Set<string>();
-  for (const verse of pathVerses) chapterKeys.add(`${verse.book}|${verse.chapter}`);
-  for (const entity of manualEntities) chapterKeys.add(`${entity.book}|${entity.chapter}`);
+  for (const entity of memorizedEntities) chapterKeys.add(`${entity.book}|${entity.chapter}`);
 
-  const manualVerseCount = manualEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
-  const verses = pathVerses.length + manualVerseCount;
-
-  const words =
-    pathVerses.reduce((sum, verse) => sum + tokenCount(verse.text), 0) +
-    getManuallyMemorizedVerses(memorizedEntities).reduce((sum, verse) => sum + tokenCount(verse.text), 0);
+  const verses = memorizedEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
+  const words = getMemorizedEntityVerses(memorizedEntities).reduce((sum, verse) => sum + tokenCount(verse.text), 0);
 
   return { chapters: chapterKeys.size, verses, words };
 }

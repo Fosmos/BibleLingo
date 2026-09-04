@@ -5,7 +5,7 @@ export default function MasteryModePage() {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <div className="mx-auto w-full max-w-2xl p-6">
+      <div className="mx-auto w-full max-w-3xl p-6">
         <MasteryModeSession />
       </div>
     </div>

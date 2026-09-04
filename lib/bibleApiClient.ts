@@ -40,9 +40,11 @@ export async function ensureChapterLoaded(book: string, chapter: number, version
   // room — Crossway's own docs anticipate this ("periodically clear cache"), and this
   // module's ensurePathVerses() transparently re-fetches anything evicted the next time
   // it's actually needed, so nothing breaks — it just may re-fetch more often than other
-  // translations, which cache forever once fetched.
+  // translations, which cache forever once fetched. Single/double-chapter books are
+  // excepted from the half-book half of that cap (see getEsvBookVerseCap), so this only
+  // ever bites longer books.
   if (version === "ESV") {
-    const cap = getEsvBookVerseCap(book);
+    const cap = getEsvBookVerseCap(book, findBook(book)?.chapterCount ?? 0);
     if (verses.length > cap) {
       throw new BibleFetchError(
         `${book} ${chapter} alone (${verses.length} verses) exceeds Crossway's ${cap}-verse ESV storage cap for ${book} (500 verses or half the book, whichever is less) — it can't be kept locally even on its own. Try another translation for this chapter.`,

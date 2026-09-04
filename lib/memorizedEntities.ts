@@ -81,14 +81,33 @@ function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, ve
   return [...remaining, merged];
 }
 
+// Book mode's direct completion hook (see store/useProgressStore.ts's completeBookChapter):
+// called the moment a chapter's last learn day finishes, with that chapter's own verses
+// already in hand from the page that's completing it — unlike syncMemorizedEntities below,
+// this never needs the whole book re-resolved from the local chapter cache, which the app's
+// own ESV storage cap means can't reliably hold an entire book at once (see
+// lib/bibleContentCache.ts). addVerseToEntities always mints a fresh SRS state for whatever
+// it builds, so any id (verse range) that already existed has its prior schedule restored
+// afterward — this can safely re-run on a chapter that's already been added.
+export function addChapterVersesToEntities(
+  existingEntities: MemorizedEntity[],
+  chapterVerses: VerseSegment[],
+  version: string,
+): MemorizedEntity[] {
+  let built = existingEntities;
+  for (const verse of chapterVerses) built = addVerseToEntities(built, verse, version);
+  const existingById = new Map(existingEntities.map((entity) => [entity.id, entity]));
+  return built.map((entity) => existingById.get(entity.id) ?? entity);
+}
+
 // Rebuilds the path-derived portion of the entity list from current path progress. An
 // entity whose verse range is unchanged from before keeps its existing SRS schedule
 // (matched by id, which encodes the range); a range that just merged/grew gets a fresh SRS
 // schedule, since it now covers different content than what was last reviewed under that id.
 // Manually-added entries (see createManualEntity) aren't derived from path progress at all,
-// so this rebuild never reconstructs them on its own — they're carried forward as-is,
-// dropped only if a completed path has since covered the same verses (avoiding a duplicate
-// pair of entities for that range).
+// so this rebuild never reconstructs them on its own — they're carried forward as-is, dropped
+// only if a completed path has since covered the same verses (avoiding a duplicate pair of
+// entities for that range).
 export function syncMemorizedEntities(
   paths: Record<string, PathProgress>,
   existingEntities: MemorizedEntity[],
@@ -100,7 +119,10 @@ export function syncMemorizedEntities(
   for (const { verse, version } of memorizedVerses) {
     entities = addVerseToEntities(entities, verse, version);
   }
-  const pathDerived = entities.map((entity) => existingById.get(entity.id) ?? entity);
+  const pathDerived = entities.map((entity) => {
+    const existing = existingById.get(entity.id);
+    return existing ? { ...entity, srs: existing.srs } : entity;
+  });
 
   const manualToKeep = existingEntities.filter(
     (entity) =>

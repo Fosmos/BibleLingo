@@ -21,9 +21,8 @@ function StatTile({ label, value, icon: Icon }: StatTileProps) {
 }
 
 export function MemorizedStats() {
-  const paths = useProgressStore((state) => state.paths);
   const memorizedEntities = useProgressStore((state) => state.memorizedEntities);
-  const stats = computeMemorizedStats(paths, memorizedEntities);
+  const stats = computeMemorizedStats(memorizedEntities);
 
   return (
     <div className="grid grid-cols-3 gap-3">

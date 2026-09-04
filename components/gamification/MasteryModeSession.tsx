@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { VerseSegment } from "@/types";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { MASTERY_LEVELS, getMasteryLevel, masteryPassageKey, masteryStickerKey } from "@/lib/masteryMode";
 import { resolvePathLabel } from "@/lib/memorizationContent";
@@ -80,17 +79,15 @@ export function MasteryModeSession() {
 
   if (phase === "playing") {
     const displayVerses = applyReferencePreference(passage.verses, includeVerseReferences);
-    const combinedVerse: VerseSegment = {
-      id: `${key}:${attempt}`,
-      reference: passage.label,
-      text: displayVerses.map((verse) => verse.text).join(" "),
-      book: passage.verses[0]?.book ?? "",
-      chapter: passage.verses[0]?.chapter ?? 1,
-      verseNumber: passage.verses[0]?.verseNumber ?? 1,
-    };
     return (
       <div className="flex flex-col gap-4">
-        <MasteryChaseRound key={attempt} verse={combinedVerse} levelConfig={getMasteryLevel(level)} onComplete={handleRoundComplete} />
+        <MasteryChaseRound
+          key={attempt}
+          label={passage.label}
+          verses={displayVerses}
+          levelConfig={getMasteryLevel(level)}
+          onComplete={handleRoundComplete}
+        />
         <EsvAttribution visible={passage.version === "ESV"} />
       </div>
     );

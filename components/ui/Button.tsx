@@ -13,7 +13,7 @@ interface ButtonProps {
 }
 
 const VARIANT_CLASSES: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  brand: "bg-brand-500 hover:bg-brand-600 text-white shadow-[0_8px_24px_rgba(212,163,115,0.25)]",
+  brand: "bg-brand-500 hover:bg-brand-600 text-white shadow-[0_8px_24px_rgba(162,114,77,0.25)]",
   gold: "bg-gold-500 hover:bg-gold-600 text-white",
   mastery: "bg-mastery-500 hover:bg-mastery-600 text-white",
   // For secondary actions that shouldn't visually compete with a screen's one primary CTA —

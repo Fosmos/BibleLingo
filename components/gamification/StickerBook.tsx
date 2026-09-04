@@ -16,7 +16,7 @@ export function StickerBook() {
   }
 
   return (
-    <div className="grid w-full max-w-md grid-cols-2 gap-4 sm:grid-cols-3">
+    <div className="grid w-full max-w-3xl grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
       {stickers.map((key) => (
         <Sticker key={key} label={resolvePathLabel(key) ?? key} />
       ))}

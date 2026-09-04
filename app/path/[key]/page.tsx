@@ -1,14 +1,25 @@
+import type { LocationTagLevel } from "@/types";
 import { Header } from "@/components/gamification/Header";
 import { PathOverviewScreen } from "@/components/gamification/PathOverviewScreen";
 import { resolvePathLabel } from "@/lib/memorizationContent";
 
+const VALID_LEVELS: LocationTagLevel[] = ["book", "chapter", "pericope", "verse"];
+
+function parseLocationTagLevels(value: string | undefined): LocationTagLevel[] | undefined {
+  if (!value) return undefined;
+  const levels = value.split(",").filter((entry): entry is LocationTagLevel => (VALID_LEVELS as string[]).includes(entry));
+  return levels.length > 0 ? levels : undefined;
+}
+
 export default async function PathOverviewPage({ params, searchParams }: PageProps<"/path/[key]">) {
   const { key } = await params;
-  const { version, versesPerDay } = await searchParams;
+  const { version, versesPerDay, locationTagLevels } = await searchParams;
   const decodedKey = decodeURIComponent(key);
   const resolvedVersion = (Array.isArray(version) ? version[0] : version) ?? "KJV";
   const versesPerDayParam = Array.isArray(versesPerDay) ? versesPerDay[0] : versesPerDay;
   const resolvedVersesPerDay = versesPerDayParam ? Number(versesPerDayParam) : undefined;
+  const locationTagLevelsParam = Array.isArray(locationTagLevels) ? locationTagLevels[0] : locationTagLevels;
+  const resolvedLocationTagLevels = parseLocationTagLevels(locationTagLevelsParam);
   const label = resolvePathLabel(decodedKey);
 
   if (!label) {
@@ -28,6 +39,7 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
         label={label}
         version={resolvedVersion}
         versesPerDay={resolvedVersesPerDay}
+        locationTagLevels={resolvedLocationTagLevels}
       />
     </div>
   );

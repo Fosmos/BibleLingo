@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { VerseSegment } from "@/types";
+import type { LocationTagLevel, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
-import { findBook } from "@/lib/bibleBooks";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { useHasMounted } from "@/lib/useHasMounted";
+import { usePericopesReady } from "@/lib/usePericopesReady";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
+// TEMPORARILY DISABLED along with its own usage below — see that comment.
+// import { DailyChapterReviewGate } from "@/components/gamification/DailyChapterReviewGate";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface PathOverviewScreenProps {
@@ -18,9 +20,10 @@ interface PathOverviewScreenProps {
   label: string;
   version: string;
   versesPerDay?: number;
+  locationTagLevels?: LocationTagLevel[];
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay }: PathOverviewScreenProps) {
+export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, locationTagLevels }: PathOverviewScreenProps) {
   const router = useRouter();
   // `verses` below is lazily seeded from the localStorage-backed content cache (via
   // resolvePath), which is empty during SSR but may already be populated on the client's
@@ -34,7 +37,6 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
   const setPath = useProgressStore((state) => state.setPath);
   const setActivePath = useProgressStore((state) => state.setActivePath);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
-  const sessionCheckpoints = useProgressStore((state) => state.sessionCheckpoints);
 
   // resolvePath() ignores translation — a chapter cached under a different version than
   // the one just selected would otherwise be trusted as-is, silently showing the wrong
@@ -91,14 +93,18 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
   // verses-per-day amount) for a path you'd already started would update this screen's own
   // content but leave plan.version/versesPerDay stuck at whatever they were first set to, so
   // every lesson (which reads the stored plan, not the URL) would keep silently using the
-  // original choice forever.
+  // original choice forever. locationTagLevels only ever arrives once, from GuidedPathFlow's
+  // own LocationTagLevelPicker step at path creation — never re-passed on a later visit — so
+  // it's never treated as a "changed, re-apply" signal the way version/versesPerDay are.
   useEffect(() => {
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
     if (!plan || plan.version !== version || versesPerDayChanged) {
-      setPath(key, version, versesPerDay);
+      setPath(key, version, versesPerDay, locationTagLevels);
     }
-  }, [plan, verses, key, version, versesPerDay, setPath]);
+  }, [plan, verses, key, version, versesPerDay, locationTagLevels, setPath]);
+
+  const pericopesReady = usePericopesReady(verses);
 
   // Must win over every other early return below — it's the only one guaranteed identical
   // between server and client's first render, since `error`/`verses`/`plan` can each already
@@ -118,6 +124,10 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
   }
 
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
+  // Waits for this path's section-heading data before chunking — buildPathDayPlan's lesson
+  // boundaries must never disagree with what a specific lesson's own loader (DayLoader)
+  // computes for the same day number (see lib/usePericopesReady.ts).
+  if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
   if (!plan) return null;
 
   const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan);
@@ -129,7 +139,10 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
   // next chapter (or, after the last chapter, to the undefined-group whole-book capstone).
   const { kind } = parsePathKey(key);
   let visibleDays = days;
-  let chapterLabel: string | undefined;
+  let title = label;
+  // Book mode only: fraction of THIS chapter's own verses memorized so far, in place of the
+  // plain "N of M lessons complete" every other path kind shows — see DayPathDiagram.tsx.
+  let chapterMemorizedFraction: number | undefined;
   let onNextChapter: (() => void) | undefined;
   let onPreviousChapter: (() => void) | undefined;
   if (kind === "book") {
@@ -140,8 +153,12 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
     const group = chapterOverride ?? nextDay?.chapterGroup;
     visibleDays = days.filter((day) => day.chapterGroup === group);
     if (group !== undefined) {
-      const totalChapters = findBook(parsePathKey(key).identifier)?.chapterCount;
-      chapterLabel = totalChapters ? `Chapter ${group} of ${totalChapters}` : `Chapter ${group}`;
+      // "Mark 14", matching chapter-mode's own title format — no separate "Chapter 14 of
+      // 16" line.
+      title = `${label} ${group}`;
+      const learnDays = visibleDays.filter((day) => day.kind === "learn");
+      const completedLearnDays = learnDays.filter((day) => day.dayNumber <= plan.completedDays).length;
+      chapterMemorizedFraction = learnDays.length > 0 ? completedLearnDays / learnDays.length : 0;
       const groupIndex = chapterGroups.indexOf(group);
       if (groupIndex !== -1 && groupIndex < chapterGroups.length - 1) {
         onNextChapter = () => setChapterOverride(chapterGroups[groupIndex + 1]);
@@ -156,18 +173,32 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay 
     }
   }
 
-  return (
+  const diagram = (
     <DayPathDiagram
-      label={label}
+      label={title}
       days={visibleDays}
       completedDays={plan.completedDays}
       pathKey={key}
-      sessionCheckpoints={sessionCheckpoints}
-      chapterLabel={chapterLabel}
+      chapterMemorizedFraction={chapterMemorizedFraction}
       onSelectDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}`)}
       onPracticeDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}/practice`)}
       onNextChapter={onNextChapter}
       onPreviousChapter={onPreviousChapter}
     />
   );
+
+  // TEMPORARILY DISABLED — the once-a-day chapter recap gate (DailyChapterReviewGate) is
+  // switched off for now; re-wrap `diagram` in it (see git history / below) to bring it back.
+  // if (kind === "book" && buildingViewEnabled) {
+  //   const reviewVerses = visibleDays
+  //     .filter((day) => day.kind === "learn" && day.dayNumber <= plan.completedDays)
+  //     .flatMap((day) => day.newVerses);
+  //   return (
+  //     <DailyChapterReviewGate pathKey={key} label={title} verses={reviewVerses}>
+  //       {diagram}
+  //     </DailyChapterReviewGate>
+  //   );
+  // }
+
+  return diagram;
 }

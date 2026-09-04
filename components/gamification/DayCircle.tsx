@@ -1,10 +1,22 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { motion } from "framer-motion";
 import { Lock, Check, BookOpen, Swords, GraduationCap, Repeat, History } from "lucide-react";
-import type { MemorizationDay } from "@/types";
+import type { DayKind, MemorizationDay } from "@/types";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
 import { MOTION_DURATION, TAP_SCALE } from "@/lib/motionTokens";
+
+// The base (non-lock/check) icon for a day's kind, rendered directly (not returned as a
+// component reference — the react-hooks/static-components rule flags "create then render a
+// component variable" as a fresh identity every render).
+export function dayKindIcon(kind: DayKind, size: number): ReactElement {
+  if (kind === "chapter_review") return <BookOpen size={size} />;
+  if (kind === "boss_battle" || kind === "section_boss_battle") return <Swords size={size} />;
+  if (kind === "weekly_review") return <Repeat size={size} />;
+  if (kind === "monthly_review") return <History size={size} />;
+  return <GraduationCap size={size} />;
+}
 
 export function dayLabel(day: MemorizationDay): string {
   if (day.kind === "learn") {
@@ -13,19 +25,46 @@ export function dayLabel(day: MemorizationDay): string {
   }
   if (day.kind === "chapter_review") return "Full Review";
   if (day.kind === "boss_battle") return "Boss Battle";
-  if (day.kind === "chapter_boss_battle") return "Chapter Boss Battle";
+  if (day.kind === "section_boss_battle") {
+    const first = day.reviewVerses[0];
+    const last = day.reviewVerses[day.reviewVerses.length - 1];
+    return first && last ? `Ch. ${first.chapter}-${last.chapter} Boss Battle` : "Section Boss Battle";
+  }
   if (day.kind === "weekly_review") return "Weekly Review";
   return "Monthly Review";
 }
 
-function DayStatusIcon({ day, isCompleted, isUnlocked }: { day: MemorizationDay; isCompleted: boolean; isUnlocked: boolean }) {
+export interface CirclePOA {
+  who: string;
+  action: string;
+  additionalInfo: string;
+}
+
+function DayStatusIcon({
+  day,
+  isCompleted,
+  isUnlocked,
+  versePOA,
+}: {
+  day: MemorizationDay;
+  isCompleted: boolean;
+  isUnlocked: boolean;
+  versePOA?: CirclePOA;
+}) {
+  // Once the reader has visualized this lesson (see VerseOrientationSummaryRep.tsx), their
+  // own typed Who/Action take over the circle from here on, lock/check included.
+  if (versePOA) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-0.5 px-1.5 text-center">
+        <span className="line-clamp-2 max-w-full text-[9px] font-medium leading-tight text-current">
+          {[versePOA.who, versePOA.action, versePOA.additionalInfo].filter(Boolean).join(" ")}
+        </span>
+      </div>
+    );
+  }
   if (!isCompleted && !isUnlocked) return <Lock size={18} />;
   if (isCompleted) return <Check size={22} />;
-  if (day.kind === "chapter_review") return <BookOpen size={26} />;
-  if (day.kind === "boss_battle" || day.kind === "chapter_boss_battle") return <Swords size={26} />;
-  if (day.kind === "weekly_review") return <Repeat size={26} />;
-  if (day.kind === "monthly_review") return <History size={26} />;
-  return <GraduationCap size={26} />;
+  return dayKindIcon(day.kind, 26);
 }
 
 interface DayCircleProps {
@@ -34,11 +73,17 @@ interface DayCircleProps {
   isUnlocked: boolean;
   progress: number;
   offset: "left" | "right" | "center";
+  // The reader's own Visualize POA for this lesson's first verse (see UserProgress.versePOA
+  // via setVersePOA) — replaces the circle's lock/check/kind icon with their own POA once set.
+  versePOA?: CirclePOA;
+  // Overrides dayLabel(day) with a specific verse's own reference — used by BuildingRoomView,
+  // which shows one circle per individual verse rather than per lesson.
+  labelOverride?: string;
   onSelect: () => void;
   onPractice: () => void;
 }
 
-const BOSS_BATTLE_KINDS = new Set(["boss_battle", "chapter_boss_battle"]);
+export const BOSS_BATTLE_KINDS = new Set(["boss_battle", "section_boss_battle"]);
 const OFFSET_CLASSES: Record<DayCircleProps["offset"], string> = {
   left: "-translate-x-8",
   right: "translate-x-8",
@@ -50,10 +95,27 @@ const OFFSET_CLASSES: Record<DayCircleProps["offset"], string> = {
 // lesson works before it's "really" unlocked. Three distinct visual states carry that at a
 // glance: locked (small, muted outline), the one active/unlocked node (larger, glowing,
 // gently pulsing so it reads as "you are here"), and completed (solid fill, crisp check).
-export function DayCircle({ day, isCompleted, isUnlocked, progress, offset, onSelect, onPractice }: DayCircleProps) {
-  const label = dayLabel(day);
+export function DayCircle({
+  day,
+  isCompleted,
+  isUnlocked,
+  progress,
+  offset,
+  versePOA,
+  labelOverride,
+  onSelect,
+  onPractice,
+}: DayCircleProps) {
+  const label = labelOverride ?? dayLabel(day);
   const canPractice = BOSS_BATTLE_KINDS.has(day.kind);
-  const size = isUnlocked ? "h-20 w-20" : isCompleted ? "h-16 w-16" : "h-14 w-14";
+  // A completed learn lesson gets the same redoable, no-stakes replay as a boss battle's
+  // Practice button — just for that one lesson's own newly-learned verses, and labeled
+  // "Review" instead, since "practice" reads oddly for a lesson you already finished. Both
+  // share the same underlying route (see PracticeLoader.tsx's practiceVerses selection).
+  const canReview = isCompleted && day.kind === "learn";
+  // Bumped up a size across the board from the original lock/check/kind-only circle sizes —
+  // once visualized, a circle needs to fit the reader's own typed Who/Action legibly.
+  const size = isUnlocked ? "h-24 w-24" : isCompleted ? "h-20 w-20" : "h-16 w-16";
 
   return (
     <div className={`flex flex-col items-center gap-2 transition-transform ${OFFSET_CLASSES[offset]}`}>
@@ -69,11 +131,11 @@ export function DayCircle({ day, isCompleted, isUnlocked, progress, offset, onSe
           isCompleted
             ? "bg-brand-600 text-white"
             : isUnlocked
-              ? "bg-brand-500 text-white shadow-[0_4px_14px_rgba(212,163,115,0.4)]"
+              ? "bg-brand-500 text-white shadow-[0_4px_14px_rgba(162,114,77,0.4)]"
               : "border-2 border-line bg-transparent text-ink-muted dark:border-zinc-700 dark:text-zinc-600"
         }`}
       >
-        <DayStatusIcon day={day} isCompleted={isCompleted} isUnlocked={isUnlocked} />
+        <DayStatusIcon day={day} isCompleted={isCompleted} isUnlocked={isUnlocked} versePOA={versePOA} />
       </motion.button>
       {isUnlocked && progress > 0 && (
         <div
@@ -92,9 +154,9 @@ export function DayCircle({ day, isCompleted, isUnlocked, progress, offset, onSe
           />
         </div>
       )}
-      {canPractice && (
+      {(canPractice || canReview) && (
         <button type="button" onClick={onPractice} className="text-xs font-medium text-brand-600 hover:underline">
-          Practice
+          {canPractice ? "Practice" : "Review"}
         </button>
       )}
     </div>

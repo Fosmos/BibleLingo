@@ -5,49 +5,106 @@ import type { VerseSegment } from "@/types";
 import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
+import { computeVerseAccuracies, type VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
+import { verseNumberAtWordIndex } from "@/lib/verseBatching";
+import type { WordAnnotationMap } from "@/lib/verseHighlights";
+import { RevealedWordsList } from "@/components/drills/RevealedWordsList";
+import { MistakeLetterHint } from "@/components/drills/MistakeLetterHint";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
+import { VerseContextLine } from "@/components/ui/VerseContextLine";
+import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
+import { VerseTextLine } from "@/components/ui/VerseTextLine";
 
 interface FirstLetterTypeRepProps {
   verse: VerseSegment;
   reps: number;
-  onComplete: (hadMistake: boolean) => void;
-  // When provided, checkpoints wordIndex so leaving mid-verse and coming back resumes here
-  // instead of restarting — used by SRS review, which has no coarser "which stage" checkpoint
-  // to fall back on the way the Learn section's phase index does.
+  // accuracy is 0-100: share of this verse's own words typed correctly first-try — used by
+  // SRS review for box promotion.
+  onComplete: (hadMistake: boolean, accuracy: number) => void;
+  // Checkpoints wordIndex so leaving mid-verse resumes here instead of restarting — used by
+  // SRS review, which has no coarser "which stage" checkpoint to fall back on.
   sessionKey?: string;
+  // The immediately preceding/following verse, shown above/below the revealed-words box.
+  previousVerse?: VerseSegment;
+  nextVerse?: VerseSegment;
+  // When true, the verse reference is shown inline with the revealed text (matching
+  // RhythmRep.tsx) instead of via VerseReferenceHeader — used by the Learn flow's final stage.
+  inlineReference?: boolean;
+  // Highlights from the Learn flow's Orientation stage — undefined for SRS review.
+  annotations?: WordAnnotationMap;
+  // Which word index each verse after the first starts at — undefined for SRS review.
+  verseMarkers?: Record<number, number>;
+  // When false, a mistake is recorded toward `accuracy` but doesn't wipe already-revealed
+  // words back to word 1 — the reader just retries the current word. Used by SRS review,
+  // where box promotion already gates on the resulting accuracy percentage (see
+  // lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD) rather than requiring one clean run through.
+  restartOnMistake?: boolean;
+  // Overrides the caption normally shown ("Type it by first letter") — used by the Learn
+  // flow's closing stage, which groups under "Remember" like every other stage past Learn.
+  // Left unset (SRS review) keeps the original, more literal caption.
+  stageLabel?: string;
+  // See MistakeLetterHint.tsx — false hides the letter until "Reveal letter" is tapped.
+  autoRevealLetterOnMistake?: boolean;
+  // See VerseReferenceHeader.tsx — true when a caller already showed this exact pericope
+  // line itself a moment ago (SrsEntityRecall.tsx's CompletedRecallStepView).
+  hidePericopeHeader?: boolean;
+  // See RevealedWordsList.tsx — SRS review only. Keeps the actual verse text off the screen
+  // entirely: a correct guess reveals just that word's own first letter, not the word itself.
+  lettersOnly?: boolean;
+  // Reports accuracy broken down per individual verse (via verseMarkers) alongside the usual
+  // whole-segment `accuracy` — used by SRS review to flag a weak verse into Problem Verses
+  // even when the group's overall accuracy is fine. Undefined for every other caller.
+  onVerseAccuracy?: (results: VerseAccuracy[]) => void;
 }
 
 const REFERENCE_PATTERN = /^(\d+):(\d+)$/;
 
-export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: FirstLetterTypeRepProps) {
+export function FirstLetterTypeRep({
+  verse,
+  reps,
+  onComplete,
+  sessionKey,
+  previousVerse,
+  nextVerse,
+  inlineReference,
+  annotations,
+  verseMarkers,
+  restartOnMistake = true,
+  stageLabel = "Type it by first letter",
+  onVerseAccuracy,
+  autoRevealLetterOnMistake = true,
+  hidePericopeHeader,
+  lettersOnly,
+}: FirstLetterTypeRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
   const [completedReps, setCompletedReps] = useState(0);
   const [wordIndex, setWordIndex] = useCheckpointField(sessionKey, "wordIndex", 0);
-  // Derived from wordIndex rather than tracked separately — the words are already known
-  // up front, so "what's been revealed" is always exactly the words before the current one.
+  // "What's been revealed" is always exactly the words before the current one.
   const revealedWords = words.slice(0, wordIndex);
   const [letterInput, setLetterInput] = useState("");
   const [showError, setShowError] = useState(false);
   const [wrongLetterExpected, setWrongLetterExpected] = useState<string | null>(null);
-  // Tracks whether any attempt across this component's lifetime (all reps) missed — read
-  // synchronously via ref rather than state so the value reported to onComplete on the very
-  // next successful attempt is never stale.
+  // Read synchronously via ref so the value reported to onComplete is never stale.
   const hadMistakeRef = useRef(false);
+  // Word positions ever mistyped, across every rep and restart — doesn't reset across reps.
+  const [wrongWordIndices, setWrongWordIndices] = useState<Set<number>>(new Set());
+  const accuracy = words.length > 0 ? Math.round(((words.length - wrongWordIndices.size) / words.length) * 100) : 100;
   const revealedRef = useRef<HTMLDivElement>(null);
 
-  // Keeps the input pinned near the top of the visible area instead of drifting down (and
-  // eventually behind the on-screen keyboard) as a long verse's revealed text grows — the
-  // text scrolls within its own bounded box rather than pushing the rest of the layout down.
+  // Keeps the input pinned near the top instead of drifting behind the on-screen keyboard.
   useEffect(() => {
     revealedRef.current?.scrollTo({ top: revealedRef.current.scrollHeight });
   }, [wordIndex]);
 
   const currentWord = words[wordIndex];
   const referenceMatch = currentWord?.match(REFERENCE_PATTERN);
-
+  function reportComplete() {
+    onVerseAccuracy?.(computeVerseAccuracies(words, verseMarkers, verse.verseNumber, wrongWordIndices));
+    onComplete(hadMistakeRef.current, accuracy);
+  }
   function revealCurrentWord() {
     if (!currentWord) return;
     setShowError(false);
@@ -57,7 +114,7 @@ export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: Firs
     if (nextWordIndex >= words.length) {
       const nextRep = completedReps + 1;
       if (nextRep >= reps) {
-        onComplete(hadMistakeRef.current);
+        reportComplete();
       } else {
         setCompletedReps(nextRep);
         setWordIndex(0);
@@ -67,9 +124,7 @@ export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: Firs
     }
   }
 
-  // A mistake restarts this rep's verse reveal from word 1 rather than just retrying the
-  // missed word — "resetting the section" the same way a wrong tap in WordBankRound
-  // restarts that round from its first blank.
+  // A mistake restarts this rep's verse reveal from word 1 rather than just retrying it.
   function handleLetterChange(value: string) {
     if (!currentWord) return;
     const expected = firstWordCharacter(currentWord)?.toLowerCase();
@@ -84,24 +139,40 @@ export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: Firs
       setWrongLetterExpected(firstWordCharacter(currentWord) ?? "");
       setLetterInput("");
       hadMistakeRef.current = true;
-      setWordIndex(0);
+      setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
+      if (restartOnMistake) setWordIndex(0);
     }
   }
+
+  // For a multi-verse segment (verseMarkers), the pericope shown should track whichever
+  // verse the reader has actually reached rather than staying fixed on the first.
+  const currentVerseNumber = verseNumberAtWordIndex(verseMarkers, wordIndex, verse.verseNumber);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-          Type it by first letter <InfoTip text={INFO_TIPS.firstLetterTypeRep} />
+          {stageLabel} <InfoTip text={INFO_TIPS.firstLetterTypeRep} />
         </p>
-        <p className="text-title">{verse.reference}</p>
+        <VerseReferenceHeader
+          book={verse.book}
+          chapter={verse.chapter}
+          verseNumber={currentVerseNumber}
+          reference={inlineReference ? undefined : verse.reference}
+          hidePericope={hidePericopeHeader}
+        />
       </div>
       <p className="text-sm text-ink-muted">
         Rep {completedReps + 1} of {reps}
       </p>
+      {previousVerse && <VerseContextLine verse={previousVerse} />}
       <div ref={revealedRef} className="max-h-36 min-h-8 overflow-y-auto">
-        <p className="text-lg leading-relaxed">{revealedWords.join(" ")}</p>
+        <p className="text-lg leading-relaxed">
+          {inlineReference && <VerseTextLine chapter={verse.chapter} verseNumber={verse.verseNumber} />}
+          <RevealedWordsList words={revealedWords} annotations={annotations} verseMarkers={verseMarkers} lettersOnly={lettersOnly} />
+        </p>
       </div>
+      {nextVerse && <VerseContextLine verse={nextVerse} />}
       {referenceMatch ? (
         <ReferenceNumberEntry
           key={currentWord}
@@ -110,7 +181,8 @@ export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: Firs
           onDone={revealCurrentWord}
           onMistake={() => {
             hadMistakeRef.current = true;
-            setWordIndex(0);
+            setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
+            if (restartOnMistake) setWordIndex(0);
           }}
         />
       ) : (
@@ -120,19 +192,13 @@ export function FirstLetterTypeRep({ verse, reps, onComplete, sessionKey }: Firs
           maxLength={1}
           autoFocus
           aria-label="Type the first letter of the next word"
-          className={`w-16 rounded-xl border p-3 text-center text-xl focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${
-            showError
-              ? "border-heart-500 focus-visible:ring-heart-500"
-              : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"
-          }`}
+          className={`w-16 rounded-xl border p-3 text-center text-xl focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${showError ? "border-heart-500 focus-visible:ring-heart-500" : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"}`}
         />
       )}
       {!referenceMatch && showError && wrongLetterExpected && (
-        <p className="text-sm font-medium text-heart-600">
-          Not quite — the next word starts with &quot;{wrongLetterExpected}&quot;.
-        </p>
+        <MistakeLetterHint key={wordIndex} expectedLetter={wrongLetterExpected} autoReveal={autoRevealLetterOnMistake} />
       )}
-      <AutoCompleteButton onClick={() => onComplete(hadMistakeRef.current)} />
+      <AutoCompleteButton onClick={reportComplete} />
     </div>
   );
 }

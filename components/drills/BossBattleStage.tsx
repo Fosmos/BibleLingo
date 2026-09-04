@@ -11,17 +11,23 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 
 interface BossBattleStageProps {
   verses: VerseSegment[];
+  // "fullWord" for the whole-path capstone boss battle; "firstLetter" for a chapter or
+  // section boss battle (book mode) — see WordTypeEntry.tsx.
+  mode: "fullWord" | "firstLetter";
+  // Defaults to 5 (a single chapter/verse boss battle); the 8-chapter section boss battle
+  // passes 20, since it's a much longer recitation to get through in one attempt.
+  lives?: number;
   onComplete: () => void;
   sessionKey?: string;
 }
 
-const LIVES_PER_ATTEMPT = 5;
+const DEFAULT_LIVES_PER_ATTEMPT = 5;
 
-export function BossBattleStage({ verses, onComplete, sessionKey }: BossBattleStageProps) {
+export function BossBattleStage({ verses, mode, lives: livesPerAttempt = DEFAULT_LIVES_PER_ATTEMPT, onComplete, sessionKey }: BossBattleStageProps) {
   // Lives/attempt reset fresh on resume even though verseIndex is checkpointed — leaving
   // mid-attempt and coming back later shouldn't preserve a nearly-lost attempt's life count.
   const [verseIndex, setVerseIndex] = useCheckpointField(sessionKey, "verseIndex", 0);
-  const [lives, setLives] = useState(LIVES_PER_ATTEMPT);
+  const [lives, setLives] = useState(livesPerAttempt);
   const [attempt, setAttempt] = useState(0);
   const [justRestarted, setJustRestarted] = useState(false);
   const verse = verses[verseIndex];
@@ -40,7 +46,7 @@ export function BossBattleStage({ verses, onComplete, sessionKey }: BossBattleSt
     const remaining = lives - 1;
     if (remaining <= 0) {
       playLifeLossSfx();
-      setLives(LIVES_PER_ATTEMPT);
+      setLives(livesPerAttempt);
       setVerseIndex(0);
       setAttempt((prev) => prev + 1);
       setJustRestarted(true);
@@ -57,8 +63,8 @@ export function BossBattleStage({ verses, onComplete, sessionKey }: BossBattleSt
         <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-heart-600">
           Boss Battle <InfoTip text={INFO_TIPS.bossBattleStage} />
         </p>
-        <div className="flex gap-1" aria-label={`${lives} of ${LIVES_PER_ATTEMPT} lives remaining`}>
-          {Array.from({ length: LIVES_PER_ATTEMPT }).map((_, index) => (
+        <div className="flex max-w-40 flex-wrap justify-end gap-1" aria-label={`${lives} of ${livesPerAttempt} lives remaining`}>
+          {Array.from({ length: livesPerAttempt }).map((_, index) => (
             <Heart
               key={index}
               size={18}
@@ -73,7 +79,13 @@ export function BossBattleStage({ verses, onComplete, sessionKey }: BossBattleSt
       <p className="text-sm text-ink-muted">
         Verse {verseIndex + 1} of {verses.length}
       </p>
-      <WordTypeEntry key={`${verse.id}-${attempt}`} verse={verse} onMistake={handleMistake} onComplete={handleVerseComplete} />
+      <WordTypeEntry
+        key={`${verse.id}-${attempt}`}
+        verse={verse}
+        mode={mode}
+        onMistake={handleMistake}
+        onComplete={handleVerseComplete}
+      />
     </div>
   );
 }

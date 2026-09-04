@@ -2,8 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useProgressStore } from "@/store/useProgressStore";
-import { AUTH_REQUIRED, LOCAL_USER_ID } from "@/lib/authConfig";
+import { AUTH_REQUIRED } from "@/lib/authConfig";
 import { ProgressInitializer } from "@/components/gamification/ProgressInitializer";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { AuthScreen } from "@/components/auth/AuthScreen";
@@ -24,15 +23,12 @@ export function AuthGate({ children }: AuthGateProps) {
   useEffect(() => {
     if (hasHydrated) return;
     hasHydrated = true;
-    if (AUTH_REQUIRED) {
-      useAuthStore.getState().hydrate();
-    } else {
-      // Auth disabled: skip account lookup entirely and load the one local profile
-      // directly, setting currentUserId so useProgressStore's persist() (which reads it
-      // from useAuthStore) keeps saving normally.
-      useProgressStore.getState().hydrate(LOCAL_USER_ID);
-      useAuthStore.setState({ currentUserId: LOCAL_USER_ID, status: "signedIn" });
-    }
+    // useAuthStore.hydrate() itself handles both cases: restores a remembered real account
+    // if one was signed into (regardless of AUTH_REQUIRED — a real sign-in should survive a
+    // reload), and otherwise either lands signed out (AUTH_REQUIRED) or falls back to the
+    // always-available anonymous local profile (AUTH_REQUIRED false — see
+    // lib/authConfig.ts's LOCAL_USER_ID).
+    useAuthStore.getState().hydrate();
   }, []);
 
   if (AUTH_REQUIRED && status !== "signedIn") {

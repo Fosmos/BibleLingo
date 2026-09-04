@@ -12,7 +12,7 @@ export function BeginFlow() {
   const [kind, setKind] = useState<PathKind | null>(null);
 
   return (
-    <div className="mx-auto w-full max-w-2xl rounded-2xl border border-line p-6 text-left dark:border-zinc-800">
+    <div className="mx-auto w-full max-w-3xl rounded-2xl border border-line p-6 text-left dark:border-zinc-800">
       <h2 className="mb-1 flex items-center gap-1.5 text-title">
         Choose your path {kind === null && <InfoTip text={INFO_TIPS.pathKindPicker} />}
       </h2>

@@ -1,13 +1,24 @@
 import { create } from "zustand";
-import type { PathProgress, UserProgress } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, PathProgress, UserProgress, VersePOA, VerseSegment } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
+import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
-import { daysSinceLastCompletion } from "@/lib/streak";
-import { syncMemorizedEntities, createManualEntity, overlapsExistingEntity, entityId } from "@/lib/memorizedEntities";
-import { scheduleReview, createSeedSRSState, type SrsPhase } from "@/lib/srs";
+import { LOCAL_USER_ID } from "@/lib/authConfig";
+import { syncMemorizedEntities, addChapterVersesToEntities } from "@/lib/memorizedEntities";
+import { scheduleReview, type SrsPhase } from "@/lib/srs";
 import { SHEKELS_PER_VERSE_REVIEWED } from "@/lib/economy";
+import { createStreakActions, type StreakLoadStatus } from "@/store/streakActions";
+import { createManualEntityActions } from "@/store/manualEntityActions";
+import { createBuildingViewActions } from "@/store/buildingViewActions";
+import { createVersePOAActions } from "@/store/versePOAActions";
+import { createLocationTagActions } from "@/store/locationTagActions";
+import { createCustomClauseRoleActions } from "@/store/customClauseRoleActions";
+import { createSessionCheckpointActions } from "@/store/sessionCheckpointActions";
+import { createProblemVerseActions } from "@/store/problemVerseActions";
+import { createReviewSettingsActions } from "@/store/reviewSettingsActions";
+import { createLearnSettingsActions } from "@/store/learnSettingsActions";
 
-export type StreakLoadStatus = "none" | "frozen" | "lost";
+export type { StreakLoadStatus };
 
 interface ProgressActions {
   hydrate: (userId: string) => void;
@@ -16,11 +27,12 @@ interface ProgressActions {
   consumeStreakFreeze: () => boolean;
   addStreakFreeze: (amount: number) => void;
   evaluateStreakOnLoad: () => { status: StreakLoadStatus; previousStreak: number };
-  setPath: (pathKey: string, version: string, versesPerDay?: number) => void;
+  setPath: (pathKey: string, version: string, versesPerDay?: number, locationTagLevels?: LocationTagLevel[]) => void;
   setActivePath: (pathKey: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
+  completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;
-  recordSrsReview: (entityId: string, passed: boolean, perfect: boolean) => void;
+  recordSrsReview: (entityId: string, accuracy: number) => void;
   earnShekels: (amount: number) => void;
   recordChapterReviewAccuracy: (pathKey: string, accuracy: number) => void;
   recordMasteryLevel: (key: string, level: number) => void;
@@ -34,88 +46,66 @@ interface ProgressActions {
   ) => void;
   addManualMemorizedBook: (book: string, chapterVerseCounts: number[], phase: SrsPhase, version: string) => void;
   setIncludeVerseReferences: (value: boolean) => void;
+  setBuildingViewEnabled: (value: boolean) => void;
+  setVersePOA: (book: string, chapter: number, verseNumber: number, poa: VersePOA) => void;
+  setPegSystemEnabled: (value: boolean) => void;
+  markBuildingViewReviewedToday: () => void;
+  setLocationTag: (key: string, value: string) => void;
+  clearLocationTag: (key: string) => void;
+  upsertCustomClauseRole: (book: string, role: CustomClauseRole) => void;
   patchSessionCheckpoint: (sessionKey: string, field: string, value: number) => void;
   clearSessionCheckpoint: (sessionKey: string) => void;
+  clearSessionCheckpointsWithPrefix: (prefix: string) => void;
+  flagProblemVerse: (book: string, chapter: number, verseNumber: number, version: string) => void;
+  clearProblemVerse: (book: string, chapter: number, verseNumber: number) => void;
+  setPericopeHeadingRecallEnabled: (value: boolean) => void;
+  setUnderstandStageEnabled: (value: boolean) => void;
+  setVisualizeStageEnabled: (value: boolean) => void;
+  setWriteFirstLetterStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 
-type ProgressStore = UserProgress & ProgressActions;
+export type ProgressStore = UserProgress & ProgressActions;
 
-// Reads the signed-in user id at save time rather than threading it through every action
-// signature — every action already runs only while someone is signed in (the app gates all
-// routes that touch this store behind AuthGate), so this is never expected to be null here.
+// Reads the signed-in user id at save time rather than threading it through every action —
+// every action runs only while signed in (AuthGate gates every route), so never null here.
+// Every write also fires a best-effort sync to the server (see lib/serverStore.ts) for real
+// accounts — never for LOCAL_USER_ID, which every device/origin shares the same constant id
+// for, so syncing it would let different devices stomp on each other's "local" progress.
 function persist(progress: UserProgress): UserProgress {
   const userId = useAuthStore.getState().currentUserId;
-  if (userId) saveProgress(userId, progress);
+  if (userId) {
+    saveProgress(userId, progress);
+    if (userId !== LOCAL_USER_ID) syncProgressToServer(userId, progress);
+  }
   return progress;
 }
 
 export const useProgressStore = create<ProgressStore>((set, get) => ({
   ...getDefaultProgress(),
+  ...createStreakActions(set, get, persist),
+  ...createManualEntityActions(set, get, persist),
+  ...createBuildingViewActions(set, get, persist),
+  ...createVersePOAActions(set, get, persist),
+  ...createLocationTagActions(set, get, persist),
+  ...createCustomClauseRoleActions(set, get, persist),
+  ...createSessionCheckpointActions(set, get, persist),
+  ...createProblemVerseActions(set, get, persist),
+  ...createReviewSettingsActions(set, get, persist),
+  ...createLearnSettingsActions(set, get, persist),
 
   hydrate: (userId) => {
     set(loadProgress(userId));
   },
 
-  incrementStreak: () => {
-    const state = get();
-    const now = new Date();
-    const alreadyCompletedToday =
-      state.streak.lastCompletedAt !== null && daysSinceLastCompletion(state.streak.lastCompletedAt, now) === 0;
-    if (alreadyCompletedToday) return;
-
-    const currentStreak = state.streak.currentStreak + 1;
-    const streak = {
-      ...state.streak,
-      currentStreak,
-      longestStreak: Math.max(state.streak.longestStreak, currentStreak),
-      lastCompletedAt: now.toISOString(),
-    };
-    set(persist({ ...state, streak }));
-  },
-
-  resetStreak: () => {
-    const state = get();
-    set(persist({ ...state, streak: { ...state.streak, currentStreak: 0 } }));
-  },
-
-  consumeStreakFreeze: () => {
-    const state = get();
-    if (state.streak.freeze.inventory <= 0) return false;
-    const streak = { ...state.streak, freeze: { inventory: state.streak.freeze.inventory - 1 } };
-    set(persist({ ...state, streak }));
-    return true;
-  },
-
-  addStreakFreeze: (amount) => {
-    const state = get();
-    const streak = { ...state.streak, freeze: { inventory: state.streak.freeze.inventory + amount } };
-    set(persist({ ...state, streak }));
-  },
-
-  evaluateStreakOnLoad: () => {
-    const state = get();
-    const previousStreak = state.streak.currentStreak;
-    const gapDays = daysSinceLastCompletion(state.streak.lastCompletedAt, new Date());
-
-    if (previousStreak === 0 || gapDays <= 1) {
-      return { status: "none" as const, previousStreak };
-    }
-    if (gapDays === 2 && state.streak.freeze.inventory > 0) {
-      get().consumeStreakFreeze();
-      return { status: "frozen" as const, previousStreak };
-    }
-    get().resetStreak();
-    return { status: "lost" as const, previousStreak };
-  },
-
-  setPath: (pathKey, version, versesPerDay) => {
+  setPath: (pathKey, version, versesPerDay, locationTagLevels) => {
     const state = get();
     const existing = state.paths[pathKey];
     const plan: PathProgress = {
       version,
       completedDays: existing?.completedDays ?? 0,
       versesPerDay: versesPerDay ?? existing?.versesPerDay,
+      locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,
     };
     set(persist({ ...state, paths: { ...state.paths, [pathKey]: plan } }));
   },
@@ -136,24 +126,35 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     set(persist({ ...state, paths, memorizedEntities }));
   },
 
+  // Book mode's direct per-chapter graduation into SRS — called alongside completeDay, right
+  // when a chapter's last learn day finishes. Independent of completeDay's
+  // syncMemorizedEntities call above, which re-resolves the whole path from the local
+  // chapter cache — unreliable for a whole book once the ESV storage cap evicts chapters.
+  completeBookChapter: (chapterVerses, version) => {
+    const state = get();
+    const memorizedEntities = addChapterVersesToEntities(state.memorizedEntities, chapterVerses, version);
+    set(persist({ ...state, memorizedEntities }));
+  },
+
   awardSticker: (pathKey) => {
     const state = get();
     if (state.stickers.includes(pathKey)) return;
     set(persist({ ...state, stickers: [...state.stickers, pathKey] }));
   },
 
-  recordSrsReview: (entityId, passed, perfect) => {
+  recordSrsReview: (entityId, accuracy) => {
     const state = get();
     const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
     if (!entity) return;
-    const srs = scheduleReview(entity.srs, passed);
+    const srs = scheduleReview(entity.srs, accuracy);
     const memorizedEntities = state.memorizedEntities.map((candidate) =>
       candidate.id === entityId ? { ...candidate, srs } : candidate,
     );
-    set(persist({ ...state, memorizedEntities }));
-    // Only a review with zero mistakes earns shekels — a pass that needed retries still
-    // schedules the next review normally, it just doesn't pay out.
-    if (passed && perfect) {
+    const best = Math.max(state.srsBestAccuracy[entityId] ?? 0, accuracy);
+    set(persist({ ...state, memorizedEntities, srsBestAccuracy: { ...state.srsBestAccuracy, [entityId]: best } }));
+    // Only a perfect (100%, zero-mistake) review earns shekels — a pass that still promotes
+    // a box but needed retries along the way doesn't pay out.
+    if (accuracy === 100) {
       const verseCount = entity.endVerse - entity.startVerse + 1;
       get().earnShekels(verseCount * SHEKELS_PER_VERSE_REVIEWED);
     }
@@ -176,56 +177,18 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     set(persist({ ...state, masteryLevels: { ...state.masteryLevels, [key]: best } }));
   },
 
-  addManualMemorizedEntity: (book, chapter, startVerse, endVerse, phase, version) => {
-    const state = get();
-    const entity = createManualEntity(book, chapter, startVerse, endVerse, createSeedSRSState(phase), version);
-    set(persist({ ...state, memorizedEntities: [...state.memorizedEntities, entity] }));
-    get().awardSticker(`manual:${entityId(book, chapter, startVerse, endVerse)}`);
-  },
-
-  addManualMemorizedBook: (book, chapterVerseCounts, phase, version) => {
-    const state = get();
-    // One entity per chapter (entities never span chapter boundaries — see
-    // lib/memorizedEntities.ts) — chapters that overlap something already tracked (e.g. a
-    // path-derived or previously manual entry) are skipped rather than duplicated.
-    const newEntities = chapterVerseCounts.reduce<typeof state.memorizedEntities>((entities, verseCount, index) => {
-      const chapter = index + 1;
-      if (verseCount <= 0) return entities;
-      if (overlapsExistingEntity([...state.memorizedEntities, ...entities], book, chapter, 1, verseCount)) return entities;
-      return [...entities, createManualEntity(book, chapter, 1, verseCount, createSeedSRSState(phase), version)];
-    }, []);
-    if (newEntities.length === 0) return;
-    set(persist({ ...state, memorizedEntities: [...state.memorizedEntities, ...newEntities] }));
-    get().awardSticker(`manual-book:${book}`);
-  },
-
   setIncludeVerseReferences: (value) => {
     const state = get();
     set(persist({ ...state, includeVerseReferences: value }));
   },
 
-  patchSessionCheckpoint: (sessionKey, field, value) => {
-    const state = get();
-    const existing = state.sessionCheckpoints[sessionKey] ?? {};
-    set(
-      persist({
-        ...state,
-        sessionCheckpoints: { ...state.sessionCheckpoints, [sessionKey]: { ...existing, [field]: value } },
-      }),
-    );
-  },
-
-  clearSessionCheckpoint: (sessionKey) => {
-    const state = get();
-    if (!(sessionKey in state.sessionCheckpoints)) return;
-    const remaining = { ...state.sessionCheckpoints };
-    delete remaining[sessionKey];
-    set(persist({ ...state, sessionCheckpoints: remaining }));
-  },
-
   resetProgress: () => {
     const userId = useAuthStore.getState().currentUserId;
-    if (userId) clearProgress(userId);
-    set(getDefaultProgress());
+    const defaults = getDefaultProgress();
+    if (userId) {
+      clearProgress(userId);
+      if (userId !== LOCAL_USER_ID) syncProgressToServer(userId, defaults);
+    }
+    set(defaults);
   },
 }));

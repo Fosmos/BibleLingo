@@ -8,7 +8,7 @@ import { ReviewNeededCard } from "@/components/gamification/ReviewNeededCard";
 export default function Home() {
   // Only resolves to a real name once auth is in use and signed in with a tracked account —
   // falls back to a generic greeting otherwise (e.g. the local-profile/no-auth mode).
-  const username = useAuthStore((state) => state.accounts.find((account) => account.id === state.currentUserId)?.username);
+  const username = useAuthStore((state) => state.currentUsername);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">

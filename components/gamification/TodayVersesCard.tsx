@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 const DAY_KIND_LABELS: Record<string, string> = {
   chapter_review: "Time for a full review!",
   boss_battle: "Time for your boss battle!",
-  chapter_boss_battle: "Time for your chapter boss battle!",
+  section_boss_battle: "Time for your section boss battle!",
   weekly_review: "Time for your weekly review!",
   monthly_review: "Time for your monthly review!",
 };

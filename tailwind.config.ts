@@ -4,29 +4,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Ultra-Minimalist Organic Modern design system — warm neutral base +
-        // ochre accent. `brand` doubles as the app's primary-action/accent color
-        // (buttons, active nav/tab states, focus rings) so retinting this one
+        // Warm parchment + terracotta design system — muted, low-contrast neutrals
+        // (paper/mist/line, all warm cream-to-taupe) paired with an earthy chestnut
+        // accent (`brand`, doubling as the app's primary-action/accent color:
+        // buttons, active nav/tab states, focus rings) so retinting this one
         // scale re-themes the app's main interactive color everywhere it's used.
-        paper: "#FDFBF8",
-        mist: "#F2EFEA",
-        line: "#E0E0E0",
+        paper: "#F2EFE9",
+        mist: "#E2DCD5",
+        line: "#C8BEB3",
         ink: {
-          DEFAULT: "#1A1A1A",
-          soft: "#4D4D4D",
-          muted: "#999999",
+          DEFAULT: "#2C2724",
+          soft: "#5A5450",
+          muted: "#8A8178",
         },
         brand: {
-          50: "#FBF3EA",
-          100: "#F6E6D3",
-          200: "#EDD0AF",
-          300: "#E3B98A",
-          400: "#DAAD7E",
-          500: "#D4A373",
-          600: "#BD8A57",
-          700: "#9C6F42",
-          800: "#7A5732",
-          900: "#5C4126",
+          50: "#FAF1EA",
+          100: "#F3E0D0",
+          200: "#E6C3AC",
+          300: "#D6A582",
+          400: "#C08A60",
+          500: "#A2724D",
+          600: "#8B5330",
+          700: "#743F22",
+          800: "#5C3119",
+          900: "#432310",
         },
         gold: {
           50: "#fffbeb",

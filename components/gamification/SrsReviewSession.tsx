@@ -1,30 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
-import { formatChapterLabel, applyReferencePreference } from "@/lib/chapterContent";
+import { formatVerseSpanLabel, applyReferencePreference } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { isChapterTrackedAsEsv } from "@/lib/esvCacheTracker";
-import { isDue } from "@/lib/srs";
-import { FirstLetterTypeRep } from "@/components/drills/FirstLetterTypeRep";
+import { isDue, PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
+import { verseKey } from "@/lib/verseKey";
+import { useCelebration } from "@/lib/useCelebration";
+import { usePericopesReady } from "@/lib/usePericopesReady";
+import { getPericopeHeadingsInRange } from "@/lib/chapterPericopes";
+import { PROBLEM_VERSE_ACCURACY_THRESHOLD } from "@/lib/problemVerses";
+import { SrsEntityRecall } from "@/components/gamification/SrsEntityRecall";
+import { SrsDueEntityPicker } from "@/components/gamification/SrsDueEntityPicker";
 import { Button } from "@/components/ui/Button";
 import { EsvAttribution } from "@/components/ui/EsvAttribution";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
-
-function rangeLabel(book: string, chapter: number, startVerse: number, endVerse: number): string {
-  const label = formatChapterLabel(book, chapter);
-  return startVerse === endVerse ? `${label}:${startVerse}` : `${label}:${startVerse}-${endVerse}`;
-}
+import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 export function SrsReviewSession() {
   const entities = useProgressStore((state) => state.memorizedEntities);
   const recordSrsReview = useProgressStore((state) => state.recordSrsReview);
-  const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
+  const clearSessionCheckpointsWithPrefix = useProgressStore((state) => state.clearSessionCheckpointsWithPrefix);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
+  const srsBestAccuracy = useProgressStore((state) => state.srsBestAccuracy);
+  const versePOA = useProgressStore((state) => state.versePOA);
+  const pericopeHeadingRecallEnabled = useProgressStore((state) => state.pericopeHeadingRecallEnabled);
+  const flagProblemVerse = useProgressStore((state) => state.flagProblemVerse);
+  const clearProblemVerse = useProgressStore((state) => state.clearProblemVerse);
+  const { pending, celebrate, finish } = useCelebration();
 
   const dueEntities = entities.filter((entity) => isDue(entity.srs));
-  const entity = dueEntities[0];
+  // Lets the reader jump to a specific due verse group instead of always the first one —
+  // falls back to the first whenever the picked one isn't (or is no longer, e.g. it was just
+  // reviewed and dropped out of dueEntities) due, so finishing one naturally advances to
+  // whatever's next without any extra state to reset.
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const entity = dueEntities.find((candidate) => candidate.id === selectedEntityId) ?? dueEntities[0];
 
   // A book+chapter's cache slot holds only one translation at a time, and other browsing
   // can silently overwrite it — so this always re-fetches by the entity's own stored
@@ -35,6 +49,14 @@ export function SrsReviewSession() {
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  // Bumped to force FirstLetterTypeRep to remount (see its key below), discarding all its
+  // in-progress typing state — paired with clearing its session checkpoint so the fresh mount
+  // starts over from word 1 instead of resuming from where the checkpoint left off.
+  const [restartToken, setRestartToken] = useState(0);
+  // Waits for section-heading data before deciding whether this entity opens a new pericope
+  // (see the pericopeHeading computation below) — called unconditionally, alongside every
+  // other hook here, since hooks can't be called after an early return.
+  const pericopesReady = usePericopesReady(verses);
 
   useEffect(() => {
     if (!entity || loadedForId === entity.id) return;
@@ -53,9 +75,13 @@ export function SrsReviewSession() {
     };
   }, [entity, loadedForId, retryToken]);
 
+  if (pending) {
+    return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
+  }
+
   if (!entity) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-title text-brand-600">All caught up!</h1>
         <p className="text-ink-muted">No verse groups are due for review right now.</p>
         <Button href="/memorized">Back to Memorized Verses</Button>
@@ -75,36 +101,77 @@ export function SrsReviewSession() {
     );
   }
 
-  if (!verses || loadedForId !== entity.id) {
+  if (!verses || loadedForId !== entity.id || !pericopesReady) {
     return <FetchLoading label="Loading…" />;
   }
 
   const displayVerses = applyReferencePreference(verses, includeVerseReferences);
-  const label = rangeLabel(entity.book, entity.chapter, entity.startVerse, entity.endVerse);
-  // FirstLetterTypeRep (the same word-by-word first-letter mechanic as the Learn section)
-  // takes one VerseSegment — an SRS entity can span multiple verses, so their words are
-  // joined into a single synthetic segment rather than chaining separate verse components.
-  const combinedVerse: VerseSegment = {
-    id: entity.id,
-    reference: label,
-    text: displayVerses.map((verse) => verse.text).join(" "),
-    book: entity.book,
-    chapter: entity.chapter,
-    verseNumber: entity.startVerse,
-  };
+  const label = formatVerseSpanLabel(entity.book, entity.chapter, entity.startVerse, entity.endVerse);
   const sessionKey = `srs:${entity.id}`;
+  const bestAccuracy = srsBestAccuracy[entity.id];
+  // Only a genuinely one-verse entity has one Visualize POA to recall — a merged range spans
+  // multiple verses' worth of scenes, none of which alone represents the whole review.
+  const entityPOA = entity.startVerse === entity.endVerse ? versePOA[verseKey(entity.book, entity.chapter, entity.startVerse)] : undefined;
+  // Every pericope this entity's range opens (not just one at its very start) — see
+  // SrsEntityRecall.tsx for how each gates its own blind type-the-heading pass ahead of the
+  // verse recall.
+  const pericopeHeadings = pericopeHeadingRecallEnabled
+    ? getPericopeHeadingsInRange(entity.book, entity.chapter, entity.startVerse, entity.endVerse)
+    : [];
+
+  function restart() {
+    // Each pericope-heading segment checkpoints under its own "sessionKey:stepIndex"
+    // sub-key (see SrsEntityRecall.tsx) — a plain clearSessionCheckpoint(sessionKey) only
+    // ever clears the bare key, leaving whichever segment was in progress resuming right
+    // back where it left off instead of genuinely restarting from word 1.
+    clearSessionCheckpointsWithPrefix(sessionKey);
+    setRestartToken((token) => token + 1);
+  }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
-      <p className="text-caption text-ink-muted">{dueEntities.length} verse group(s) left to review</p>
-      <FirstLetterTypeRep
-        key={entity.id}
-        verse={combinedVerse}
-        reps={1}
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-caption text-ink-muted">{dueEntities.length} verse group(s) left to review</p>
+          {bestAccuracy !== undefined && (
+            <p className="text-caption text-ink-muted">
+              Best score for {label}: <span className="font-semibold text-brand-600 dark:text-brand-400">{bestAccuracy}%</span>
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={restart}
+          className="flex items-center gap-1 rounded-full bg-mist px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-line dark:bg-zinc-800 dark:text-zinc-300"
+        >
+          <RotateCcw size={13} /> Restart
+        </button>
+      </div>
+      <SrsDueEntityPicker dueEntities={dueEntities} currentEntityId={entity.id} onSelect={setSelectedEntityId} />
+      <SrsEntityRecall
+        key={`${entity.id}-${restartToken}`}
+        verses={displayVerses}
         sessionKey={sessionKey}
-        onComplete={(hadMistake) => {
-          clearSessionCheckpoint(sessionKey);
-          recordSrsReview(entity.id, true, !hadMistake);
+        label={label}
+        pericopeHeadings={pericopeHeadings}
+        entityPOA={entityPOA}
+        onRestart={restart}
+        onVerseAccuracy={(results) => {
+          results.forEach(({ verseNumber, accuracy: verseAccuracy }) => {
+            if (verseAccuracy < PROBLEM_VERSE_ACCURACY_THRESHOLD) {
+              flagProblemVerse(entity.book, entity.chapter, verseNumber, entity.version);
+            } else if (verseAccuracy >= PROMOTION_ACCURACY_THRESHOLD) {
+              // A later good review DOES clear a verse out of the bin now — the only other
+              // way out is fully relearning it (see RelearnSession.tsx).
+              clearProblemVerse(entity.book, entity.chapter, verseNumber);
+            }
+          });
+        }}
+        onComplete={(accuracy) => {
+          celebrate(() => {
+            clearSessionCheckpointsWithPrefix(sessionKey);
+            recordSrsReview(entity.id, accuracy);
+          }, `${accuracy}% correct`);
         }}
       />
       <EsvAttribution visible={isChapterTrackedAsEsv(entity.book, entity.chapter)} />

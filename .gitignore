@@ -44,3 +44,9 @@ certificates
 
 # claude code local settings (machine-specific, not for sharing)
 .claude/settings.local.json
+
+# AI-generated path-view art (regenerable, machine-local — see lib/generatedImageStore.ts)
+/public/generated/
+
+# Server-side accounts + progress (see lib/serverStore.ts) — real user data, machine-local
+/.data/

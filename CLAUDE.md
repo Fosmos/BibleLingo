@@ -103,3 +103,13 @@ A phase in `features.json` is not marked `completed` until `npm run build` and `
 - Do not start Phase N+1 features while Phase N features are still `pending` or `in_progress`, unless explicitly instructed otherwise.
 - After completing a feature, update its `status` in `features.json` and note any deviation from its `acceptance_criteria` rather than silently reinterpreting scope.
 - When a requirement in this file and a convenience shortcut conflict (e.g., "just inline this style to save time"), this file wins.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

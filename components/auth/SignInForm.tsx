@@ -18,9 +18,17 @@ export function SignInForm() {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
-    const result = await useAuthStore.getState().signIn(username, password);
-    setSubmitting(false);
-    if (!result.ok) setError(result.error ?? "Something went wrong.");
+    try {
+      const result = await useAuthStore.getState().signIn(username, password);
+      if (!result.ok) setError(result.error ?? "Something went wrong.");
+    } catch (error) {
+      // signIn can reject outright (e.g. hashPassword's secure-context check) rather than
+      // resolving with { ok: false } — without this, that left the button stuck on
+      // "Signing in…" forever instead of ever reaching setSubmitting(false) below.
+      setError(error instanceof Error ? error.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

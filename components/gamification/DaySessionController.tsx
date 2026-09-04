@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { MemorizationDay } from "@/types";
+import type { MemorizationDay, VerseSegment } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
 import { VerseLessonFlow } from "@/components/gamification/VerseLessonFlow";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
-import { ChapterReviewStage } from "@/components/drills/ChapterReviewStage";
+import { ReviewChain } from "@/components/drills/ReviewChain";
 import { BossBattleStage } from "@/components/drills/BossBattleStage";
 import { VictoryScreen } from "@/components/gamification/VictoryScreen";
 import { StreakMilestoneModal } from "@/components/gamification/StreakMilestoneModal";
@@ -21,16 +21,21 @@ interface DaySessionControllerProps {
   label: string;
   day: MemorizationDay;
   totalDays: number;
+  // Book mode only: set by DayLoader when this day is the last "learn" day of its chapter —
+  // that chapter's own verses, graduated straight into SRS the moment this lesson finishes.
+  completingChapterVerses?: VerseSegment[];
 }
 
-export function DaySessionController({ pathKey, label, day, totalDays }: DaySessionControllerProps) {
+export function DaySessionController({ pathKey, label, day, totalDays, completingChapterVerses }: DaySessionControllerProps) {
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const completeDay = useProgressStore((state) => state.completeDay);
+  const completeBookChapter = useProgressStore((state) => state.completeBookChapter);
   const incrementStreak = useProgressStore((state) => state.incrementStreak);
   const addStreakFreeze = useProgressStore((state) => state.addStreakFreeze);
   const awardSticker = useProgressStore((state) => state.awardSticker);
   const earnShekels = useProgressStore((state) => state.earnShekels);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
+  const recordChapterReviewAccuracy = useProgressStore((state) => state.recordChapterReviewAccuracy);
 
   const [dayComplete, setDayComplete] = useState(false);
   const [milestoneStreak, setMilestoneStreak] = useState<number | null>(null);
@@ -44,14 +49,10 @@ export function DaySessionController({ pathKey, label, day, totalDays }: DaySess
 
   function finishDay() {
     clearSessionCheckpoint(sessionKey);
-    // LearnVerseStage checkpoints its phase under its own per-verse key (sessionKey:verse.id)
-    // rather than as a field on the shared sessionKey object — those need clearing
-    // individually too, or a completed "learn" day re-entered later (every lesson stays
-    // clickable regardless of lock state) would read a stale phaseIndex for its first verse.
-    for (const verse of day.newVerses) {
-      clearSessionCheckpoint(`${sessionKey}:${verse.id}`);
-    }
     completeDay(pathKey, day.dayNumber);
+    if (completingChapterVerses && completingChapterVerses.length > 0 && plan) {
+      completeBookChapter(completingChapterVerses, plan.version);
+    }
     const previousStreak = useProgressStore.getState().streak.currentStreak;
     incrementStreak();
     const newStreak = useProgressStore.getState().streak.currentStreak;
@@ -65,7 +66,7 @@ export function DaySessionController({ pathKey, label, day, totalDays }: DaySess
     if (day.newVerses.length > 0) {
       earnShekels(day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED);
     }
-    if (day.kind === "boss_battle" || day.kind === "chapter_boss_battle") {
+    if (day.kind === "boss_battle" || day.kind === "section_boss_battle") {
       earnShekels(SHEKELS_PER_BOSS_BATTLE);
     }
     if (day.kind === "boss_battle") {
@@ -99,13 +100,13 @@ export function DaySessionController({ pathKey, label, day, totalDays }: DaySess
           ? "Weekly review complete!"
           : day.kind === "monthly_review"
             ? "Monthly review complete!"
-            : day.kind === "chapter_boss_battle"
-              ? `Chapter ${day.chapterGroup ?? ""} boss battle complete!`
+            : day.kind === "section_boss_battle"
+              ? "Section boss battle complete!"
               : `Day ${day.dayNumber} complete!`;
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-title text-brand-600">{completeHeading}</h1>
-        <Button href={pathHref}>{day.kind === "chapter_boss_battle" ? "Continue" : "Back to path"}</Button>
+        <Button href={pathHref}>{day.kind === "section_boss_battle" ? "Continue" : "Back to path"}</Button>
         <StreakMilestoneModal
           open={milestoneStreak !== null}
           streakCount={milestoneStreak ?? 0}
@@ -116,21 +117,28 @@ export function DaySessionController({ pathKey, label, day, totalDays }: DaySess
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
       {day.kind !== "learn" && <p className="text-caption text-ink-muted">{dayLabel}</p>}
-      {day.kind === "learn" && <VerseLessonFlow day={day} onComplete={finishDay} sessionKey={sessionKey} />}
+      {day.kind === "learn" && (
+        <VerseLessonFlow day={day} onComplete={finishDay} sessionKey={sessionKey} />
+      )}
       {day.kind === "chapter_review" && (
-        <ChapterReviewStage
-          pathKey={pathKey}
-          label={label}
+        <ReviewChain
           verses={day.reviewVerses}
-          previousVerses={day.previousVerses}
+          onComplete={(accuracy) => {
+            recordChapterReviewAccuracy(pathKey, accuracy);
+            finishDay();
+          }}
+        />
+      )}
+      {(day.kind === "boss_battle" || day.kind === "section_boss_battle") && (
+        <BossBattleStage
+          verses={day.reviewVerses}
+          mode={day.kind === "boss_battle" ? "fullWord" : "firstLetter"}
+          lives={day.kind === "section_boss_battle" ? 20 : undefined}
           onComplete={finishDay}
           sessionKey={sessionKey}
         />
-      )}
-      {(day.kind === "boss_battle" || day.kind === "chapter_boss_battle") && (
-        <BossBattleStage verses={day.reviewVerses} onComplete={finishDay} sessionKey={sessionKey} />
       )}
       {(day.kind === "weekly_review" || day.kind === "monthly_review") && (
         <ReviewSection day={day} onComplete={finishDay} sessionKey={sessionKey} />

@@ -1,6 +1,8 @@
 import { Award } from "lucide-react";
 import { MemorizedStats } from "@/components/gamification/MemorizedStats";
 import { SrsOverview } from "@/components/gamification/SrsOverview";
+import { SwordOfTheSpirit } from "@/components/gamification/SwordOfTheSpirit";
+import { ProblemVersesBin } from "@/components/gamification/ProblemVersesBin";
 import { AddMemorizedVerseFlow } from "@/components/gamification/AddMemorizedVerseFlow";
 import { Button } from "@/components/ui/Button";
 
@@ -15,6 +17,8 @@ export default function MemorizedPage() {
       </div>
       <MemorizedStats />
       <SrsOverview />
+      <SwordOfTheSpirit />
+      <ProblemVersesBin />
       <AddMemorizedVerseFlow />
     </div>
   );

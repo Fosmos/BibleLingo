@@ -1,25 +1,18 @@
 import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
 import { computeBucketStatesPerLesson } from "@/lib/bookReviewSchedule";
+import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
 
 export const DEFAULT_VERSES_PER_DAY = 5;
 
-function chunkVerses(verses: VerseSegment[], size: number): VerseSegment[][] {
-  const chunks: VerseSegment[][] = [];
-  for (let index = 0; index < verses.length; index += size) {
-    chunks.push(verses.slice(index, index + size));
-  }
-  return chunks;
-}
-
-// Previous chapter in full, plus the current chapter's verses up to (not including)
-// today's new chunk — anchored on the chunk's first verse, since review happens before
-// that chunk is learned.
-function slidingWindowReview(verses: VerseSegment[], chunk: VerseSegment[]): VerseSegment[] {
+// The current chapter's verses up to (not including) today's new chunk — anchored on the
+// chunk's first verse, since review happens before that chunk is learned. Deliberately
+// scoped to just this chapter — the post-learn "Chapter Review" stage below is meant to
+// drill the chapter actually being worked on, not drag the previous chapter's verses back
+// in every lesson (that carryover happens instead via the "Previous Verses" pre-lesson
+// check, which just reviews yesterday's own lesson — see buildBookDayPlan's previousChunk).
+function currentChapterReview(verses: VerseSegment[], chunk: VerseSegment[]): VerseSegment[] {
   const anchor = chunk[0];
-  return verses.filter(
-    (verse) =>
-      verse.chapter === anchor.chapter - 1 || (verse.chapter === anchor.chapter && verse.verseNumber < anchor.verseNumber),
-  );
+  return verses.filter((verse) => verse.chapter === anchor.chapter && verse.verseNumber < anchor.verseNumber);
 }
 
 function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSegment[] {
@@ -29,66 +22,78 @@ function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSeg
 
 // Book mode only: chunks verses into versesPerDay-sized lessons, grouped by the chapter
 // each lesson is anchored in (chapterGroup) so the path can be displayed one chapter at a
-// time. A lesson whose tail verses spill into the next chapter still belongs to its
-// anchor chapter's group — the boss battle for a chapter always covers that chapter's
-// full verse set regardless of exactly which lesson taught its last few verses.
+// time. A lesson always gets the full versesPerDay verses requested — it can freely span
+// multiple pericopes now, but never a chapter boundary (see lib/chapterChunking.ts), so
+// chapterGroup stays unambiguous.
 //
-// Weekly/monthly batch reviews are inserted as their own circles exactly when a batch of
+// A chapter's own recall check (the old per-lesson daily-rotation review and the per-chapter
+// boss battle) isn't in the path at all — once a chapter's last lesson completes, that
+// chapter graduates into the SRS system (see getMemorizedVerses in lib/progressSummary.ts),
+// and long-term review of it happens there on its own schedule instead of as a forced path
+// day. Weekly/monthly batch reviews are inserted as their own circles exactly when a batch of
 // 8 chapters newly completes (not on a fixed lesson-count cadence), tagged into whichever
-// chapter's group they formed during. Each chapter gets its own boss-battle circle right
-// after its last lesson. The whole book ends with the same Full Review + Boss Battle
-// capstone every other path kind uses.
+// chapter's group they formed during — those stay in the path. The whole book ends with the
+// same Full Review + Boss Battle capstone every other path kind uses.
 export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): MemorizationDay[] {
-  const chunks = chunkVerses(verses, Math.max(1, versesPerDay));
+  const effectiveVersesPerDay = Math.max(1, versesPerDay);
+  const chunks = chunkVersesRespectingChapters(verses, effectiveVersesPerDay);
   const bucketStates = computeBucketStatesPerLesson(chunks);
 
   const days: MemorizationDay[] = [];
   let dayNumber = 1;
   let previousWeeklyBatchKey = "";
   let previousMonthlyBucketKey = "";
-  // Advances by one only on lessons where the daily pool is non-empty, so the rotation
-  // steps strictly 1, 2, 3, ... through the pool's current chapters and wraps back to the
-  // start once it's cycled through all of them — independent of the book-wide lesson
-  // index, which would otherwise skew the starting phase every time the pool's size changes.
-  let rotationCursor = 0;
+  // Just yesterday's lesson — the immediately preceding learn day's own new verses (skipping
+  // over any weekly/monthly review or boss-battle days in between, which aren't "a lesson").
+  // Empty on the book's very first lesson.
+  let previousChunk: VerseSegment[] = [];
 
   chunks.forEach((chunk, index) => {
     const state = bucketStates[index];
     const chapterGroup = chunk[0].chapter;
-    const windowReview = slidingWindowReview(verses, chunk);
-    const rotationChapter = state.dailyPool.length > 0 ? state.dailyPool[rotationCursor % state.dailyPool.length] : null;
-    const rotationReview = rotationChapter !== null ? versesForChapters(verses, [rotationChapter]) : [];
-    if (state.dailyPool.length > 0) rotationCursor++;
+    // Today's own newly-learned chunk is appended last — the post-learn recap should cover
+    // everything memorized in-window, including what was JUST learned this lesson, not only
+    // what came before it.
+    const windowReview = [...currentChapterReview(verses, chunk), ...chunk];
 
-    // Daily rotation chapter reviewed before today's new verse; the sliding two-chapter
-    // window is reviewed AFTER it instead, so review of already-known material doesn't
-    // stand between the user and the new verse they came here to learn.
-    const reviewStages: ReviewStage[] = [];
-    if (rotationReview.length > 0) reviewStages.push({ label: "Daily Review", verses: rotationReview });
     const postLearnReviewStages: ReviewStage[] = [];
     if (windowReview.length > 0) postLearnReviewStages.push({ label: "Chapter Review", verses: windowReview });
-    const previousVerses = index > 0 ? chunks[index - 1] : [];
 
     days.push({
       dayNumber: dayNumber++,
       kind: "learn",
       newVerses: chunk,
-      reviewVerses: [...rotationReview, ...windowReview],
-      reviewStages,
+      // Empty, not windowReview: that content already runs post-learn via
+      // postLearnReviewStages below — putting it here too would review it twice, since
+      // ReviewSection falls back to building a "pre" stage from reviewVerses whenever
+      // reviewStages is absent (as it now always is for book-mode learn days).
+      reviewVerses: [],
       postLearnReviewStages,
-      previousVerses,
+      previousVerses: previousChunk,
       chapterGroup,
     });
+    previousChunk = chunk;
 
     // A weekly-review circle appears exactly when a fresh batch of 8 chapters forms
-    // (not on a fixed interval), so it's always "the one that has all 8 at once."
+    // (not on a fixed interval), so it's always "the one that has all 8 at once." Right
+    // after it, a section boss battle covers those same 8 chapters — first-letter typing
+    // across all of them back to back, with more lives (20) than a single-chapter boss
+    // battle gets, since it's a much longer recitation.
     const weeklyBatchKey = state.currentWeeklyBatch ? state.currentWeeklyBatch.join(",") : "";
     if (weeklyBatchKey && weeklyBatchKey !== previousWeeklyBatchKey) {
+      const batchVerses = versesForChapters(verses, state.currentWeeklyBatch as number[]);
       days.push({
         dayNumber: dayNumber++,
         kind: "weekly_review",
         newVerses: [],
-        reviewVerses: versesForChapters(verses, state.currentWeeklyBatch as number[]),
+        reviewVerses: batchVerses,
+        chapterGroup,
+      });
+      days.push({
+        dayNumber: dayNumber++,
+        kind: "section_boss_battle",
+        newVerses: [],
+        reviewVerses: batchVerses,
         chapterGroup,
       });
       previousWeeklyBatchKey = weeklyBatchKey;
@@ -107,20 +112,15 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
       });
       previousMonthlyBucketKey = monthlyBucketKey;
     }
-
-    const nextChapterGroup = chunks[index + 1]?.[0]?.chapter;
-    if (nextChapterGroup !== chapterGroup) {
-      days.push({
-        dayNumber: dayNumber++,
-        kind: "chapter_boss_battle",
-        newVerses: [],
-        reviewVerses: versesForChapters(verses, [chapterGroup]),
-        chapterGroup,
-      });
-    }
   });
 
-  days.push({ dayNumber: dayNumber++, kind: "chapter_review", newVerses: [], reviewVerses: verses });
+  days.push({
+    dayNumber: dayNumber++,
+    kind: "chapter_review",
+    newVerses: [],
+    reviewVerses: verses,
+    previousVerses: previousChunk,
+  });
   days.push({ dayNumber: dayNumber++, kind: "boss_battle", newVerses: [], reviewVerses: verses });
 
   return days;

@@ -7,6 +7,7 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
+import { usePericopesReady } from "@/lib/usePericopesReady";
 import { DaySessionController } from "@/components/gamification/DaySessionController";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
@@ -62,9 +63,11 @@ export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
     };
   }, [pathKey, plan, label, verses, retryToken]);
 
+  const pericopesReady = usePericopesReady(verses);
+
   if (!plan) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-title">Start this path first</h1>
         <Button href={pathHref}>Back to {label}</Button>
       </div>
@@ -84,22 +87,41 @@ export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
   }
 
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
+  // Waits for section-heading data before chunking — must always agree with
+  // PathOverviewScreen's own chunking for the same day number (see lib/usePericopesReady.ts).
+  if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
 
   const days = buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan);
   const day = days.find((candidate) => candidate.dayNumber === dayNumber);
 
   if (!day) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 p-8 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-title">Lesson not found</h1>
         <Button href={pathHref}>Back to {label}</Button>
       </div>
     );
   }
 
+  // Book mode only: when this is the last "learn" day tagged with this chapter, that
+  // chapter's verses are handed to DaySessionController so it can graduate them straight
+  // into SRS the moment this lesson finishes — see completeBookChapter in
+  // useProgressStore.ts for why this can't just wait and re-resolve the whole book later.
+  const isFinalLearnDayOfChapter =
+    day.kind === "learn" &&
+    day.chapterGroup !== undefined &&
+    !days.some((candidate) => candidate.kind === "learn" && candidate.chapterGroup === day.chapterGroup && candidate.dayNumber > day.dayNumber);
+  const completingChapterVerses = isFinalLearnDayOfChapter ? verses.filter((verse) => verse.chapter === day.chapterGroup) : undefined;
+
   return (
     <>
-      <DaySessionController pathKey={pathKey} label={label} day={day} totalDays={days.length} />
+      <DaySessionController
+        pathKey={pathKey}
+        label={label}
+        day={day}
+        totalDays={days.length}
+        completingChapterVerses={completingChapterVerses}
+      />
       <EsvAttribution visible={plan.version === "ESV"} />
     </>
   );

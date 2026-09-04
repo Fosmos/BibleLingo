@@ -69,6 +69,29 @@ export function getChapterVerses(book: string, chapter: number): VerseSegment[] 
   return getCachedChapter(book, chapter);
 }
 
+// Looks up the verse immediately before (direction -1) or after (direction 1) the given
+// one, crossing into the neighboring chapter when the given verse is the first/last in its
+// own chapter — e.g. the verse after Mark 8:38 is Mark 9:1, not "no next verse." A
+// same-chapter-only lookup would silently drop context right at that seam, which a
+// multi-verse Learn day's chunk can end on or cross whenever a chapter boundary doesn't
+// happen to line up with versesPerDay. Both chapters must already be cached (a book/verse
+// path's own chapter always is by the time this runs; the neighboring chapter may not be,
+// in which case this just returns undefined the same way an uncached chapter already does).
+export function getAdjacentVerse(
+  book: string,
+  chapter: number,
+  verseNumber: number,
+  direction: 1 | -1,
+): VerseSegment | undefined {
+  const sameChapter = getChapterVerses(book, chapter)?.find((entry) => entry.verseNumber === verseNumber + direction);
+  if (sameChapter) return sameChapter;
+  const neighborChapter = chapter + direction;
+  if (neighborChapter < 1) return undefined;
+  const neighborVerses = getChapterVerses(book, neighborChapter);
+  if (!neighborVerses || neighborVerses.length === 0) return undefined;
+  return direction === 1 ? neighborVerses[0] : neighborVerses[neighborVerses.length - 1];
+}
+
 // Every chapter of every known book is selectable — content is fetched on demand
 // rather than pre-authored, so availability is just "is this a real chapter number."
 export function availableChaptersForBook(book: string): Set<number> {

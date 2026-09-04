@@ -1,10 +1,7 @@
 import type { UserProgress } from "@/types";
 
 const STORAGE_PREFIX = "verses:progress:";
-// Where progress lived before accounts existed. Consumed exactly once, by whichever
-// account is the very first one ever signed up — see consumeLegacyProgress below.
-const LEGACY_STORAGE_KEY = "verses:progress";
-const SCHEMA_VERSION = 19;
+const SCHEMA_VERSION = 30;
 
 function progressKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`;
@@ -25,9 +22,21 @@ export function getDefaultProgress(): UserProgress {
     memorizedEntities: [],
     shekels: 0,
     includeVerseReferences: false,
+    buildingViewEnabled: false,
+    versePOA: {},
+    locationTags: {},
+    pegSystemEnabled: false,
+    buildingViewLastReviewDate: null,
     chapterReviewBestAccuracy: {},
+    srsBestAccuracy: {},
     sessionCheckpoints: {},
     masteryLevels: {},
+    customClauseRoles: {},
+    pericopeHeadingRecallEnabled: true,
+    problemVerses: {},
+    understandStageEnabled: true,
+    visualizeStageEnabled: true,
+    writeFirstLetterStageEnabled: true,
   };
 }
 
@@ -70,20 +79,4 @@ export function clearProgress(userId: string): void {
     return;
   }
   window.localStorage.removeItem(progressKey(userId));
-}
-
-// One-time migration: before accounts existed, progress lived at a single unkeyed key.
-// The first account ever created inherits that data as its starting state — this removes
-// the legacy key the moment it's read, so every subsequent call (including from later
-// signups) sees nothing left to migrate.
-export function consumeLegacyProgress(): UserProgress | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const raw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
-  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  return parseStoredProgress(raw);
 }

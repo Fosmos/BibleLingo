@@ -1,0 +1,175 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { motion, Reorder } from "framer-motion";
+import type { CustomClauseRole, VerseSegment } from "@/types";
+import { tokenizeVerseWords } from "@/lib/verseWords";
+import { TAP_SCALE } from "@/lib/motionTokens";
+import type { WordAnnotationMap } from "@/lib/verseHighlights";
+import { useProgressStore } from "@/store/useProgressStore";
+import { ClauseCard, type ClauseBlock } from "@/components/drills/ClauseCard";
+import { ClauseRolePalette } from "@/components/drills/ClauseRolePalette";
+import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
+import { InfoTip } from "@/components/ui/InfoTip";
+import { INFO_TIPS } from "@/lib/infoTipCopy";
+import { VerseContextLine } from "@/components/ui/VerseContextLine";
+import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
+
+interface VerseOrientationRepProps {
+  verse: VerseSegment;
+  verseMarkers: Record<number, number>;
+  annotations: WordAnnotationMap;
+  onAnnotationsChange: (updater: (prev: WordAnnotationMap) => WordAnnotationMap) => void;
+  onComplete: () => void;
+  previousVerse?: VerseSegment;
+  nextVerse?: VerseSegment;
+}
+
+// A stable reference for the "no roles defined yet" case — returning a fresh `[] as const`
+// from the store selector below would give useSyncExternalStore a new array every render,
+// which Zustand reports as an infinite loop (getSnapshot never settling).
+const NO_ROLES: CustomClauseRole[] = [];
+
+function buildClauseBlocks(words: string[], breakAfter: Set<number>): ClauseBlock[] {
+  const blocks: ClauseBlock[] = [];
+  let start = 0;
+  words.forEach((_, index) => {
+    if (breakAfter.has(index) || index === words.length - 1) {
+      blocks.push({ id: `clause-${start}`, startIndex: start, endIndex: index });
+      start = index + 1;
+    }
+  });
+  return blocks;
+}
+
+// Stage 1: the passage starts as one unified block — the reader divides it into clauses
+// themselves (tap a word, inside the block, to split or merge the division right there),
+// drags the resulting cards into whatever vertical order helps them think through the
+// passage's structure, then assigns each one a role via the shared palette above the list:
+// tap a card to select it, tap a color to apply it. There's no preset role catalog — every
+// role is named and colored by the reader (see ClauseRolePalette/CustomRoleEditor), scoped
+// to this verse's own book and persisted (see useProgressStore's customClauseRoles) so a
+// role defined once keeps showing up in every later lesson for the same book. Not graded —
+// reordering doesn't change anything downstream, it's just a way to actively handle the
+// passage's structure before drilling into it. The resulting roles are lifted to
+// LearnSection and stay visible (read-only) on every later stage in this lesson that shows
+// this verse's own words.
+export function VerseOrientationRep({
+  verse,
+  verseMarkers,
+  annotations,
+  onAnnotationsChange,
+  onComplete,
+  previousVerse,
+  nextVerse,
+}: VerseOrientationRepProps) {
+  const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
+  const [breakAfter, setBreakAfter] = useState<Set<number>>(() => new Set());
+  const [order, setOrder] = useState<string[] | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const bookRoles = useProgressStore((state) => state.customClauseRoles[verse.book] ?? NO_ROLES);
+  const upsertCustomClauseRole = useProgressStore((state) => state.upsertCustomClauseRole);
+
+  const blocks = useMemo(() => buildClauseBlocks(words, breakAfter), [words, breakAfter]);
+  const blockById = useMemo(() => new Map(blocks.map((block) => [block.id, block])), [blocks]);
+  // `order` only tracks the user's own drag-reordering — a merge/split changes the block
+  // count, invalidating any prior order, so it resets to the blocks' natural order then too.
+  const orderedIds = order && order.length === blocks.length ? order : blocks.map((block) => block.id);
+  const orderedBlocks = orderedIds
+    .map((id) => blockById.get(id))
+    .filter((block): block is ClauseBlock => block !== undefined);
+  const selectedBlock = selectedBlockId ? blockById.get(selectedBlockId) : undefined;
+
+  function toggleBreak(index: number) {
+    if (index === words.length - 1) return;
+    setBreakAfter((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+    setOrder(null);
+  }
+
+  function assignRole(role: CustomClauseRole) {
+    if (!selectedBlock) return;
+    const isSame = annotations[selectedBlock.startIndex]?.role?.id === role.id;
+    onAnnotationsChange((prev) => {
+      const next = { ...prev };
+      for (let i = selectedBlock.startIndex; i <= selectedBlock.endIndex; i++) {
+        next[i] = isSame ? {} : { role };
+      }
+      return next;
+    });
+  }
+
+  // Persists the role to this book's list (so it's available in every later lesson here —
+  // see store/customClauseRoleActions.ts) and re-stamps every clause already using it, so
+  // redefining its name/color (via ClauseRolePalette's "Edit") doesn't leave a stale copy
+  // behind on words annotated before the edit — each annotation holds its own snapshot of
+  // the role, not just a lookup key.
+  function saveRole(role: CustomClauseRole) {
+    upsertCustomClauseRole(verse.book, role);
+    onAnnotationsChange((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        const index = Number(key);
+        if (next[index]?.role?.id === role.id) next[index] = { role };
+      }
+      return next;
+    });
+  }
+
+  const canContinue = blocks.every((block) => annotations[block.startIndex]?.role !== undefined);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
+          Understand <InfoTip text={INFO_TIPS.verseOrientationRep} />
+        </p>
+        <VerseReferenceHeader book={verse.book} chapter={verse.chapter} verseNumber={verse.verseNumber} />
+      </div>
+      <p className="text-sm font-medium text-ink-soft dark:text-zinc-300">
+        Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.
+      </p>
+      <ClauseRolePalette
+        roles={bookRoles}
+        activeRoleId={selectedBlock ? annotations[selectedBlock.startIndex]?.role?.id : undefined}
+        disabled={!selectedBlock}
+        onSelectRole={assignRole}
+        onSaveRole={saveRole}
+      />
+      {previousVerse && <VerseContextLine verse={previousVerse} />}
+      <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex flex-col gap-3">
+        {orderedBlocks.map((block) => (
+          <ClauseCard
+            key={block.id}
+            block={block}
+            words={words}
+            verseMarkers={verseMarkers}
+            verseLabel={block.startIndex === 0 ? { chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined}
+            annotation={annotations[block.startIndex]}
+            isSelected={block.id === selectedBlockId}
+            onToggleBreak={toggleBreak}
+            onSelect={() => setSelectedBlockId(block.id)}
+            onMergeUp={block.startIndex > 0 ? () => toggleBreak(block.startIndex - 1) : undefined}
+          />
+        ))}
+      </Reorder.Group>
+      {nextVerse && <VerseContextLine verse={nextVerse} />}
+      <div className="flex items-center gap-4">
+        <motion.button
+          type="button"
+          whileTap={TAP_SCALE}
+          disabled={!canContinue}
+          onClick={onComplete}
+          className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Continue
+        </motion.button>
+      </div>
+      <AutoCompleteButton onClick={onComplete} />
+    </div>
+  );
+}
