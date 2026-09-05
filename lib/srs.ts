@@ -60,10 +60,17 @@ function isValidBox(value: unknown): value is SrsBox {
 // SrsReviewSession -> recordSrsReview). state.box is re-validated rather than trusted as-is
 // — an entity created before this box system existed has no box field at all, and treating
 // that as Box 1 here (rather than doing arithmetic on undefined) is what lets it self-heal
-// into a real box on its very next review instead of crashing.
-export function scheduleReview(state: SRSState, accuracy: number, now: Date = new Date()): SRSState {
+// into a real box on its very next review instead of crashing. promotionThreshold defaults
+// to PROMOTION_ACCURACY_THRESHOLD but is overridable — see UserProgress.srsPromotionThreshold
+// and useProgressStore.ts's recordSrsReview, which passes the reader's own configured value.
+export function scheduleReview(
+  state: SRSState,
+  accuracy: number,
+  now: Date = new Date(),
+  promotionThreshold: number = PROMOTION_ACCURACY_THRESHOLD,
+): SRSState {
   const currentBox = isValidBox(state.box) ? state.box : 1;
-  const box: SrsBox = accuracy >= PROMOTION_ACCURACY_THRESHOLD ? nextBox(currentBox) : 1;
+  const box: SrsBox = accuracy >= promotionThreshold ? nextBox(currentBox) : 1;
   const intervalDays = BOX_INTERVAL_DAYS[box];
   return { box, lastReviewedAt: now.toISOString(), nextDueAt: addDays(now, intervalDays).toISOString() };
 }

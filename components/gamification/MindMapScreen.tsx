@@ -8,9 +8,9 @@ import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 // Testing-tab entry point (see components/ui/BottomTabBar.tsx) for the Mind Map — a free
 // pan/zoom view of the currently active BOOK path's own chapter/pericope tree. All the real
-// data work (loading verses, building the day plan, shaping it into per-chapter pericope
-// zones/states) lives in lib/useMindMapData.ts; this component only picks which state to
-// show and wires the ready case's navigation callbacks through to the canvas.
+// data work (loading verses, building the day plan, slicing it per chapter) lives in
+// lib/useMindMapData.ts; this component only picks which state to show and wires the ready
+// case's navigation callbacks through to the canvas.
 export function MindMapScreen() {
   const router = useRouter();
   const data = useMindMapData();
@@ -51,6 +51,7 @@ export function MindMapScreen() {
         <MindMapCanvas
           bookLabel={data.label}
           chapters={data.chapters}
+          completedDays={data.completedDays}
           onSelectDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}`)}
           onPracticeDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}/practice`)}
         />

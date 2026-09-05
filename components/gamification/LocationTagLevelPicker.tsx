@@ -5,12 +5,16 @@ import { motion } from "framer-motion";
 import type { LocationTagLevel } from "@/types";
 import { LOCATION_TAG_LEVEL_LABELS } from "@/lib/locationTags";
 import { TAP_SCALE } from "@/lib/motionTokens";
+import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
 interface LocationTagLevelPickerProps {
-  onSelect: (levels: LocationTagLevel[]) => void;
+  onSelect: (levels: LocationTagLevel[], pegSystemEnabled: boolean, sectionEndPegEnabled: boolean) => void;
   onBack: () => void;
+  // Seed for the Pegs checkbox — whatever lib/pegSystem.ts's global toggle is set to right now
+  // (see Profile) — not reset just because this step is being revisited.
+  initialPegSystemEnabled: boolean;
 }
 
 const LEVELS: LocationTagLevel[] = ["book", "chapter", "pericope", "verse"];
@@ -25,8 +29,12 @@ const LEVEL_DESCRIPTIONS: Record<LocationTagLevel, string> = {
 // levels (including none) can be picked; each picked level gets its own "add location tag"
 // option wherever that scope shows up in the path view (see BuildingRoomView.tsx and
 // LocationTagField.tsx) — plain free text, no suggestions of any kind.
-export function LocationTagLevelPicker({ onSelect, onBack }: LocationTagLevelPickerProps) {
+export function LocationTagLevelPicker({ onSelect, onBack, initialPegSystemEnabled }: LocationTagLevelPickerProps) {
   const [selected, setSelected] = useState<Set<LocationTagLevel>>(new Set());
+  const [pegSystemEnabled, setPegSystemEnabled] = useState(initialPegSystemEnabled);
+  // Create-time-only, per-path — never seeded from anywhere global, unlike pegSystemEnabled
+  // above, since it only makes sense alongside this same path's own pericope-level choice.
+  const [sectionEndPegEnabled, setSectionEndPegEnabled] = useState(false);
 
   function toggle(level: LocationTagLevel) {
     setSelected((prev) => {
@@ -74,10 +82,30 @@ export function LocationTagLevelPicker({ onSelect, onBack }: LocationTagLevelPic
           );
         })}
       </div>
+      <div className="flex items-start gap-1.5">
+        <ToggleSwitch
+          checked={pegSystemEnabled}
+          onChange={setPegSystemEnabled}
+          label="Pegs"
+          description="Show a Major-System peg word alongside each location tag above — a section's own peg pegs to its first verse"
+        />
+        <InfoTip text={INFO_TIPS.pegSystemToggle} />
+      </div>
+      {selected.has("pericope") && pegSystemEnabled && (
+        <div className="flex items-start gap-1.5 pl-4">
+          <ToggleSwitch
+            checked={sectionEndPegEnabled}
+            onChange={setSectionEndPegEnabled}
+            label="Section end peg"
+            description="Also show a second peg word on each section, pegged to the verse it ends with"
+          />
+          <InfoTip text={INFO_TIPS.sectionEndPegToggle} />
+        </div>
+      )}
       <motion.button
         type="button"
         whileTap={TAP_SCALE}
-        onClick={() => onSelect(Array.from(selected))}
+        onClick={() => onSelect(Array.from(selected), pegSystemEnabled, sectionEndPegEnabled)}
         className="self-start rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white"
       >
         Continue

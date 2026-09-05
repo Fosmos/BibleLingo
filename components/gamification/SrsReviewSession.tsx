@@ -30,6 +30,11 @@ export function SrsReviewSession() {
   const pericopeHeadingRecallEnabled = useProgressStore((state) => state.pericopeHeadingRecallEnabled);
   const flagProblemVerse = useProgressStore((state) => state.flagProblemVerse);
   const clearProblemVerse = useProgressStore((state) => state.clearProblemVerse);
+  // The reader's own configured thresholds (Profile > Settings) — undefined (a profile
+  // saved before these existed) falls back to the same defaults lib/srs.ts and
+  // lib/problemVerses.ts have always used.
+  const promotionThreshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
+  const problemVerseThreshold = useProgressStore((state) => state.problemVerseThreshold) ?? PROBLEM_VERSE_ACCURACY_THRESHOLD;
   const { pending, celebrate, finish } = useCelebration();
 
   const dueEntities = entities.filter((entity) => isDue(entity.srs));
@@ -158,9 +163,9 @@ export function SrsReviewSession() {
         onRestart={restart}
         onVerseAccuracy={(results) => {
           results.forEach(({ verseNumber, accuracy: verseAccuracy }) => {
-            if (verseAccuracy < PROBLEM_VERSE_ACCURACY_THRESHOLD) {
+            if (verseAccuracy < problemVerseThreshold) {
               flagProblemVerse(entity.book, entity.chapter, verseNumber, entity.version);
-            } else if (verseAccuracy >= PROMOTION_ACCURACY_THRESHOLD) {
+            } else if (verseAccuracy >= promotionThreshold) {
               // A later good review DOES clear a verse out of the bin now — the only other
               // way out is fully relearning it (see RelearnSession.tsx).
               clearProblemVerse(entity.book, entity.chapter, verseNumber);

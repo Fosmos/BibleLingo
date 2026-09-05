@@ -3,7 +3,7 @@
 import type { PathZone } from "@/lib/pathZones";
 import type { PericopeCardState } from "@/lib/pericopeCardState";
 import { dayLabel } from "@/components/gamification/DayCircle";
-import { PERICOPE_NODE_RADIUS } from "@/lib/mindMapLayout";
+import { PERICOPE_PILL_WIDTH, PERICOPE_PILL_HEIGHT } from "@/lib/mindMapLayout";
 
 interface MindMapPericopeNodeProps {
   zone: PathZone;
@@ -33,8 +33,7 @@ const TEXT_BY_STATUS = {
 
 // A short label for this node — the zone's own verse range ("9-11") for a real pericope, or
 // whatever short name DayCircle already uses for a capstone day (a weekly/monthly review, a
-// section boss battle) for the rare zone that isn't one — same fallback PericopeCard.tsx's
-// own actionLabel reaches for.
+// section boss battle) for the rare zone that isn't one.
 function shortLabel(zone: PathZone, state: PericopeCardState): string {
   if (zone.startVerse !== undefined && zone.endVerse !== undefined) {
     return zone.startVerse === zone.endVerse ? `${zone.startVerse}` : `${zone.startVerse}-${zone.endVerse}`;
@@ -42,14 +41,18 @@ function shortLabel(zone: PathZone, state: PericopeCardState): string {
   return state.actionDay ? dayLabel(state.actionDay) : zone.label;
 }
 
-// One pericope's own node on a zoomed-in chapter's ring — same status-coloring language as
-// MindMapChapterNode.tsx (locked/active/completed), just smaller and labeled with its verse
-// range instead of a chapter number. Clicking it is real navigation (see MindMapCanvas.tsx's
-// onSelect), the same select-vs-practice action lib/pericopeCardState.ts's computeZoneCardState
-// already decided for this exact zone — so a click here does exactly what tapping this same
-// pericope's card would do on the real path screen.
+// One pericope's own small pill on a chapter's expanded branch (see MindMapCanvas.tsx) —
+// same pill shape, drop shadow, and status-coloring language as MindMapChapterNode.tsx, just
+// smaller and labeled with its verse range instead of a chapter number. Clicking it opens
+// the real path view for its own chapter (MindMapCanvas.tsx's pathViewChapter) rather than
+// jumping straight into a lesson — that same real view is where the actual Learn/practice
+// button lives.
 export function MindMapPericopeNode({ zone, state, x, y, onSelect }: MindMapPericopeNodeProps) {
   const label = shortLabel(zone, state);
+  const left = x - PERICOPE_PILL_WIDTH / 2;
+  const top = y - PERICOPE_PILL_HEIGHT / 2;
+  const rx = PERICOPE_PILL_HEIGHT / 2;
+
   return (
     <g
       role="button"
@@ -62,32 +65,31 @@ export function MindMapPericopeNode({ zone, state, x, y, onSelect }: MindMapPeri
       className="cursor-pointer outline-none"
     >
       {state.status === "active" && (
-        <circle
-          cx={x}
-          cy={y}
-          r={PERICOPE_NODE_RADIUS + 7}
+        <rect
+          x={left - 5}
+          y={top - 5}
+          width={PERICOPE_PILL_WIDTH + 10}
+          height={PERICOPE_PILL_HEIGHT + 10}
+          rx={rx + 5}
           className="animate-pulse fill-none stroke-brand-500 stroke-2 opacity-70"
         />
       )}
-      <circle
-        cx={x}
-        cy={y}
-        r={PERICOPE_NODE_RADIUS}
+      <rect
+        x={left}
+        y={top}
+        width={PERICOPE_PILL_WIDTH}
+        height={PERICOPE_PILL_HEIGHT}
+        rx={rx}
+        filter="url(#mm-pill-shadow)"
         className={`${FILL_BY_STATUS[state.status]} ${STROKE_BY_STATUS[state.status]} stroke-2`}
       />
-      <text
-        x={x}
-        y={y}
-        textAnchor="middle"
-        dominantBaseline="central"
-        className={`${TEXT_BY_STATUS[state.status]} select-none text-[11px] font-semibold`}
-      >
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className={`${TEXT_BY_STATUS[state.status]} select-none text-[11px] font-semibold`}>
         {label}
       </text>
       {state.status === "completed" && (
-        <g transform={`translate(${x + PERICOPE_NODE_RADIUS - 6}, ${y - PERICOPE_NODE_RADIUS + 6})`}>
-          <circle r={8} className="fill-brand-500" />
-          <path d="M -3 0 L -1 2.5 L 4 -3" className="fill-none stroke-white" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+        <g transform={`translate(${left + PERICOPE_PILL_WIDTH - 8}, ${top + 8})`}>
+          <circle r={7} className="fill-brand-500" />
+          <path d="M -2.5 0 L -0.5 2 L 3.5 -2.5" className="fill-none stroke-white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
         </g>
       )}
     </g>

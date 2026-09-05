@@ -37,6 +37,21 @@ export function computeZoneCardState(zone: PathZone, completedDays: number): Per
     return { status: "completed", actionDay: reviewTarget, actionKind: "practice" };
   }
 
+  // A pericope short enough that no lesson ever ends exactly on it never gets a "home" day
+  // above — every lesson that touches it only ever passes through on the way to a later
+  // section (see PathZone.spilloverVerses). Its own completion still has to be judged from
+  // that spillover history, or it stays stuck showing "Locked" forever even once every lesson
+  // that ever touched it has long since finished. No actionDay here (there's no single lesson
+  // of its own to replay — reviewing would mean replaying a whole later lesson's verses,
+  // which reach beyond this pericope) — PericopeCard.tsx renders no action button for it,
+  // same as any other spillover-only card.
+  if (zone.days.length === 0 && zone.spilloverVerses && zone.spilloverVerses.length > 0) {
+    const lastSpilloverDay = Math.max(...zone.spilloverVerses.map((entry) => entry.dayNumber));
+    if (lastSpilloverDay <= completedDays) {
+      return { status: "completed", actionKind: "practice" };
+    }
+  }
+
   // Not reached yet — still previewable via its own first lesson, same as any other day.
   const firstLearnDay = zone.days.find((day) => day.kind === "learn");
   return { status: "locked", actionDay: firstLearnDay ?? zone.days[0], actionKind: "select" };

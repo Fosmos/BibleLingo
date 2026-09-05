@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, LocationTagLevel, PathProgress, UserProgress, VersePOA, VerseSegment } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, UserProgress, VersePOA, VerseSegment } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -12,11 +12,13 @@ import { createManualEntityActions } from "@/store/manualEntityActions";
 import { createBuildingViewActions } from "@/store/buildingViewActions";
 import { createVersePOAActions } from "@/store/versePOAActions";
 import { createLocationTagActions } from "@/store/locationTagActions";
+import { createPegMasterListActions } from "@/store/pegMasterListActions";
 import { createCustomClauseRoleActions } from "@/store/customClauseRoleActions";
 import { createSessionCheckpointActions } from "@/store/sessionCheckpointActions";
 import { createProblemVerseActions } from "@/store/problemVerseActions";
 import { createReviewSettingsActions } from "@/store/reviewSettingsActions";
 import { createLearnSettingsActions } from "@/store/learnSettingsActions";
+import { createPathActions } from "@/store/pathActions";
 
 export type { StreakLoadStatus };
 
@@ -27,7 +29,14 @@ interface ProgressActions {
   consumeStreakFreeze: () => boolean;
   addStreakFreeze: (amount: number) => void;
   evaluateStreakOnLoad: () => { status: StreakLoadStatus; previousStreak: number };
-  setPath: (pathKey: string, version: string, versesPerDay?: number, locationTagLevels?: LocationTagLevel[]) => void;
+  setPath: (
+    pathKey: string,
+    version: string,
+    versesPerDay?: number,
+    locationTagLevels?: LocationTagLevel[],
+    sectionEndPegEnabled?: boolean,
+  ) => void;
+  resetPathProgress: (pathKey: string) => void;
   setActivePath: (pathKey: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
@@ -52,6 +61,8 @@ interface ProgressActions {
   markBuildingViewReviewedToday: () => void;
   setLocationTag: (key: string, value: string) => void;
   clearLocationTag: (key: string) => void;
+  setPegMasterWord: (key: string, value: string) => void;
+  clearPegMasterWord: (key: string) => void;
   upsertCustomClauseRole: (book: string, role: CustomClauseRole) => void;
   patchSessionCheckpoint: (sessionKey: string, field: string, value: number) => void;
   clearSessionCheckpoint: (sessionKey: string) => void;
@@ -59,9 +70,12 @@ interface ProgressActions {
   flagProblemVerse: (book: string, chapter: number, verseNumber: number, version: string) => void;
   clearProblemVerse: (book: string, chapter: number, verseNumber: number) => void;
   setPericopeHeadingRecallEnabled: (value: boolean) => void;
+  setSrsPromotionThreshold: (value: number) => void;
+  setProblemVerseThreshold: (value: number) => void;
   setUnderstandStageEnabled: (value: boolean) => void;
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
+  setFillInTheBlankStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 
@@ -88,32 +102,16 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   ...createBuildingViewActions(set, get, persist),
   ...createVersePOAActions(set, get, persist),
   ...createLocationTagActions(set, get, persist),
+  ...createPegMasterListActions(set, get, persist),
   ...createCustomClauseRoleActions(set, get, persist),
   ...createSessionCheckpointActions(set, get, persist),
   ...createProblemVerseActions(set, get, persist),
   ...createReviewSettingsActions(set, get, persist),
   ...createLearnSettingsActions(set, get, persist),
+  ...createPathActions(set, get, persist),
 
   hydrate: (userId) => {
     set(loadProgress(userId));
-  },
-
-  setPath: (pathKey, version, versesPerDay, locationTagLevels) => {
-    const state = get();
-    const existing = state.paths[pathKey];
-    const plan: PathProgress = {
-      version,
-      completedDays: existing?.completedDays ?? 0,
-      versesPerDay: versesPerDay ?? existing?.versesPerDay,
-      locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,
-    };
-    set(persist({ ...state, paths: { ...state.paths, [pathKey]: plan } }));
-  },
-
-  setActivePath: (pathKey) => {
-    const state = get();
-    if (state.activePathKey === pathKey) return;
-    set(persist({ ...state, activePathKey: pathKey }));
   },
 
   completeDay: (pathKey, dayNumber) => {
@@ -146,7 +144,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const state = get();
     const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
     if (!entity) return;
-    const srs = scheduleReview(entity.srs, accuracy);
+    const srs = scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold);
     const memorizedEntities = state.memorizedEntities.map((candidate) =>
       candidate.id === entityId ? { ...candidate, srs } : candidate,
     );

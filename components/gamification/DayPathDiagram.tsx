@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Map, ChevronLeft, ChevronRight } from "lucide-react";
+import { Map, ChevronLeft, ChevronRight, FlaskConical } from "lucide-react";
 import type { MemorizationDay } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
+import { applyDayCompletion } from "@/lib/completeDayEffects";
 import { MOTION_DURATION } from "@/lib/motionTokens";
 import { PathDayList } from "@/components/gamification/PathDayList";
 import { BuildingRoomView } from "@/components/gamification/BuildingRoomView";
@@ -14,6 +15,10 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 interface DayPathDiagramProps {
   label: string;
   days: MemorizationDay[];
+  // The path's FULL, unscoped day list — book mode's `days` prop above may be narrowed to just
+  // the currently-viewed chapter, but "Next day (testing)" always needs to find whichever day
+  // is globally next regardless of which chapter happens to be in view.
+  allDays: MemorizationDay[];
   completedDays: number;
   pathKey: string;
   onSelectDay: (dayNumber: number) => void;
@@ -38,6 +43,7 @@ const navPillClass =
 export function DayPathDiagram({
   label,
   days,
+  allDays,
   completedDays,
   pathKey,
   onSelectDay,
@@ -47,6 +53,7 @@ export function DayPathDiagram({
   onPreviousChapter,
 }: DayPathDiagramProps) {
   const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
+  const nextDay = allDays.find((candidate) => candidate.dayNumber === completedDays + 1);
   // completedDays is a path-wide counter, but `days` may be a single chapter's subset —
   // scope the visible count to what's actually rendered here.
   const visibleCompletedCount = days.filter((day) => day.dayNumber <= completedDays).length;
@@ -82,6 +89,11 @@ export function DayPathDiagram({
           {onNextChapter && (
             <button type="button" onClick={onNextChapter} className={navPillClass}>
               Next <ChevronRight size={13} />
+            </button>
+          )}
+          {nextDay && (
+            <button type="button" onClick={() => applyDayCompletion(pathKey, nextDay)} className={navPillClass}>
+              <FlaskConical size={13} /> Next day (testing)
             </button>
           )}
         </div>

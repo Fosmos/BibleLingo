@@ -84,6 +84,12 @@ export interface PathProgress {
   // combination, chosen once at path-creation time. Undefined (an older path, or Building
   // view was off when this one was made) means none.
   locationTagLevels?: LocationTagLevel[];
+  // When true (and "pericope" is one of locationTagLevels above and pegSystemEnabled is on),
+  // each pericope card's header shows a SECOND peg chip pegged to the section's own last verse
+  // number, alongside the usual one pegged to its first verse — chosen once at path-creation
+  // time, right alongside locationTagLevels (see LocationTagLevelPicker.tsx). Undefined means
+  // off, same "never asked/older path" convention as locationTagLevels.
+  sectionEndPegEnabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,10 +222,19 @@ export interface UserProgress {
   // option instead of a tag; a verse reached before its own tag is set just proceeds with no
   // Loci context in Visualize.
   locationTags: Record<string, string>;
+  // The reader's own Master Peg List — one word per NUMBER (0-99, zero-padded key — see
+  // lib/pegSystem.ts's pegMasterListKey), not per scope: unlike locationTags, this is the same
+  // single flat map whether it's edited from the Master Peg List settings page
+  // (app/profile/peg-list/page.tsx) or inline from any PegTagField.tsx chip in a path view — an
+  // edit either place changes that number's word everywhere it's used. A number with no entry
+  // here falls back to lib/pegSystem.ts's own Major-System recommendation (see resolvePegWord).
+  pegMasterList: Record<string, string>;
   // Whether the Major/peg number-to-consonant system (see lib/pegSystem.ts) is on — when it
   // is, Visualize pre-fills an editable peg-word field for the verse number alongside the
   // reader's own POA (the reader's own choice IS written back into it — see VersePOA.pegWord),
-  // and a short "Learn the system" overview/quiz becomes available wherever Building view is.
+  // and a short "Learn the system" overview/quiz plus the Master Peg List (pegMasterList
+  // above) become available from Profile — including the Memory Palace tag view, where it
+  // shows an editable PegTagField right next to every location tag spot the reader picked.
   pegSystemEnabled: boolean;
   // The last calendar date (YYYY-MM-DD, local) a Building-view chapter review was shown —
   // gates DailyChapterReviewGate.tsx to at most once per day per the reader's own clock,
@@ -252,6 +267,19 @@ export interface UserProgress {
   // components/gamification/SrsEntityRecall.tsx) — off skips straight to the verse recall,
   // same as an entity that doesn't open a pericope.
   pericopeHeadingRecallEnabled: boolean;
+  // User-configurable override for lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD default (90) —
+  // how high an SRS review's accuracy must be to promote a box instead of dropping back to
+  // Box 1. Optional (rather than bumped in alongside a schema version) so an existing saved
+  // profile missing it just falls back to that same default at every read site, the same
+  // self-healing convention SRSState.box already uses — never requires wiping progress.
+  srsPromotionThreshold?: number;
+  // User-configurable override for lib/problemVerses.ts's PROBLEM_VERSE_ACCURACY_THRESHOLD
+  // default (80) — how low a single verse's SRS review accuracy must fall to flag it into
+  // the Problem Verses bin. Same undefined-falls-back-to-default convention as
+  // srsPromotionThreshold above. Deliberately not validated against it — setting this at or
+  // above the promotion threshold just means a review can flag and promote at the same time,
+  // which is confusing but not unsafe, so it's left as the reader's own call.
+  problemVerseThreshold?: number;
   // Every individual verse whose most recent SRS review accuracy fell below
   // PROBLEM_VERSE_ACCURACY_THRESHOLD (lib/problemVerses.ts), keyed by lib/verseKey.ts's
   // verseKey — a standing "needs extra practice" list (see components/gamification/
@@ -274,6 +302,10 @@ export interface UserProgress {
   // see DrawFirstLetterRep) runs during Learn. Off skips straight from Rhythm to the Speak
   // (first-letter hint) stage for every verse that day.
   writeFirstLetterStageEnabled: boolean;
+  // Whether each verse's "Fill in the Blank" stage (the word-bank tap exercise — see
+  // FillInTheBlankRep) runs during Learn, right after the Speak hint. Off skips straight from
+  // the Speak hint to Type it by first letter for every verse that day.
+  fillInTheBlankStageEnabled: boolean;
 }
 
 // One verse flagged into the Problem Verses bin — see UserProgress.problemVerses above for

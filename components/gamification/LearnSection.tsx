@@ -31,16 +31,19 @@ const LONGER_PRAYER_DURATION_S = 60;
 type FlatStep = { phase: Phase; verseIndex?: number };
 
 // One individual verse's own drilling stages — run once, in order, before moving to the next
-// verse (no repeated rounds). Write First Letter (the handwriting canvas) drops out entirely
-// when its own setting is off, going straight from Rhythm to the Speak hint. Fill In The
-// Blank sits after the Speak hint and before the fully-blind Type stage — one more rung on
-// the same "progressively less scaffolding" ladder: read it (Rhythm) → hear a first-letter
-// hint while speaking it (Speak hint) → recall whole words with a word bank to lean on (Fill
-// In The Blank) → recall it with no help at all (Type it by first letter).
-function versePhases(writeFirstLetterEnabled: boolean): Phase[] {
-  return writeFirstLetterEnabled
-    ? ["rhythm", "draw_first_letters", "speak_hint", "fill_in_the_blank", "type_first_letters"]
-    : ["rhythm", "speak_hint", "fill_in_the_blank", "type_first_letters"];
+// verse (no repeated rounds). Write First Letter (the handwriting canvas) and Fill In The
+// Blank each drop out entirely when their own setting is off. Fill In The Blank, when on,
+// sits after the Speak hint and before the fully-blind Type stage — one more rung on the
+// same "progressively less scaffolding" ladder: read it (Rhythm) → hear a first-letter hint
+// while speaking it (Speak hint) → recall whole words with a word bank to lean on (Fill In
+// The Blank) → recall it with no help at all (Type it by first letter).
+function versePhases(writeFirstLetterEnabled: boolean, fillInTheBlankEnabled: boolean): Phase[] {
+  const phases: Phase[] = ["rhythm"];
+  if (writeFirstLetterEnabled) phases.push("draw_first_letters");
+  phases.push("speak_hint");
+  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
+  phases.push("type_first_letters");
+  return phases;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
@@ -63,11 +66,12 @@ function buildSteps(
   understandEnabled: boolean,
   visualizeEnabled: boolean,
   writeFirstLetterEnabled: boolean,
+  fillInTheBlankEnabled: boolean,
 ): FlatStep[] {
   const steps: FlatStep[] = [];
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
-  const phases = versePhases(writeFirstLetterEnabled);
+  const phases = versePhases(writeFirstLetterEnabled, fillInTheBlankEnabled);
   for (let verseIndex = 0; verseIndex < verseCount; verseIndex++) {
     for (const phase of phases) steps.push({ phase, verseIndex });
     steps.push({ phase: "speak_verse", verseIndex });
@@ -105,9 +109,10 @@ export function LearnSection({ day, onComplete, sessionKey }: LearnSectionProps)
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
   const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
+  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   const steps = useMemo(
-    () => buildSteps(day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled),
-    [day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled],
+    () => buildSteps(day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled),
+    [day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled],
   );
 
   const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);

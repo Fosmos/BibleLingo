@@ -5,6 +5,7 @@ import type { MemorizationDay, VerseSegment } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
+import { applyDayCompletion } from "@/lib/completeDayEffects";
 import { VerseLessonFlow } from "@/components/gamification/VerseLessonFlow";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { ReviewChain } from "@/components/drills/ReviewChain";
@@ -12,9 +13,7 @@ import { BossBattleStage } from "@/components/drills/BossBattleStage";
 import { VictoryScreen } from "@/components/gamification/VictoryScreen";
 import { StreakMilestoneModal } from "@/components/gamification/StreakMilestoneModal";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
-import { STREAK_MILESTONES } from "@/lib/streak";
-import { playStreakSfx } from "@/lib/audio";
-import { SHEKELS_PER_VERSE_COMPLETED, SHEKELS_PER_BOSS_BATTLE } from "@/lib/economy";
+import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 
 interface DaySessionControllerProps {
   pathKey: string;
@@ -28,12 +27,6 @@ interface DaySessionControllerProps {
 
 export function DaySessionController({ pathKey, label, day, totalDays, completingChapterVerses }: DaySessionControllerProps) {
   const plan = useProgressStore((state) => state.paths[pathKey]);
-  const completeDay = useProgressStore((state) => state.completeDay);
-  const completeBookChapter = useProgressStore((state) => state.completeBookChapter);
-  const incrementStreak = useProgressStore((state) => state.incrementStreak);
-  const addStreakFreeze = useProgressStore((state) => state.addStreakFreeze);
-  const awardSticker = useProgressStore((state) => state.awardSticker);
-  const earnShekels = useProgressStore((state) => state.earnShekels);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const recordChapterReviewAccuracy = useProgressStore((state) => state.recordChapterReviewAccuracy);
 
@@ -49,29 +42,8 @@ export function DaySessionController({ pathKey, label, day, totalDays, completin
 
   function finishDay() {
     clearSessionCheckpoint(sessionKey);
-    completeDay(pathKey, day.dayNumber);
-    if (completingChapterVerses && completingChapterVerses.length > 0 && plan) {
-      completeBookChapter(completingChapterVerses, plan.version);
-    }
-    const previousStreak = useProgressStore.getState().streak.currentStreak;
-    incrementStreak();
-    const newStreak = useProgressStore.getState().streak.currentStreak;
-    if (newStreak !== previousStreak) {
-      playStreakSfx();
-      if (STREAK_MILESTONES.includes(newStreak)) {
-        addStreakFreeze(1);
-        setMilestoneStreak(newStreak);
-      }
-    }
-    if (day.newVerses.length > 0) {
-      earnShekels(day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED);
-    }
-    if (day.kind === "boss_battle" || day.kind === "section_boss_battle") {
-      earnShekels(SHEKELS_PER_BOSS_BATTLE);
-    }
-    if (day.kind === "boss_battle") {
-      awardSticker(pathKey);
-    }
+    const milestone = applyDayCompletion(pathKey, day, completingChapterVerses);
+    if (milestone !== null) setMilestoneStreak(milestone);
     if (day.kind === "learn") {
       celebrate(() => setDayComplete(true), "Todays lesson complete");
     } else {
@@ -119,6 +91,7 @@ export function DaySessionController({ pathKey, label, day, totalDays, completin
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
       {day.kind !== "learn" && <p className="text-caption text-ink-muted">{dayLabel}</p>}
+      <AutoCompleteButton label="Auto-complete lesson (testing)" onClick={finishDay} />
       {day.kind === "learn" && (
         <VerseLessonFlow day={day} onComplete={finishDay} sessionKey={sessionKey} />
       )}

@@ -9,9 +9,12 @@ import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { StreakFreezeBadge } from "@/components/gamification/StreakFreezeBadge";
 import { ShekelCounter } from "@/components/gamification/ShekelCounter";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { ThresholdSlider } from "@/components/ui/ThresholdSlider";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { TAP_SCALE } from "@/lib/motionTokens";
+import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
+import { PROBLEM_VERSE_ACCURACY_THRESHOLD } from "@/lib/problemVerses";
 
 export default function ProfilePage() {
   const longestStreak = useProgressStore((state) => state.streak.longestStreak);
@@ -24,12 +27,18 @@ export default function ProfilePage() {
   const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
   const pericopeHeadingRecallEnabled = useProgressStore((state) => state.pericopeHeadingRecallEnabled);
   const setPericopeHeadingRecallEnabled = useProgressStore((state) => state.setPericopeHeadingRecallEnabled);
+  const srsPromotionThreshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
+  const setSrsPromotionThreshold = useProgressStore((state) => state.setSrsPromotionThreshold);
+  const problemVerseThreshold = useProgressStore((state) => state.problemVerseThreshold) ?? PROBLEM_VERSE_ACCURACY_THRESHOLD;
+  const setProblemVerseThreshold = useProgressStore((state) => state.setProblemVerseThreshold);
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const setUnderstandStageEnabled = useProgressStore((state) => state.setUnderstandStageEnabled);
   const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
   const setVisualizeStageEnabled = useProgressStore((state) => state.setVisualizeStageEnabled);
   const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
+  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
+  const setFillInTheBlankStageEnabled = useProgressStore((state) => state.setFillInTheBlankStageEnabled);
   const currentUserId = useAuthStore((state) => state.currentUserId);
   const username = useAuthStore((state) => state.currentUsername);
   const signOut = useAuthStore((state) => state.signOut);
@@ -119,6 +128,15 @@ export default function ProfilePage() {
         </div>
         <div className="mt-3 flex items-start gap-1.5">
           <ToggleSwitch
+            checked={fillInTheBlankStageEnabled}
+            onChange={setFillInTheBlankStageEnabled}
+            label="Fill in the Blank stage"
+            description="A word-bank tap exercise during each verse's Learn stages, right after the Speak hint"
+          />
+          <InfoTip text={INFO_TIPS.fillInTheBlankStageToggle} />
+        </div>
+        <div className="mt-3 flex items-start gap-1.5">
+          <ToggleSwitch
             checked={pegSystemEnabled}
             onChange={setPegSystemEnabled}
             label="Peg system"
@@ -127,9 +145,14 @@ export default function ProfilePage() {
           <InfoTip text={INFO_TIPS.pegSystemToggle} />
         </div>
         {pegSystemEnabled && (
-          <Link href="/profile/peg-system" className="mt-2 self-start text-sm font-medium text-brand-600 hover:underline">
-            Learn the system →
-          </Link>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href="/profile/peg-system" className="self-start text-sm font-medium text-brand-600 hover:underline">
+              Learn the system →
+            </Link>
+            <Link href="/profile/peg-list" className="self-start text-sm font-medium text-brand-600 hover:underline">
+              Edit peg words →
+            </Link>
+          </div>
         )}
         <div className="mt-3 flex items-start gap-1.5">
           <ToggleSwitch
@@ -139,6 +162,28 @@ export default function ProfilePage() {
             description="When reviewing a verse group that opens a new section, type its heading by first letter before the verse — doesn't count against accuracy"
           />
           <InfoTip text={INFO_TIPS.pericopeHeadingRecallToggle} />
+        </div>
+        <div className="mt-4 flex items-start gap-1.5">
+          <div className="flex-1">
+            <ThresholdSlider
+              value={srsPromotionThreshold}
+              onChange={setSrsPromotionThreshold}
+              label="SRS promotion threshold"
+              description="How high a review's accuracy must be to move a verse group up a Sword of the Spirit box instead of dropping it back to Box 1"
+            />
+          </div>
+          <InfoTip text={INFO_TIPS.srsPromotionThresholdSlider} />
+        </div>
+        <div className="mt-4 flex items-start gap-1.5">
+          <div className="flex-1">
+            <ThresholdSlider
+              value={problemVerseThreshold}
+              onChange={setProblemVerseThreshold}
+              label="Problem verse threshold"
+              description="How low a single verse's review accuracy must fall to flag it into the Problem Verses bin"
+            />
+          </div>
+          <InfoTip text={INFO_TIPS.problemVerseThresholdSlider} />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <motion.button

@@ -10,6 +10,7 @@ import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { usePericopesReady } from "@/lib/usePericopesReady";
+import { resolveBookChapterView } from "@/lib/bookChapterView";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 // TEMPORARILY DISABLED along with its own usage below — see that comment.
 // import { DailyChapterReviewGate } from "@/components/gamification/DailyChapterReviewGate";
@@ -21,9 +22,17 @@ interface PathOverviewScreenProps {
   version: string;
   versesPerDay?: number;
   locationTagLevels?: LocationTagLevel[];
+  sectionEndPegEnabled?: boolean;
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, locationTagLevels }: PathOverviewScreenProps) {
+export function PathOverviewScreen({
+  pathKey: key,
+  label,
+  version,
+  versesPerDay,
+  locationTagLevels,
+  sectionEndPegEnabled,
+}: PathOverviewScreenProps) {
   const router = useRouter();
   // `verses` below is lazily seeded from the localStorage-backed content cache (via
   // resolvePath), which is empty during SSR but may already be populated on the client's
@@ -93,16 +102,17 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   // verses-per-day amount) for a path you'd already started would update this screen's own
   // content but leave plan.version/versesPerDay stuck at whatever they were first set to, so
   // every lesson (which reads the stored plan, not the URL) would keep silently using the
-  // original choice forever. locationTagLevels only ever arrives once, from GuidedPathFlow's
-  // own LocationTagLevelPicker step at path creation — never re-passed on a later visit — so
-  // it's never treated as a "changed, re-apply" signal the way version/versesPerDay are.
+  // original choice forever. locationTagLevels/sectionEndPegEnabled only ever arrive once,
+  // from GuidedPathFlow's own LocationTagLevelPicker step at path creation — never re-passed
+  // on a later visit — so neither is ever treated as a "changed, re-apply" signal the way
+  // version/versesPerDay are.
   useEffect(() => {
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
     if (!plan || plan.version !== version || versesPerDayChanged) {
-      setPath(key, version, versesPerDay, locationTagLevels);
+      setPath(key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled);
     }
-  }, [plan, verses, key, version, versesPerDay, locationTagLevels, setPath]);
+  }, [plan, verses, key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, setPath]);
 
   const pericopesReady = usePericopesReady(verses);
 
@@ -133,50 +143,21 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan);
   const basePath = `/path/${encodeURIComponent(key)}`;
 
-  // Book mode shows one chapter at a time rather than the whole book's lesson list —
-  // the visible group is whichever chapter the next incomplete day belongs to. Once every
-  // day in a chapter's group is done, the next incomplete day naturally belongs to the
-  // next chapter (or, after the last chapter, to the undefined-group whole-book capstone).
   const { kind } = parsePathKey(key);
-  let visibleDays = days;
-  let title = label;
-  // Book mode only: fraction of THIS chapter's own verses memorized so far, in place of the
-  // plain "N of M lessons complete" every other path kind shows — see DayPathDiagram.tsx.
-  let chapterMemorizedFraction: number | undefined;
-  let onNextChapter: (() => void) | undefined;
-  let onPreviousChapter: (() => void) | undefined;
-  if (kind === "book") {
-    const chapterGroups = Array.from(
-      new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
-    ).sort((a, b) => a - b);
-    const nextDay = days.find((day) => day.dayNumber === plan.completedDays + 1);
-    const group = chapterOverride ?? nextDay?.chapterGroup;
-    visibleDays = days.filter((day) => day.chapterGroup === group);
-    if (group !== undefined) {
-      // "Mark 14", matching chapter-mode's own title format — no separate "Chapter 14 of
-      // 16" line.
-      title = `${label} ${group}`;
-      const learnDays = visibleDays.filter((day) => day.kind === "learn");
-      const completedLearnDays = learnDays.filter((day) => day.dayNumber <= plan.completedDays).length;
-      chapterMemorizedFraction = learnDays.length > 0 ? completedLearnDays / learnDays.length : 0;
-      const groupIndex = chapterGroups.indexOf(group);
-      if (groupIndex !== -1 && groupIndex < chapterGroups.length - 1) {
-        onNextChapter = () => setChapterOverride(chapterGroups[groupIndex + 1]);
-      }
-      if (groupIndex > 0) {
-        onPreviousChapter = () => setChapterOverride(chapterGroups[groupIndex - 1]);
-      }
-    } else if (chapterGroups.length > 0) {
-      // Past every chapter (at the whole-book capstone) — still offer a way back into
-      // the last chapter's circles for testing, since there's otherwise no entry point.
-      onPreviousChapter = () => setChapterOverride(chapterGroups[chapterGroups.length - 1]);
-    }
-  }
+  const { visibleDays, title, chapterMemorizedFraction, onNextChapter, onPreviousChapter } = resolveBookChapterView(
+    kind,
+    days,
+    plan,
+    label,
+    chapterOverride,
+    setChapterOverride,
+  );
 
   const diagram = (
     <DayPathDiagram
       label={title}
       days={visibleDays}
+      allDays={days}
       completedDays={plan.completedDays}
       pathKey={key}
       chapterMemorizedFraction={chapterMemorizedFraction}

@@ -16,6 +16,15 @@ import { computeZoneCardState, type PericopeCardState, type PericopeCardStatus }
 export interface ChapterNode {
   chapter: number;
   status: PericopeCardStatus;
+  // This chapter's own slice of the full day plan — handed straight to PathDayList.tsx (the
+  // same component the real path screen renders) once a pericope in this chapter is opened,
+  // so its own pericope cards/grids/Learn buttons are pixel-for-pixel the real thing, not a
+  // mind-map-specific re-derivation of the same state.
+  days: MemorizationDay[];
+  // The same zones/states PathDayList itself would compute from `days` above — kept here too
+  // so the mind map's own small inline pericope-branch nodes (MindMapPericopeNode.tsx) can
+  // show each pericope's real status/short label without rendering a full PathDayList just
+  // to read it.
   zones: PathZone[];
   states: PericopeCardState[];
 }
@@ -44,11 +53,7 @@ function chapterStatus(chapterDays: MemorizationDay[], completedDays: number): P
 // buildPathDayPlan calls) so this view can never show a structure that disagrees with the
 // real path screen for the same book. Scoped to "book" kind paths only — chapter/verse/topic
 // paths have no chapter tier to draw a tree from, so those (and no active path at all) report
-// "no-path". Each chapter's own pericope zones/states come from buildPathZones +
-// computeZoneCardState run on just that chapter's own days — the exact same call
-// PathDayList.tsx makes once a chapter is the visible one there — so a pericope node's
-// color/checkmark here always matches what that same pericope's card shows on the real path
-// screen.
+// "no-path".
 export function useMindMapData(): MindMapData {
   const mounted = useHasMounted();
   const activePathKey = useProgressStore((state) => state.activePathKey);
@@ -134,7 +139,7 @@ export function useMindMapData(): MindMapData {
     const chapterDays = days.filter((day) => day.chapterGroup === chapter);
     const zones = buildPathZones(chapterDays);
     const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays));
-    return { chapter, status: chapterStatus(chapterDays, plan.completedDays), zones, states };
+    return { chapter, status: chapterStatus(chapterDays, plan.completedDays), days: chapterDays, zones, states };
   });
 
   return {

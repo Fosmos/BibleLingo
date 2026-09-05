@@ -1,6 +1,8 @@
-// Pure geometry for the Mind Map view (components/gamification/MindMapCanvas.tsx) — no
-// React, no DOM, so the ring math and camera-centering algebra can be reasoned about (and
-// tested) on their own, same convention as lib/srs.ts.
+// Pure camera/viewport geometry for the Mind Map view (components/gamification/
+// MindMapCanvas.tsx) — no React, no DOM, so the algebra can be reasoned about (and tested)
+// on its own, same convention as lib/srs.ts. The book/chapter/pericope SHAPE itself (which
+// side a chapter sits on, where its pericopes fan out to) lives in lib/mindMapShape.ts —
+// kept separate purely to stay under this codebase's 200-line-per-file cap.
 
 export interface Point {
   x: number;
@@ -19,30 +21,19 @@ export interface Camera {
 export const VIEWPORT_WIDTH = 900;
 export const VIEWPORT_HEIGHT = 700;
 
-export const BOOK_PILL_WIDTH = 140;
-export const BOOK_PILL_HEIGHT = 56;
-export const CHAPTER_NODE_RADIUS = 30;
-export const PERICOPE_NODE_RADIUS = 24;
-export const CHAPTER_RING_RADIUS = 260;
-export const PERICOPE_RING_RADIUS = 130;
+// The book node is a circle (not a pill like everything else) — big enough to hold 2-3
+// wrapped lines of its own full ceremonial title (see lib/bibleBookTitles.ts), which is why
+// it needs real radius rather than the tighter pill dimensions everything else uses.
+export const BOOK_CIRCLE_RADIUS = 82;
+export const CHAPTER_PILL_WIDTH = 92;
+export const CHAPTER_PILL_HEIGHT = 44;
+export const PERICOPE_PILL_WIDTH = 88;
+export const PERICOPE_PILL_HEIGHT = 36;
 
 export const OVERVIEW_SCALE = 1;
-export const FOCUS_SCALE = 1.9;
+export const FOCUS_SCALE = 1.5;
 export const MIN_SCALE = 0.5;
 export const MAX_SCALE = 2.6;
-
-const RING_START_ANGLE = -Math.PI / 2;
-
-// Evenly places `count` points on a circle of `radius` around `center`, starting at the top
-// (12 o'clock) and going clockwise — the one layout rule this whole mind map uses, for both
-// the chapter ring around the book pill and each chapter's own pericope ring.
-export function ringLayout(count: number, radius: number, center: Point = { x: 0, y: 0 }): Point[] {
-  if (count <= 0) return [];
-  return Array.from({ length: count }, (_, index) => {
-    const angle = RING_START_ANGLE + (index / count) * Math.PI * 2;
-    return { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) };
-  });
-}
 
 export function clampScale(scale: number): number {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));

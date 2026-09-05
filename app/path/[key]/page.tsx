@@ -13,13 +13,15 @@ function parseLocationTagLevels(value: string | undefined): LocationTagLevel[] |
 
 export default async function PathOverviewPage({ params, searchParams }: PageProps<"/path/[key]">) {
   const { key } = await params;
-  const { version, versesPerDay, locationTagLevels } = await searchParams;
+  const { version, versesPerDay, locationTagLevels, sectionEndPeg } = await searchParams;
   const decodedKey = decodeURIComponent(key);
   const resolvedVersion = (Array.isArray(version) ? version[0] : version) ?? "KJV";
   const versesPerDayParam = Array.isArray(versesPerDay) ? versesPerDay[0] : versesPerDay;
   const resolvedVersesPerDay = versesPerDayParam ? Number(versesPerDayParam) : undefined;
   const locationTagLevelsParam = Array.isArray(locationTagLevels) ? locationTagLevels[0] : locationTagLevels;
   const resolvedLocationTagLevels = parseLocationTagLevels(locationTagLevelsParam);
+  const sectionEndPegParam = Array.isArray(sectionEndPeg) ? sectionEndPeg[0] : sectionEndPeg;
+  const resolvedSectionEndPegEnabled = sectionEndPegParam ? sectionEndPegParam === "1" : undefined;
   const label = resolvePathLabel(decodedKey);
 
   if (!label) {
@@ -40,6 +42,7 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
         version={resolvedVersion}
         versesPerDay={resolvedVersesPerDay}
         locationTagLevels={resolvedLocationTagLevels}
+        sectionEndPegEnabled={resolvedSectionEndPegEnabled}
       />
     </div>
   );

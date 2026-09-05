@@ -6,6 +6,7 @@ interface LearnSettingsActions {
   setUnderstandStageEnabled: (value: boolean) => void;
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
+  setFillInTheBlankStageEnabled: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -29,6 +30,11 @@ export function createLearnSettingsActions(
     setWriteFirstLetterStageEnabled: (value) => {
       const state = get();
       set(persist({ ...state, writeFirstLetterStageEnabled: value }));
+    },
+
+    setFillInTheBlankStageEnabled: (value) => {
+      const state = get();
+      set(persist({ ...state, fillInTheBlankStageEnabled: value }));
     },
   };
 }

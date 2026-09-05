@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type RefObject, type PointerEvent } from "react";
 import {
-  cameraCenteredOn,
   zoomTowardPoint,
+  cameraCenteredOn,
   OVERVIEW_CAMERA,
   FOCUS_SCALE,
   VIEWPORT_WIDTH,
@@ -12,16 +12,14 @@ import {
   type Point,
 } from "@/lib/mindMapLayout";
 
-// Owns the Mind Map's pan/zoom camera state and every pointer/wheel interaction that moves
-// it — split out of MindMapCanvas.tsx so that component can stay focused on composing the
+// Owns the Mind Map's pan/zoom camera state and every pointer/wheel interaction that moves it
+// — split out of MindMapCanvas.tsx so that component can stay focused on composing the
 // book/chapter/pericope tree, not the interaction plumbing. A drag pans (converting the raw
 // client-pixel delta into the canvas's own fixed logical units via the SVG's actual on-screen
 // size, since its viewBox scales to fit whatever the container's real size is); a wheel zooms
 // toward the cursor, clamped by lib/mindMapLayout.ts's own MIN_SCALE/MAX_SCALE; focusOn
-// (called when a chapter is clicked) snaps the camera to center + zoom on a world-space
-// point — the caller applies its own CSS transition to the resulting transform (see
-// MindMapCanvas.tsx) so that jump animates instead of a hard cut, rather than anything
-// animated from in here.
+// (clicking a chapter's own pill) animates the camera to center + zoom on a world-space point
+// via a CSS transition the caller applies to its own <g transform> (see MindMapCanvas.tsx).
 export function useMindMapCamera(svgRef: RefObject<SVGSVGElement | null>) {
   const [camera, setCamera] = useState<Camera>(OVERVIEW_CAMERA);
   const [isDragging, setIsDragging] = useState(false);

@@ -35,6 +35,12 @@ export const INFO_TIPS = {
   versionPicker: "Pick which Bible translation to memorize this passage in.",
   versesPerDayPicker:
     "Sets how many new verses each lesson introduces. Larger amounts mean fewer, bigger lessons; smaller amounts mean more, shorter ones.",
+  learnIntensitySlider:
+    "How many encoding stages each new verse gets during Learn, from a quick pass (Rhythm, Speak hint, Type by first letter, Speak with nothing) up to every stage this app offers. Each step up adds one more stage and takes longer per verse, but tends to make the verse stick harder. Review, Pray, and cumulative review are unaffected either way — this only changes how a verse is first learned. Changing it here changes your Fill in the Blank / Visualize / Write First Letter / Understand settings for every future lesson, not just this path.",
+  customizeStagesToggle:
+    "Pick each stage individually instead of using one of the slider's presets — starts from whatever's on right now.",
+  memoryPalaceToggle:
+    "Add free-text location tags at whichever scopes you pick next (book, chapter, section, or verse) — no suggestions, just your own words. Leave this off to skip straight to creating the path.",
   bookChapterGrid:
     "Pick a book, then a chapter, to build a memorization path from. Content is fetched and cached the first time you select it.",
   masteryPassagePicker: "Choose the verse, chapter, or book (and translation) to test in Mastery Mode.",
@@ -53,17 +59,25 @@ export const INFO_TIPS = {
   includeVerseReferencesToggle:
     'When on, shows the verse number/reference inline in the text (e.g. "1:1 Paul and Timotheus...") wherever a verse is displayed.',
   buildingViewToggle:
-    "When on, the path view lets you add free-text \"location tags\" wherever you like — starting a book or chapter path with this on adds one more step: pick which scopes (Book, Chapter, Pericope, Verse) get an \"add location tag\" option, any combination, none required. No suggestions of any kind — whatever you type is saved as-is, and you can tap a tag again anytime to change it. When off, the path view is the plain lesson list with no tags at all. Lessons are grouped the same way either way — the \"how many verses per day\" step sets how many verses one lesson teaches, same as the plain view; a lesson covering several verses just gets a location tag field for each one.",
+    "When on, the path view lets you add free-text \"location tags\" wherever you like — starting a book or chapter path with this on adds one more step: pick which scopes (Book, Chapter, Pericope, Verse) get an \"add location tag\" option, any combination, none required, plus a Pegs checkbox that adds a peg-word badge alongside each one. No suggestions of any kind — whatever you type is saved as-is, and you can tap a tag again anytime to change it. When off, the path view is the plain lesson list with no tags at all. Lessons are grouped the same way either way — the \"how many verses per day\" step sets how many verses one lesson teaches, same as the plain view; a lesson covering several verses just gets a location tag field for each one.",
   locationTagLevelPicker:
     "Which scopes get an \"add location tag\" option in this path's Building view — any combination of Book, Chapter, Pericope, and Verse, or none at all. Plain free text, no suggestions — tap a tag again anytime to change it. Chosen once, now, for this path.",
   pegSystemToggle:
-    "The classic Major/peg mnemonic system: each digit (0-9) maps to a consonant sound and a picturable word (e.g. 1 = T/D = \"Tie\"). When on, the Visualize stage pre-fills a peg-system word for the verse number alongside (not instead of) your own Person/Action/Object scene — edit it if you'd rather use a different word. Tap \"Learn the system\" for a quick overview and quiz.",
+    "The classic Major/peg mnemonic system: each digit (0-9) maps to a consonant sound and a picturable word (e.g. 1 = T/D = \"Tie\"). When on, the Visualize stage pre-fills a peg-system word for the verse number alongside (not instead of) your own Person/Action/Object scene — edit it if you'd rather use a different word. It also adds an editable peg word chip next to the chapter, pericope, and verse location tag spots the Memory Palace step's own scopes turned on — the chapter number, the verse the section starts with, or the verse number itself (never the book tag — a book has no natural number to peg). Every peg chip pulls from (and edits) your own Master Peg List — one word per number, 01-99 — so changing a number's word anywhere changes it everywhere that number shows up; edit the whole list at once from \"Edit peg words.\" Tap \"Learn the system\" for a quick overview and quiz.",
+  sectionEndPegToggle:
+    "Only shown when Pericope tags and Pegs are both on. Adds a second peg chip to each section, pegged to the verse it ENDS with (its own start-verse peg is always shown) — handy for a two-ended mnemonic route through a longer section. Off by default; chosen once per path, same as the tag scopes above.",
   understandStageToggle:
     "When off, a Learn day skips straight to Visualize (or straight to Rhythm, if that's off too) — no clause-tagging step. Turn it back on any time to bring it back for later lessons.",
   visualizeStageToggle:
     "When off, a Learn day skips straight to each verse's own Rhythm stage — no Loci/Peg + Who/Action/scene step. Verses learned with it off just show no room item, peg word, or scene wherever those would otherwise appear (their circle, SRS review, etc.). Turn it back on any time to bring it back for later lessons.",
   writeFirstLetterStageToggle:
     "When off, each verse's Learn stages skip straight from Rhythm to Speak (the first-letter hint) — no handwriting-recognition canvas. Turn it back on any time to bring it back for later lessons.",
+  fillInTheBlankStageToggle:
+    "When off, each verse's Learn stages skip straight from the Speak hint to Type it by first letter — no word-bank tap exercise in between. Turn it back on any time to bring it back for later lessons.",
+  srsPromotionThresholdSlider:
+    "How high an SRS review's first-letter typing accuracy must be to promote a verse group up a box (Sword of the Spirit) instead of dropping it back to Box 1. Defaults to 90%.",
+  problemVerseThresholdSlider:
+    "How low a single verse's SRS review accuracy must fall to flag it into the Problem Verses bin. Defaults to 80% — kept lower than the promotion threshold so a review can land strictly between the two without flagging or promoting anything. A verse still clears the bin once a later review reaches the promotion threshold above.",
   pericopeHeadingRecallToggle:
     "When on, an SRS review of a chapter/book verse group that opens a new section requires typing that section's heading, blind, by first letter, before the verse itself — doesn't count against your accuracy. When off, review skips straight to the verse, same as usual.",
   problemVersesBin:
