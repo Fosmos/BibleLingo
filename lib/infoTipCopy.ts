@@ -13,7 +13,7 @@ export const INFO_TIPS = {
   prayRep:
     "Start the timer (30 seconds, or 1 minute on a day with more than 3 new verses) and take that time to pray about the verse — what it means, and how you want to respond to it. Continue unlocks once the timer finishes. The lesson's very last stage, right before whatever review follows.",
   speakRep:
-    "Speak the verse aloud. Uses your browser's speech recognition (Chrome/Edge only) to check what you said against the verse text — no exact match required, close is fine. When only first letters are shown, hover (or tap) one to reveal that word if you're stuck.",
+    "Speak the verse aloud. Uses your browser's speech recognition to check what you said against the verse text — no exact match required, close is fine. When only first letters are shown, hover (or tap) one to reveal that word if you're stuck. If microphone access is declined, you can skip to the next exercise.",
   writeRep:
     "Type the verse from memory (or copy it, on the first rep when it's shown). Checked with fuzzy matching, so minor typos/punctuation differences still pass.",
   firstLetterTypeRep:

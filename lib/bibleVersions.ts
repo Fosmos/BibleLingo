@@ -13,4 +13,5 @@ export const BIBLE_VERSIONS: BibleVersion[] = [
   { code: "ESV", name: "English Standard Version" },
   { code: "NASB", name: "New American Standard Bible" },
   { code: "NLT", name: "New Living Translation" },
+  { code: "CSB", name: "Christian Standard Bible" },
 ];
