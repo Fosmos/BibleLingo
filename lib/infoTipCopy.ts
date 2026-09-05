@@ -8,6 +8,8 @@ export const INFO_TIPS = {
     "Read the verse once more in full, then fill in Who and Action (plus any extra detail) — alongside this verse's fixed Loci (room item) and Peg (verse-number word, when that's on). Tap \"Generate scene\" to have those turned into one vivid sentence, or type your own. Not graded, just a way to build a vivid, personal picture before drilling into it.",
   rhythmRep:
     "Every noun and verb in the verse is shown in bold capitals. One word is highlighted at a time — tap the bar below to move to the next word (it plays aloud as you go), bold words included.",
+  fillInTheBlankRep:
+    "Tap the missing words, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
   drawFirstLetterRep:
     "The whole verse is shown with the current item highlighted — not just words, but punctuation marks and verse-number markers too, each getting their own turn. Draw whatever's current with your finger, Apple Pencil, or mouse; handwriting recognition auto-advances once it detects you've drawn something legible (not auto-graded — it only checks that something was drawn, never whether it's correct). Punctuation and verse numbers auto-reveal on their own with nothing to draw. Either way, Next reveals the real printed item (a word's first letter, or the mark/number itself) in a growing strip under the verse and clears the canvas for what's next — tap it yourself any time if recognition is slow.",
   prayRep:

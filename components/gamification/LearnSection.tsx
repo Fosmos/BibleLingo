@@ -32,11 +32,15 @@ type FlatStep = { phase: Phase; verseIndex?: number };
 
 // One individual verse's own drilling stages — run once, in order, before moving to the next
 // verse (no repeated rounds). Write First Letter (the handwriting canvas) drops out entirely
-// when its own setting is off, going straight from Rhythm to the Speak hint.
+// when its own setting is off, going straight from Rhythm to the Speak hint. Fill In The
+// Blank sits after the Speak hint and before the fully-blind Type stage — one more rung on
+// the same "progressively less scaffolding" ladder: read it (Rhythm) → hear a first-letter
+// hint while speaking it (Speak hint) → recall whole words with a word bank to lean on (Fill
+// In The Blank) → recall it with no help at all (Type it by first letter).
 function versePhases(writeFirstLetterEnabled: boolean): Phase[] {
   return writeFirstLetterEnabled
-    ? ["rhythm", "draw_first_letters", "speak_hint", "type_first_letters"]
-    : ["rhythm", "speak_hint", "type_first_letters"];
+    ? ["rhythm", "draw_first_letters", "speak_hint", "fill_in_the_blank", "type_first_letters"]
+    : ["rhythm", "speak_hint", "fill_in_the_blank", "type_first_letters"];
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.

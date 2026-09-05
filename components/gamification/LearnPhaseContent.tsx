@@ -11,6 +11,7 @@ import { VerseOrientationRep } from "@/components/drills/VerseOrientationRep";
 import { VerseOrientationSummaryRep } from "@/components/drills/VerseOrientationSummaryRep";
 import { RhythmRep } from "@/components/drills/RhythmRep";
 import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
+import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
 import { FirstLetterTypeRep } from "@/components/drills/FirstLetterTypeRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
 import { PrayRep } from "@/components/drills/PrayRep";
@@ -22,6 +23,7 @@ export type Phase =
   | "rhythm"
   | "draw_first_letters"
   | "speak_hint"
+  | "fill_in_the_blank"
   | "type_first_letters"
   | "pray"
   | "speak_verse"
@@ -135,6 +137,8 @@ export function LearnPhaseContent({
         onComplete={onAdvance}
       />
     );
+  } else if (phase === "fill_in_the_blank") {
+    content = <FillInTheBlankRep key={stageKey} verse={verse} onComplete={onAdvance} />;
   } else if (phase === "type_first_letters") {
     content = (
       <FirstLetterTypeRep
