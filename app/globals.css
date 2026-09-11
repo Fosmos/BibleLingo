@@ -2,7 +2,7 @@
 @config "../tailwind.config.ts";
 
 :root {
-  --background: #f2efe9;
+  --background: #ffffff;
   --foreground: #2c2724;
 }
 
@@ -29,14 +29,23 @@ body {
 /* Editorial contrast: serif headings over sans body/controls, per the
    Ultra-Minimalist Organic Modern design system. Targets both raw heading
    tags and the app's own `text-title` heading-scale utility so components
-   using either get the pairing without per-file changes. */
+   using either get the pairing without per-file changes. `.text-title` runs
+   bold, not the raw tags' regular weight — it's this app's one shared
+   "screen headline" scale (page headers, lesson stage titles, drill verse
+   references, celebration/result screens, ...), and bumping it here once
+   is what actually reaches every one of those screens at once, rather than
+   hand-editing each. See tailwind.config.ts's `fontSize.title` for the size. */
 @layer utilities {
   h1,
   h2,
-  h3,
-  .text-title {
+  h3 {
     font-family: var(--font-serif), Georgia, serif;
     font-weight: 400;
+  }
+
+  .text-title {
+    font-family: var(--font-serif), Georgia, serif;
+    font-weight: 700;
   }
 
   .text-caption {
