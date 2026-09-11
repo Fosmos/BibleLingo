@@ -131,7 +131,7 @@ export function DayCircle({
           isCompleted
             ? "bg-brand-600 text-white"
             : isUnlocked
-              ? "bg-brand-500 text-white shadow-[0_4px_14px_rgba(107,86,68,0.35)]"
+              ? "bg-brand-500 text-white shadow-[0_4px_14px_rgba(162,114,77,0.4)]"
               : "border-2 border-line bg-transparent text-ink-muted dark:border-zinc-700 dark:text-zinc-600"
         }`}
       >

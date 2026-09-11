@@ -4,46 +4,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // White page background + warm taupe neutrals (mist/line) design system, paired with
-        // a quiet, desaturated coffee/umber accent (`brand`, doubling as the app's primary-
-        // action/accent color: buttons, active nav/tab states, focus rings) so retinting this
-        // one scale re-themes the app's main interactive color everywhere it's used.
-        // Deliberately restrained — closer to a dark neutral than a "color" — so it doesn't
-        // compete with the other semantic accents (gold, heart, mastery, crack). `paper` is
-        // the page's own background (see app/globals.css's --background) — plain white, kept
-        // as its own token rather than a bare `bg-white` since a few surfaces (a fullscreen
-        // drawing canvas, a keyboard key) reference it by name for "matches the page," not
-        // "is a white card."
-        paper: "#FFFFFF",
+        // Warm parchment + terracotta design system — muted, low-contrast neutrals
+        // (paper/mist/line, all warm cream-to-taupe) paired with an earthy chestnut
+        // accent (`brand`, doubling as the app's primary-action/accent color:
+        // buttons, active nav/tab states, focus rings) so retinting this one
+        // scale re-themes the app's main interactive color everywhere it's used.
+        paper: "#F2EFE9",
         mist: "#E2DCD5",
         line: "#C8BEB3",
-        // The physical "page" the Path view's chapter text sits on (see ChapterReadingView.tsx)
-        // — a soft warm ivory, distinct from the app's own plain white `paper` background but
-        // deliberately much less saturated/yellow than an "aged manila folder" tan — a refined
-        // stationery feel rather than a costume-y old-scroll one. heading is the pericope
-        // section-title tint. A completed verse's own number/checkmark uses a plain Tailwind
-        // green instead of a parchment-family tint — "done" reads as its own universal color,
-        // not a variation on the page's own palette.
-        parchment: {
-          DEFAULT: "#F5F1E8",
-          heading: "#5C4D41",
-        },
         ink: {
           DEFAULT: "#2C2724",
           soft: "#5A5450",
           muted: "#8A8178",
         },
         brand: {
-          50: "#F5F1EC",
-          100: "#E8DFD3",
-          200: "#D3C4B0",
-          300: "#B79E82",
-          400: "#96795D",
-          500: "#6B5644",
-          600: "#574434",
-          700: "#453529",
-          800: "#33271E",
-          900: "#221A14",
+          50: "#FAF1EA",
+          100: "#F3E0D0",
+          200: "#E6C3AC",
+          300: "#D6A582",
+          400: "#C08A60",
+          500: "#A2724D",
+          600: "#8B5330",
+          700: "#743F22",
+          800: "#5C3119",
+          900: "#432310",
         },
         gold: {
           50: "#fffbeb",
@@ -93,18 +77,6 @@ const config: Config = {
           800: "#9a3412",
           900: "#7c2d12",
         },
-        // Evening Vespers mode's own palette (see VespersView.tsx) — deliberately its OWN
-        // fixed colors, not the app's usual light/dark theme pair: warm amber text on a near-
-        // black ground, chosen specifically to cut blue light before bed, so it stays this
-        // exact combination regardless of whether the reader's device is in light or dark mode
-        // otherwise.
-        vespers: {
-          bg: "#0D0C0A",
-          surface: "#17140F",
-          ink: "#E8D9B8",
-          soft: "#B8A67E",
-          accent: "#D9A752",
-        },
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],
@@ -117,11 +89,7 @@ const config: Config = {
       },
       fontSize: {
         display: ["2.75rem", { lineHeight: "1.1", fontWeight: "700" }],
-        // Bumped up from 1.5rem/600 — this app's one shared "screen headline" scale (see
-        // globals.css's own `.text-title` weight override), used everywhere from page
-        // headers down to a lesson's own stage title and a drill's verse reference, so
-        // sizing it up here reaches every one of those at once.
-        title: ["1.875rem", { lineHeight: "1.2", fontWeight: "700" }],
+        title: ["1.5rem", { lineHeight: "1.25", fontWeight: "600" }],
         caption: ["0.75rem", { lineHeight: "1.4", fontWeight: "500" }],
       },
     },

@@ -69,14 +69,6 @@ export function getChapterVerses(book: string, chapter: number): VerseSegment[] 
   return getCachedChapter(book, chapter);
 }
 
-function crossChapterNeighbor(book: string, chapter: number, direction: 1 | -1): VerseSegment | undefined {
-  const neighborChapter = chapter + direction;
-  if (neighborChapter < 1) return undefined;
-  const neighborVerses = getChapterVerses(book, neighborChapter);
-  if (!neighborVerses || neighborVerses.length === 0) return undefined;
-  return direction === 1 ? neighborVerses[0] : neighborVerses[neighborVerses.length - 1];
-}
-
 // Looks up the verse immediately before (direction -1) or after (direction 1) the given
 // one, crossing into the neighboring chapter when the given verse is the first/last in its
 // own chapter — e.g. the verse after Mark 8:38 is Mark 9:1, not "no next verse." A
@@ -85,11 +77,6 @@ function crossChapterNeighbor(book: string, chapter: number, direction: 1 | -1):
 // happen to line up with versesPerDay. Both chapters must already be cached (a book/verse
 // path's own chapter always is by the time this runs; the neighboring chapter may not be,
 // in which case this just returns undefined the same way an uncached chapter already does).
-// Skips straight past a translation's own gap verse (see lib/bibleProviders/esv.ts's note on
-// Mark 11:26 and its siblings) rather than ever handing one back as "the next/previous verse"
-// — there's nothing there worth showing as context, and recursing (rather than stopping at
-// the first empty candidate) still finds a real one even if a translation omits two verses in
-// a row. Chapter length bounds the recursion depth, so there's no real risk of it running away.
 export function getAdjacentVerse(
   book: string,
   chapter: number,
@@ -97,12 +84,12 @@ export function getAdjacentVerse(
   direction: 1 | -1,
 ): VerseSegment | undefined {
   const sameChapter = getChapterVerses(book, chapter)?.find((entry) => entry.verseNumber === verseNumber + direction);
-  const candidate = sameChapter ?? crossChapterNeighbor(book, chapter, direction);
-  if (!candidate) return undefined;
-  if (candidate.text.trim().length === 0) {
-    return getAdjacentVerse(candidate.book, candidate.chapter, candidate.verseNumber, direction);
-  }
-  return candidate;
+  if (sameChapter) return sameChapter;
+  const neighborChapter = chapter + direction;
+  if (neighborChapter < 1) return undefined;
+  const neighborVerses = getChapterVerses(book, neighborChapter);
+  if (!neighborVerses || neighborVerses.length === 0) return undefined;
+  return direction === 1 ? neighborVerses[0] : neighborVerses[neighborVerses.length - 1];
 }
 
 // Every chapter of every known book is selectable — content is fetched on demand

@@ -1,6 +1,6 @@
 import type { StoreApi } from "zustand";
 import type { UserProgress } from "@/types";
-import { daysSinceLastCompletion, obligatedGapDays } from "@/lib/streak";
+import { daysSinceLastCompletion } from "@/lib/streak";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 export type StreakLoadStatus = "none" | "frozen" | "lost";
@@ -62,9 +62,7 @@ export function createStreakActions(
     evaluateStreakOnLoad: () => {
       const state = get();
       const previousStreak = state.streak.currentStreak;
-      // restDayOfWeek ?? null: a save from before this setting existed has no field at all
-      // (see UserProgress.restDayOfWeek) — reads the same as "never set one."
-      const gapDays = obligatedGapDays(state.streak.lastCompletedAt, new Date(), state.restDayOfWeek ?? null);
+      const gapDays = daysSinceLastCompletion(state.streak.lastCompletedAt, new Date());
 
       if (previousStreak === 0 || gapDays <= 1) {
         return { status: "none" as const, previousStreak };

@@ -3,13 +3,7 @@ import type { UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 interface ReviewSettingsActions {
-  setSrsSpeakModeEnabled: (value: boolean) => void;
-  setSrsPromotionThreshold: (value: number) => void;
-  setRestDayOfWeek: (value: number | null) => void;
-}
-
-function clampPercent(value: number): number {
-  return Math.min(100, Math.max(0, Math.round(value)));
+  setPericopeHeadingRecallEnabled: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -20,17 +14,9 @@ export function createReviewSettingsActions(
   persist: (progress: UserProgress) => UserProgress,
 ): ReviewSettingsActions {
   return {
-    setSrsSpeakModeEnabled: (value) => {
+    setPericopeHeadingRecallEnabled: (value) => {
       const state = get();
-      set(persist({ ...state, srsSpeakModeEnabled: value }));
-    },
-    setSrsPromotionThreshold: (value) => {
-      const state = get();
-      set(persist({ ...state, srsPromotionThreshold: clampPercent(value) }));
-    },
-    setRestDayOfWeek: (value) => {
-      const state = get();
-      set(persist({ ...state, restDayOfWeek: value }));
+      set(persist({ ...state, pericopeHeadingRecallEnabled: value }));
     },
   };
 }

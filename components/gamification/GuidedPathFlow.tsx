@@ -3,19 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BibleBook, LocationTagLevel } from "@/types";
+import { useProgressStore } from "@/store/useProgressStore";
 import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
 import { pathKey } from "@/lib/memorizationContent";
-import { useProgressStore } from "@/store/useProgressStore";
-import { useLearnIntensityFlow } from "@/lib/useLearnIntensityFlow";
 import { BookList } from "@/components/gamification/BookList";
 import { ChapterGrid } from "@/components/gamification/ChapterGrid";
 import { VersionPicker } from "@/components/gamification/VersionPicker";
 import { VersePicker } from "@/components/gamification/VersePicker";
 import { VersesPerDayPicker } from "@/components/gamification/VersesPerDayPicker";
-import { LearnIntensityPicker } from "@/components/gamification/LearnIntensityPicker";
 import { LocationTagLevelPicker } from "@/components/gamification/LocationTagLevelPicker";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
@@ -28,7 +26,7 @@ const CHAPTER_FETCH_CONCURRENCY = 4;
 
 export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const router = useRouter();
-  const resetPathProgress = useProgressStore((state) => state.resetPathProgress);
+  const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -36,6 +34,10 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [loadingLabel, setLoadingLabel] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  // Held between the verses-per-day step and the location-tag-levels step (Building view,
+  // book/chapter mode only — see LocationTagLevelPicker.tsx) so the final goToPath call has
+  // both.
+  const [pendingVersesPerDay, setPendingVersesPerDay] = useState<number | null>(null);
 
   function goToPath(
     identifier: string,
@@ -43,23 +45,12 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     version: string,
     versesPerDay?: number,
     locationTagLevels?: LocationTagLevel[],
-    sectionEndPegEnabled?: boolean,
   ) {
-    const key = pathKey(kind, identifier);
-    // Re-picking a path through this flow (reached via "Switch Path") always starts fresh —
-    // see store/useProgressStore.ts's resetPathProgress. A no-op for a path with no progress
-    // yet, so a brand-new pick is unaffected.
-    resetPathProgress(key);
     const query = new URLSearchParams({ version: version });
     if (versesPerDay) query.set("versesPerDay", String(versesPerDay));
     if (locationTagLevels && locationTagLevels.length > 0) query.set("locationTagLevels", locationTagLevels.join(","));
-    if (sectionEndPegEnabled) query.set("sectionEndPeg", "1");
-    router.push(`/path/${encodeURIComponent(key)}?${query}`);
+    router.push(`/path/${encodeURIComponent(pathKey(kind, identifier))}?${query}`);
   }
-
-  // Book/chapter mode's step chain after "how many verses per day": intensity, then optionally
-  // Memory Palace tag levels — see lib/useLearnIntensityFlow.ts.
-  const intensityFlow = useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath });
 
   async function handleSelectVersion(version: string) {
     if (!selectedBook) return;
@@ -100,6 +91,32 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     goToPath(`${selectedBook.name}|${selectedChapter}|${verseNumber}`, "verse", selectedVersion);
   }
 
+  // Lessons are chunked by this pick exactly like a regular path's — Building view groups
+  // its lesson circles the same way (see lib/dayPlan.ts, BuildingRoomView.tsx). Building
+  // view just means one more step follows (LocationTagLevelPicker) before the path is
+  // actually created, so the pick is held here until that step's own answer arrives too.
+  function handleSelectVersesPerDay(versesPerDay: number) {
+    if (!selectedBook || !selectedVersion) return;
+    if (buildingViewEnabled) {
+      setPendingVersesPerDay(versesPerDay);
+      return;
+    }
+    if (mode === "chapter" && selectedChapter) {
+      goToPath(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, versesPerDay);
+      return;
+    }
+    goToPath(selectedBook.name, "book", selectedVersion, versesPerDay);
+  }
+
+  function handleSelectLocationTagLevels(levels: LocationTagLevel[]) {
+    if (!selectedBook || !selectedVersion || pendingVersesPerDay === null) return;
+    if (mode === "chapter" && selectedChapter) {
+      goToPath(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, pendingVersesPerDay, levels);
+      return;
+    }
+    goToPath(selectedBook.name, "book", selectedVersion, pendingVersesPerDay, levels);
+  }
+
   if (status === "loading") {
     return <FetchLoading label={loadingLabel} />;
   }
@@ -108,25 +125,8 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     return <FetchError message={errorMessage} onRetry={() => setStatus("idle")} />;
   }
 
-  if (intensityFlow.showLocationTagLevels) {
-    return (
-      <LocationTagLevelPicker
-        onSelect={intensityFlow.handleSelectLocationTagLevels}
-        onBack={intensityFlow.resetShowLocationTagLevels}
-        initialPegSystemEnabled={intensityFlow.initialPegSystemEnabled}
-      />
-    );
-  }
-
-  if (intensityFlow.pendingVersesPerDay !== null) {
-    return (
-      <LearnIntensityPicker
-        initialStages={intensityFlow.initialStages}
-        initialMemoryPalace={intensityFlow.initialMemoryPalace}
-        onContinue={intensityFlow.handleIntensityContinue}
-        onBack={intensityFlow.resetPendingVersesPerDay}
-      />
-    );
+  if (pendingVersesPerDay !== null) {
+    return <LocationTagLevelPicker onSelect={handleSelectLocationTagLevels} onBack={() => setPendingVersesPerDay(null)} />;
   }
 
   if (selectedBook && verseCount !== null && (mode === "book" || (mode === "chapter" && selectedChapter))) {
@@ -136,7 +136,7 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
       <VersesPerDayPicker
         totalVerses={verseCount}
         description={description}
-        onSelect={intensityFlow.handleSelectVersesPerDay}
+        onSelect={handleSelectVersesPerDay}
         onBack={() => {
           setVerseCount(null);
           setSelectedVersion(null);

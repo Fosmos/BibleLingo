@@ -10,9 +10,11 @@ export interface PericopeInfo {
   chapter: number;
   // The covering pericope's own first verse — lets a caller tell "this verse is SOMEWHERE
   // inside a pericope" (any verse in range) apart from "this verse IS where a pericope
-  // starts" (verseNumber === startVerse).
+  // starts" (verseNumber === startVerse), e.g. SrsReviewSession's own new-pericope gate.
   startVerse: number;
-  // Derived (see buildPericopeInfo below), same value already folded into `label`.
+  // Derived (see buildPericopeInfo below), same value already folded into `label` — kept as
+  // its own field too so a caller building a typed reference digit-by-digit
+  // (PericopeHeadingTypeRep.tsx) doesn't have to parse it back out of that display string.
   endVerse: number;
 }
 
@@ -73,4 +75,19 @@ export function getPericopeForVerse(book: string, chapter: number, verseNumber: 
   if (coveringIndex === -1) return undefined;
 
   return buildPericopeInfo(pericopes, coveringIndex, book, chapter);
+}
+
+// Every pericope that OPENS somewhere within [startVerse, endVerse] — not just the one
+// covering startVerse — so a multi-verse SRS entity spanning several section breaks surfaces
+// every heading that starts inside it, in order. A pericope that started before startVerse
+// and merely continues into the range is excluded: its heading was already reviewed whenever
+// ITS OWN start verse first came up, so it isn't "new" to this range.
+export function getPericopeHeadingsInRange(book: string, chapter: number, startVerse: number, endVerse: number): PericopeInfo[] {
+  const pericopes = getCachedPericopes(book, chapter);
+  if (!pericopes || pericopes.length === 0) return [];
+
+  return pericopes
+    .map((pericope, index) => ({ pericope, index }))
+    .filter(({ pericope }) => pericope.startVerse >= startVerse && pericope.startVerse <= endVerse)
+    .map(({ index }) => buildPericopeInfo(pericopes, index, book, chapter));
 }

@@ -1,21 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMindMapData } from "@/lib/useMindMapData";
-import { BookMindMap } from "@/components/gamification/BookMindMap";
+import { MindMapCanvas } from "@/components/gamification/MindMapCanvas";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
-interface MindMapScreenProps {
-  onSelectChapter: (chapter: number, startVerse?: number) => void;
-}
-
-// The Book path's own landing screen: a free pan/zoom view of the active book's Book ->
-// Chapter -> Pericope tree (see PathOverviewScreen.tsx, which renders this whenever no
-// chapter has been opened yet). Tapping a pericope opens that chapter's own parchment view —
-// this screen itself never navigates anywhere on its own. All the real data work (loading
-// verses, building the day plan, slicing it per chapter) lives in lib/useMindMapData.ts; this
-// component only picks which state to show and wires the ready case's onSelectChapter through.
-export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
+// Testing-tab entry point (see components/ui/BottomTabBar.tsx) for the Mind Map — a free
+// pan/zoom view of the currently active BOOK path's own chapter/pericope tree. All the real
+// data work (loading verses, building the day plan, shaping it into per-chapter pericope
+// zones/states) lives in lib/useMindMapData.ts; this component only picks which state to
+// show and wires the ready case's navigation callbacks through to the canvas.
+export function MindMapScreen() {
+  const router = useRouter();
   const data = useMindMapData();
 
   if (data.status === "loading") {
@@ -36,6 +33,8 @@ export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
     );
   }
 
+  const basePath = `/path/${encodeURIComponent(data.pathKey)}`;
+
   return (
     // AuthGate.tsx's <main> wraps every page in flex-1 inside a body that's only min-h-full
     // (a floor, not a ceiling) — so a plain flex-1 chain here has no definite height to fill
@@ -44,20 +43,16 @@ export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
     // that <main>'s own pb-20 (5rem) sidesteps the broken chain with a height that's
     // definite from the very first div, so the canvas below can actually fill it.
     <div className="flex h-[calc(100dvh-5rem)] w-full flex-col">
-      <div className="border-b border-line px-4 py-2 dark:border-zinc-800">
-        <p className="font-serif text-lg font-semibold text-ink dark:text-zinc-100">{data.label}</p>
-        {/* The +/- badge on a chapter node is the only other hint this interaction exists —
-            worth spelling out once in plain words too, since "tap a circle to reveal more
-            circles" isn't an interaction every reader has met before. */}
-        <p className="text-xs text-ink-muted">Tap a chapter to expand its sections; tap a section to open its verses.</p>
+      <div className="flex items-center justify-between border-b border-line px-4 py-2 dark:border-zinc-800">
+        <p className="font-serif text-lg font-semibold text-ink dark:text-zinc-100">{data.label} — Mind Map</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Testing</p>
       </div>
       <div className="min-h-0 flex-1">
-        <BookMindMap
+        <MindMapCanvas
           bookLabel={data.label}
           chapters={data.chapters}
-          completedDays={data.completedDays}
-          todaysDay={data.todaysDay}
-          onSelectChapter={onSelectChapter}
+          onSelectDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}`)}
+          onPracticeDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}/practice`)}
         />
       </div>
     </div>

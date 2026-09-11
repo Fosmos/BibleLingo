@@ -1,16 +1,13 @@
 "use client";
 
-import type { ReactNode, Ref } from "react";
+import type { Ref } from "react";
 import { motion } from "framer-motion";
+import { Check, Lock } from "lucide-react";
 import { versesByPericopeSegment, type PathZone } from "@/lib/pathZones";
 import type { PericopeCardState } from "@/lib/pericopeCardState";
 import { dayLabel } from "@/components/gamification/DayCircle";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
-import { MOTION_DURATION } from "@/lib/motionTokens";
-import { PericopeCardRail } from "@/components/gamification/PericopeCardRail";
-import { PericopeVerseGrid } from "@/components/gamification/PericopeVerseGrid";
-import { PericopeCardAction } from "@/components/gamification/PericopeCardAction";
-import { PericopeCompactRow } from "@/components/gamification/PericopeCompactRow";
+import { MOTION_DURATION, TAP_SCALE } from "@/lib/motionTokens";
 
 interface PericopeCardProps {
   zone: PathZone;
@@ -18,59 +15,46 @@ interface PericopeCardProps {
   index: number;
   isLast: boolean;
   completedDays: number;
-  // Whichever day counts as TODAY's own lesson (lib/dayRollover.ts's todaysDayNumber) — this card's own spillover lookup below.
-  todaysDayNumber: number;
   // Whether the card immediately before/after this one in the list is also part of today's
   // one active lesson (see lib/pericopeCardState.ts's zoneShowsTodaysVerses) — when either
   // is true, this card visually merges into that neighbor instead of reading as its own
   // separate box, since together they're really just one lesson's verses split across
-  // sections. Only ever true while a lesson is actually spanning multiple pericopes (so both
-  // sides are emphasized — see isEmphasized below).
+  // sections. Only ever true while a lesson is actually spanning multiple pericopes.
   connectToPrevious: boolean;
   connectToNext: boolean;
-  // Set only on the currently-emphasized card — see PathDayList.tsx, which scrolls to
-  // whichever card holds this ref the moment the path view opens.
+  // Set only on the currently-active card — see PathDayList.tsx, which scrolls to whichever
+  // card holds this ref the moment the path view opens.
   cardRef?: Ref<HTMLDivElement>;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
-  // Building view only (see BuildingRoomView.tsx) — this section's own pericope-level
-  // location/peg tags, rendered right under the heading; and this section's per-verse tags,
-  // rendered right under the verse grid. Undefined outside Building view, and never rendered
-  // on a collapsed PericopeCompactRow — Building view's own tags only ever make sense once a
-  // section is actually showing its verses.
-  headerExtra?: ReactNode;
-  verseGridExtra?: ReactNode;
 }
 
-// One pericope (or capstone day)'s own row in the path list. Only the ONE card that's
-// actually relevant right now — the active lesson, an active capstone day (Full Review, Boss
-// Battle, ...), or an earlier section a lesson merely spills through on its way there — gets
-// the full treatment: a bordered card, its per-verse grid, a text preview, and an action
-// button. Every other card (not yet reached, or already finished) collapses into a single
-// compact, chrome-free row instead (see PericopeCompactRow.tsx) — so a long path reads as a
-// short, scannable list with one clear "you are here" card, not a wall of near-identical
-// boxes. A rail circle (checked once done, glowing on the emphasized card, locked-outline
-// otherwise — see PericopeCardRail.tsx) plus a dotted connector line runs down the left side
-// of every row either way.
-export function PericopeCard({
-  zone,
-  state,
-  index,
-  isLast,
-  completedDays,
-  todaysDayNumber,
-  connectToPrevious,
-  connectToNext,
-  cardRef,
-  onSelectDay,
-  onPracticeDay,
-  headerExtra,
-  verseGridExtra,
-}: PericopeCardProps) {
+// One pericope's own row: a rail circle straddling its card's own top-left corner (checked
+// once done, glowing on the current one, locked-outline otherwise), a thick dotted line
+// running the full row height behind it to connect to its neighbors, and the card itself —
+// verse-reference/heading header, then, on whichever card(s) actually show today's verses, a
+// 5-column grid of every verse in that section (V.9, V.10, ...): today's own verses
+// highlighted, verses already finished in an earlier lesson faded a distinct tinted color with
+// a checkmark, and verses not yet reached plain-faded — then either the active card's own
+// "Today's Verse(s)"
+// preview (reference + full text) with a plain "Learn" button, or, for every other card, a
+// single button that replays a finished pericope, previews a not-yet-reached one, or opens
+// whatever capstone day (Weekly Review, Boss Battle, ...) happens to be active here instead
+// of a learn day — see lib/pericopeCardState.ts. Locked only changes how the button looks,
+// not whether it works: every pericope stays reachable regardless of lock state, same as
+// DayCircle's own onSelect always was. Every card actually showing today's verses (the
+// home section with the button, and any earlier section a lesson merely spills through —
+// see lib/pathZones.ts) stays at full strength; every other one fades back so it reads as
+// "not now." A spillover-only card (part of today's lesson, but not its home) drops its own
+// independent button entirely and merges visually into its connected neighbor — the one
+// "Learn" button for the whole lesson lives only in the home section.
+export function PericopeCard({ zone, state, index, isLast, completedDays, connectToPrevious, connectToNext, cardRef, onSelectDay, onPracticeDay }: PericopeCardProps) {
   const { status, actionDay, actionKind } = state;
   const isActive = status === "active";
   const isCompleted = status === "completed";
-  // The one case with an actual "today" to name — every other active day (a capstone's own button) or compact row is a plain single-line label.
+  // The one case with an actual "today" to name — every other button (Review, a capstone
+  // day's own name, or a not-yet-reached lesson's "Locked" preview) is a plain single-line
+  // label.
   const isTodaysLesson = isActive && actionDay?.kind === "learn";
   // This zone's own slice of today's lesson — the whole lesson always starts from here (see
   // handleClick below), but a lesson that crosses a section break only shows the verses that
@@ -82,16 +66,18 @@ export function PericopeCard({
   // Only ever shows for the lesson that's actually active right now — a day that's since
   // finished or hasn't come up yet contributes no spillover here, same as its own home zone
   // dropping its verse text once it's no longer the active lesson either.
-  const activeSpillover = zone.spilloverVerses?.find((entry) => entry.dayNumber === todaysDayNumber)?.verses;
+  const activeSpillover = zone.spilloverVerses?.find((entry) => entry.dayNumber === completedDays + 1)?.verses;
   const hasActiveSpillover = (activeSpillover?.length ?? 0) > 0;
-  // The one tier that gets the full card treatment. A "locked"-status zone can still land here
-  // (see lib/pericopeCardState.ts), so this is its own check, not just `isActive`.
-  const isEmphasized = isActive || hasActiveSpillover;
-  // A pure continuation of today's lesson into an earlier section — its own independent
-  // action would be redundant right above the section that actually has the "Learn" button,
-  // so it drops the button entirely. Same for a pericope so short it never gets a home day of
-  // its own (see lib/pericopeCardState.ts) — nothing of its own left to replay once done.
-  const isSpilloverOnly = (hasActiveSpillover && !isTodaysLesson) || (status === "completed" && !actionDay);
+  // Drives the card's own highlight — every box actually showing today's verses stays at
+  // full strength, not just the one that happens to hold the "Learn" button. A section that
+  // ONLY has spillover verses can otherwise be a "locked" zone in its own right (no home
+  // lesson has ever landed there yet — see lib/pathZones.ts), which would fade it despite it
+  // genuinely being part of today's lesson.
+  const showsTodaysVerses = isTodaysLesson || hasActiveSpillover;
+  // This card is purely a continuation of today's lesson into an earlier section — its own
+  // independent action (Review, Locked, ...) would be redundant/confusing right above the
+  // section that actually has the "Learn" button, so it drops the button entirely.
+  const isSpilloverOnly = hasActiveSpillover && !isTodaysLesson;
   // Whichever of today's verses actually belong to THIS card's own section — drives the
   // per-verse grid below. A card is never both the home and a spillover card for the same
   // lesson at once (see lib/pathZones.ts), so exactly one of these is ever non-empty.
@@ -102,7 +88,8 @@ export function PericopeCard({
   // now-completed lesson that once spilled through here on its way to a later section (a
   // spillover entry stops showing once its day is no longer active — see activeSpillover
   // above — so this checks every entry's own dayNumber directly instead of reusing that).
-  // Never overlaps highlightedVerseNumbers: todaysDayNumber is never <= completedDays (see lib/dayRollover.ts).
+  // Never overlaps highlightedVerseNumbers by construction: a day only lands here once its
+  // dayNumber is <= completedDays, while today's active lesson is always completedDays + 1.
   const completedVerseNumbers = new Set<number>();
   for (const homeDay of zone.days) {
     if (homeDay.dayNumber <= completedDays) {
@@ -115,15 +102,14 @@ export function PericopeCard({
     }
   }
 
-  // A capstone day (Full Review, Boss Battle, ...) has no pericope heading of its own (see
-  // lib/pathZones.ts) — show its actual kind as the bold headline instead of just its bare
-  // verse range, so a not-yet-reached one reads as "Boss Battle" rather than a generic
-  // "Locked" range with no hint of what it actually is.
-  const capstoneDay = zone.heading === "" && zone.days.length === 1 && zone.days[0].kind !== "learn" ? zone.days[0] : undefined;
-  const primaryLabel = capstoneDay ? dayLabel(capstoneDay) : zone.label;
-  const secondaryLabel = capstoneDay ? zone.label : zone.heading;
-
   const actionLabel = !actionDay ? "" : actionKind === "practice" ? "Review" : actionDay.kind !== "learn" ? dayLabel(actionDay) : "";
+
+  const circleColorClass = isCompleted
+    ? "bg-brand-600 text-white"
+    : isActive
+      ? "bg-brand-500 text-white"
+      : "border-2 border-line bg-white text-ink-muted dark:border-zinc-700 dark:bg-zinc-900";
+  const lineColorClass = isCompleted ? "border-brand-600" : isActive ? "border-brand-500" : "border-line dark:border-zinc-700";
 
   function handleClick() {
     if (!actionDay) return;
@@ -131,51 +117,58 @@ export function PericopeCard({
     else onSelectDay(actionDay.dayNumber);
   }
 
-  if (!isEmphasized) {
-    return (
-      <div className="flex w-full gap-0">
-        <PericopeCardRail isLast={isLast} isCompleted={isCompleted} isEmphasized={false} />
-        <PericopeCompactRow
-          primaryLabel={primaryLabel}
-          secondaryLabel={secondaryLabel}
-          isCompleted={isCompleted}
-          hasAction={Boolean(actionDay)}
-          onClick={handleClick}
-          headerExtra={headerExtra}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className={`flex w-full gap-0 ${connectToNext ? "pb-0" : "pb-4"}`}>
-      <PericopeCardRail isLast={isLast} isCompleted={isCompleted} isEmphasized />
+      <div className="relative flex w-14 shrink-0 flex-col items-center">
+        {!isLast && <div className={`absolute inset-y-0 border-l-4 border-dotted ${lineColorClass}`} aria-hidden="true" />}
+        <div
+          className={`relative z-10 mt-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${circleColorClass} ${
+            isActive ? "shadow-[0_4px_14px_rgba(162,114,77,0.4)]" : ""
+          }`}
+        >
+          {isCompleted ? <Check size={20} /> : !isActive ? <Lock size={16} /> : null}
+        </div>
+      </div>
 
       <motion.div
         ref={cardRef}
         initial={{ y: 8 }}
         animate={{ y: 0 }}
         transition={{ delay: index * 0.05, duration: MOTION_DURATION.base }}
-        className={`-ml-7 w-full rounded-t-2xl rounded-b-2xl border border-brand-500 bg-white p-5 pl-11 shadow-[0_4px_14px_rgba(107,86,68,0.18)] dark:bg-zinc-900 ${
-          connectToPrevious ? "rounded-t-none border-t-0" : ""
-        } ${connectToNext ? "rounded-b-none border-b-0" : ""}`}
+        className={`-ml-7 w-full border p-4 pl-11 transition-opacity duration-300 ${connectToPrevious ? "rounded-t-none border-t-0" : "rounded-t-2xl"} ${
+          connectToNext ? "rounded-b-none border-b-0" : "rounded-b-2xl"
+        } ${showsTodaysVerses ? "opacity-100" : "opacity-55"} ${
+          showsTodaysVerses
+            ? "border-brand-500 bg-white shadow-[0_4px_14px_rgba(162,114,77,0.25)] dark:bg-zinc-900"
+            : "border-line bg-white dark:border-zinc-700 dark:bg-zinc-900"
+        }`}
       >
-        <p className="font-serif text-lg font-semibold text-ink dark:text-zinc-100">{primaryLabel}</p>
-        {secondaryLabel && <p className="text-base text-ink-soft dark:text-zinc-300">{secondaryLabel}</p>}
-        {headerExtra}
-        <div className="mt-3 h-px w-full bg-mist dark:bg-zinc-700" />
+        <p className="font-serif text-lg font-semibold text-ink dark:text-zinc-100">{zone.label}</p>
+        {zone.heading && <p className="text-base text-ink dark:text-zinc-100">{zone.heading}</p>}
+        <div className="mt-2 h-px w-full bg-mist dark:bg-zinc-700" />
 
-        {/* Only worth the space when it's actually doing something — anchoring Building
-            view's own per-verse tag chips (verseGridExtra). Otherwise the text preview below
-            already says which verses are today's, so the grid would be pure decoration. */}
-        {verseGridExtra && zone.startVerse !== undefined && zone.endVerse !== undefined && (
-          <PericopeVerseGrid
-            startVerse={zone.startVerse}
-            endVerse={zone.endVerse}
-            highlightedVerseNumbers={highlightedVerseNumbers}
-            completedVerseNumbers={completedVerseNumbers}
-            extra={verseGridExtra}
-          />
+        {showsTodaysVerses && zone.startVerse !== undefined && zone.endVerse !== undefined && (
+          <div className="mt-3 grid grid-cols-5 gap-1.5">
+            {Array.from({ length: zone.endVerse - zone.startVerse + 1 }, (_, i) => zone.startVerse! + i).map((verseNumber) => {
+              const isHighlighted = highlightedVerseNumbers.has(verseNumber);
+              const isVerseCompleted = completedVerseNumbers.has(verseNumber);
+              return (
+                <div
+                  key={verseNumber}
+                  className={`flex items-center justify-center gap-0.5 rounded-md py-1.5 text-[10px] font-semibold ${
+                    isHighlighted
+                      ? "bg-brand-500 text-white"
+                      : isVerseCompleted
+                        ? "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
+                        : "bg-mist text-ink-muted dark:bg-zinc-800 dark:text-zinc-500"
+                  }`}
+                >
+                  V.{verseNumber}
+                  {isVerseCompleted && <Check size={10} />}
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {activeSpillover && activeSpillover.length > 0 && (
@@ -187,13 +180,42 @@ export function PericopeCard({
           </div>
         )}
 
-        <PericopeCardAction
-          isSpilloverOnly={isSpilloverOnly}
-          isTodaysLesson={isTodaysLesson && Boolean(actionDay)}
-          todaysVerses={todaysVerses}
-          actionLabel={actionLabel}
-          onClick={handleClick}
-        />
+        {isSpilloverOnly ? null : status === "locked" ? (
+          <motion.button
+            type="button"
+            whileTap={TAP_SCALE}
+            onClick={handleClick}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-line py-2 text-sm text-ink-muted dark:border-zinc-700"
+          >
+            <Lock size={14} /> Locked
+          </motion.button>
+        ) : isTodaysLesson && actionDay ? (
+          <div className="mt-3 flex flex-col gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                {todaysVerses.length === 1 ? "Today's Verse" : "Today's Verses"} — {formatVerseRangeLabel(todaysVerses)}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-ink dark:text-zinc-100">{todaysVerses.map((verse) => verse.text).join(" ")}</p>
+            </div>
+            <motion.button
+              type="button"
+              whileTap={TAP_SCALE}
+              onClick={handleClick}
+              className="w-full rounded-full bg-brand-500 py-2 text-sm font-semibold text-white"
+            >
+              Learn
+            </motion.button>
+          </div>
+        ) : (
+          <motion.button
+            type="button"
+            whileTap={TAP_SCALE}
+            onClick={handleClick}
+            className="mt-3 w-full rounded-full bg-brand-500 py-2 text-sm font-semibold text-white"
+          >
+            {actionLabel}
+          </motion.button>
+        )}
       </motion.div>
     </div>
   );

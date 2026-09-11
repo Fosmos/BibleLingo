@@ -2,22 +2,12 @@
 
 import type { MemorizationDay } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
-import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { LearnSection } from "@/components/gamification/LearnSection";
 
 interface VerseLessonFlowProps {
   day: MemorizationDay;
-  // See DaySessionController.tsx's own doc comment — this whole path's own full day
-  // plan/completedDays/todaysDay, threaded straight through to LearnSection.
-  allDays: MemorizationDay[];
-  completedDays: number;
-  todaysDay: number;
-  label: string;
-  version: string;
   onComplete: () => void;
-  // See DaySessionController.tsx's own doc comment — set only by the in-place lesson flow.
-  onExit?: () => void;
   sessionKey?: string;
 }
 
@@ -33,15 +23,11 @@ type Phase = (typeof PHASES)[number];
 // (where day.reviewVerses is deliberately empty, see lib/bookDayPlan.ts) squeezed between
 // Learn and the real Chapter Review; the per-verse checks inside Learn cover that same ground
 // in the place it actually belongs.
-export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey }: VerseLessonFlowProps) {
+export function VerseLessonFlow({ day, onComplete, sessionKey }: VerseLessonFlowProps) {
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "phaseIndex", 0);
   const phase: Phase = PHASES[phaseIndex];
   const hasPreviousReview = (day.previousVerses?.length ?? 0) > 0;
   const hasPostReview = day.postLearnReviewStages?.some((stage) => stage.verses.length > 0) ?? false;
-  // Only actually used by the previousReview/postReview branches below (LearnSection computes
-  // its own for "learn") — called unconditionally regardless, same as every other hook here,
-  // since hooks can't be called after an early return.
-  const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay);
 
   // Skip straight past the previous-lesson check when there's nothing to show for it (a
   // path's very first lesson) — adjusting phaseIndex here, during render, is the same
@@ -53,46 +39,12 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
   }
 
   if (phase === "previousReview") {
-    return (
-      <ReviewSection
-        day={day}
-        onComplete={() => setPhaseIndex(1)}
-        sessionKey={sessionKey}
-        phase="previous"
-        layout={layout}
-        lessonLabel={label}
-        version={version}
-        onExit={onExit}
-      />
-    );
+    return <ReviewSection day={day} onComplete={() => setPhaseIndex(1)} sessionKey={sessionKey} phase="previous" />;
   }
 
   if (phase === "learn") {
-    return (
-      <LearnSection
-        day={day}
-        allDays={allDays}
-        completedDays={completedDays}
-        todaysDay={todaysDay}
-        label={label}
-        version={version}
-        onComplete={() => (hasPostReview ? setPhaseIndex(2) : onComplete())}
-        onExit={onExit}
-        sessionKey={sessionKey}
-      />
-    );
+    return <LearnSection day={day} onComplete={() => (hasPostReview ? setPhaseIndex(2) : onComplete())} sessionKey={sessionKey} />;
   }
 
-  return (
-    <ReviewSection
-      day={day}
-      onComplete={onComplete}
-      sessionKey={sessionKey}
-      phase="post"
-      layout={layout}
-      lessonLabel={label}
-      version={version}
-      onExit={onExit}
-    />
-  );
+  return <ReviewSection day={day} onComplete={onComplete} sessionKey={sessionKey} phase="post" />;
 }

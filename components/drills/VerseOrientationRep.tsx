@@ -5,33 +5,24 @@ import { motion, Reorder } from "framer-motion";
 import type { CustomClauseRole, VerseSegment } from "@/types";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { TAP_SCALE } from "@/lib/motionTokens";
-import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
+import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import { useProgressStore } from "@/store/useProgressStore";
 import { ClauseCard, type ClauseBlock } from "@/components/drills/ClauseCard";
 import { ClauseRolePalette } from "@/components/drills/ClauseRolePalette";
-import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
-import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
-import { LessonWholeDayPageCard } from "@/components/gamification/LessonWholeDayPageCard";
-import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { VerseContextLine } from "@/components/ui/VerseContextLine";
+import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
 
 interface VerseOrientationRepProps {
-  // The whole day's own joined synthetic segment (see LearnSection.tsx's `wholeDay`) — clause
-  // splitting/reordering math (breakAfter, blocks, annotations) all stays keyed to this
-  // COMBINED word-index space, since a clause can cross a real verse boundary. `verses`/
-  // `verseOffsets` below are only for RENDERING each real verse on its own real page position.
   verse: VerseSegment;
   verseMarkers: Record<number, number>;
   annotations: WordAnnotationMap;
   onAnnotationsChange: (updater: (prev: WordAnnotationMap) => WordAnnotationMap) => void;
   onComplete: () => void;
-  // Today's own real verses (see LearnSection.tsx's `realVerses`) plus each one's own word
-  // offset into `annotations`' whole-day indexing (see LearnSection.tsx's `verseOffsets`).
-  verses: VerseSegment[];
-  verseOffsets: number[];
-  layout: ChapterReadingLayout;
+  previousVerse?: VerseSegment;
+  nextVerse?: VerseSegment;
 }
 
 // A stable reference for the "no roles defined yet" case — returning a fresh `[] as const`
@@ -59,12 +50,19 @@ function buildClauseBlocks(words: string[], breakAfter: Set<number>): ClauseBloc
 // role is named and colored by the reader (see ClauseRolePalette/CustomRoleEditor), scoped
 // to this verse's own book and persisted (see useProgressStore's customClauseRoles) so a
 // role defined once keeps showing up in every later lesson for the same book. Not graded —
-// reordering doesn't change anything downstream (the real page below always shows every real
-// verse in its own normal reading order, unaffected by drag reorder), it's just a way to
-// actively handle the passage's structure before drilling into it; a role, once assigned,
-// DOES show live on the real page (see renderActiveVerse below) via the same word-tint every
-// later stage in this lesson reuses.
-export function VerseOrientationRep({ verse, verseMarkers, annotations, onAnnotationsChange, onComplete, verses, verseOffsets, layout }: VerseOrientationRepProps) {
+// reordering doesn't change anything downstream, it's just a way to actively handle the
+// passage's structure before drilling into it. The resulting roles are lifted to
+// LearnSection and stay visible (read-only) on every later stage in this lesson that shows
+// this verse's own words.
+export function VerseOrientationRep({
+  verse,
+  verseMarkers,
+  annotations,
+  onAnnotationsChange,
+  onComplete,
+  previousVerse,
+  nextVerse,
+}: VerseOrientationRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
   const [breakAfter, setBreakAfter] = useState<Set<number>>(() => new Set());
   const [order, setOrder] = useState<string[] | null>(null);
@@ -125,54 +123,42 @@ export function VerseOrientationRep({ verse, verseMarkers, annotations, onAnnota
   const canContinue = blocks.every((block) => annotations[block.startIndex]?.role !== undefined);
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-        Understand <InfoTip text={INFO_TIPS.verseOrientationRep} />
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
+          Understand <InfoTip text={INFO_TIPS.verseOrientationRep} />
+        </p>
+        <VerseReferenceHeader book={verse.book} chapter={verse.chapter} verseNumber={verse.verseNumber} />
+      </div>
+      <p className="text-sm font-medium text-ink-soft dark:text-zinc-300">
+        Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.
       </p>
-      <LessonWholeDayPageCard
-        layout={layout}
-        verses={verses}
-        renderActiveVerse={(realVerse, verseIndex) => {
-          const localWords = tokenizeVerseWords(realVerse.text);
-          const offset = verseOffsets[verseIndex] ?? 0;
-          const sliced = sliceWordAnnotations(annotations, offset, localWords.length);
-          return (
-            <>
-              {localWords.map((word, index) => (
-                <span key={index}>
-                  <AnnotatedVerseWord word={word} annotation={sliced[index]} />{" "}
-                </span>
-              ))}
-            </>
-          );
-        }}
+      <ClauseRolePalette
+        roles={bookRoles}
+        activeRoleId={selectedBlock ? annotations[selectedBlock.startIndex]?.role?.id : undefined}
+        disabled={!selectedBlock}
+        onSelectRole={assignRole}
+        onSaveRole={saveRole}
       />
-
-      <LessonControlBar dockRef={layout.dockRef}>
-        <p className="text-center text-xs text-ink-muted">Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.</p>
-        <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex w-full flex-col gap-2">
-          {orderedBlocks.map((block) => (
-            <ClauseCard
-              key={block.id}
-              block={block}
-              words={words}
-              verseMarkers={verseMarkers}
-              verseLabel={block.startIndex === 0 ? { chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined}
-              annotation={annotations[block.startIndex]}
-              isSelected={block.id === selectedBlockId}
-              onToggleBreak={toggleBreak}
-              onSelect={() => setSelectedBlockId(block.id)}
-              onMergeUp={block.startIndex > 0 ? () => toggleBreak(block.startIndex - 1) : undefined}
-            />
-          ))}
-        </Reorder.Group>
-        <ClauseRolePalette
-          roles={bookRoles}
-          activeRoleId={selectedBlock ? annotations[selectedBlock.startIndex]?.role?.id : undefined}
-          disabled={!selectedBlock}
-          onSelectRole={assignRole}
-          onSaveRole={saveRole}
-        />
+      {previousVerse && <VerseContextLine verse={previousVerse} />}
+      <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex flex-col gap-3">
+        {orderedBlocks.map((block) => (
+          <ClauseCard
+            key={block.id}
+            block={block}
+            words={words}
+            verseMarkers={verseMarkers}
+            verseLabel={block.startIndex === 0 ? { chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined}
+            annotation={annotations[block.startIndex]}
+            isSelected={block.id === selectedBlockId}
+            onToggleBreak={toggleBreak}
+            onSelect={() => setSelectedBlockId(block.id)}
+            onMergeUp={block.startIndex > 0 ? () => toggleBreak(block.startIndex - 1) : undefined}
+          />
+        ))}
+      </Reorder.Group>
+      {nextVerse && <VerseContextLine verse={nextVerse} />}
+      <div className="flex items-center gap-4">
         <motion.button
           type="button"
           whileTap={TAP_SCALE}
@@ -182,8 +168,8 @@ export function VerseOrientationRep({ verse, verseMarkers, annotations, onAnnota
         >
           Continue
         </motion.button>
-        <AutoCompleteButton onClick={onComplete} />
-      </LessonControlBar>
+      </div>
+      <AutoCompleteButton onClick={onComplete} />
     </div>
   );
 }

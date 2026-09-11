@@ -12,20 +12,10 @@ import { usePericopesReady } from "@/lib/usePericopesReady";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { buildPathZones, type PathZone } from "@/lib/pathZones";
 import { computeZoneCardState, type PericopeCardState, type PericopeCardStatus } from "@/lib/pericopeCardState";
-import { todaysDayNumber } from "@/lib/dayRollover";
 
 export interface ChapterNode {
   chapter: number;
   status: PericopeCardStatus;
-  // This chapter's own slice of the full day plan — handed straight to PathDayList.tsx (the
-  // same component the real path screen renders) once a pericope in this chapter is opened,
-  // so its own pericope cards/grids/Learn buttons are pixel-for-pixel the real thing, not a
-  // mind-map-specific re-derivation of the same state.
-  days: MemorizationDay[];
-  // The same zones/states PathDayList itself would compute from `days` above — kept here too
-  // so the mind map's own tree (see lib/mindMapHierarchy.ts's buildMindMapTree) can shape
-  // each pericope's real status/verses/label without rendering a full PathDayList just to
-  // read it.
   zones: PathZone[];
   states: PericopeCardState[];
 }
@@ -34,18 +24,16 @@ export type MindMapData =
   | { status: "no-path" }
   | { status: "loading" }
   | { status: "error"; message: string; retry: () => void }
-  | { status: "ready"; pathKey: string; label: string; completedDays: number; todaysDay: number; chapters: ChapterNode[] };
+  | { status: "ready"; pathKey: string; label: string; completedDays: number; chapters: ChapterNode[] };
 
 // A whole chapter's own status, mirroring computeZoneCardState's own three-state read on a
-// single pericope zone (lib/pericopeCardState.ts) — "active" (amber) whenever any of its days
-// is TODAY's own lesson (see lib/dayRollover.ts's todaysDayNumber — always real, so a chapter
-// stays amber for today's just-finished lesson too, not just an upcoming one), "completed"
-// once every one of its days (learn lessons and any weekly/monthly capstones tagged into it)
-// is behind completedDays, "locked" otherwise. A chapter's days are always contiguous in
-// dayNumber (same guarantee a PathZone's own days carry), so this never needs to represent
-// "partially done."
-function chapterStatus(chapterDays: MemorizationDay[], completedDays: number, todaysDay: number): PericopeCardStatus {
-  if (chapterDays.some((day) => day.dayNumber === todaysDay)) return "active";
+// single pericope zone (lib/pericopeCardState.ts) — "active" the moment any of its days is
+// the one currently up next, "completed" once every one of its days (learn lessons and any
+// weekly/monthly capstones tagged into it) is behind completedDays, "locked" otherwise. A
+// chapter's days are always contiguous in dayNumber (same guarantee a PathZone's own days
+// carry), so this never needs to represent "partially done."
+function chapterStatus(chapterDays: MemorizationDay[], completedDays: number): PericopeCardStatus {
+  if (chapterDays.some((day) => day.dayNumber === completedDays + 1)) return "active";
   if (chapterDays.length > 0 && chapterDays.every((day) => day.dayNumber <= completedDays)) return "completed";
   return "locked";
 }
@@ -56,7 +44,11 @@ function chapterStatus(chapterDays: MemorizationDay[], completedDays: number, to
 // buildPathDayPlan calls) so this view can never show a structure that disagrees with the
 // real path screen for the same book. Scoped to "book" kind paths only — chapter/verse/topic
 // paths have no chapter tier to draw a tree from, so those (and no active path at all) report
-// "no-path".
+// "no-path". Each chapter's own pericope zones/states come from buildPathZones +
+// computeZoneCardState run on just that chapter's own days — the exact same call
+// PathDayList.tsx makes once a chapter is the visible one there — so a pericope node's
+// color/checkmark here always matches what that same pericope's card shows on the real path
+// screen.
 export function useMindMapData(): MindMapData {
   const mounted = useHasMounted();
   const activePathKey = useProgressStore((state) => state.activePathKey);
@@ -138,12 +130,11 @@ export function useMindMapData(): MindMapData {
     new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
   ).sort((a, b) => a - b);
 
-  const todaysDay = todaysDayNumber(plan, new Date());
   const chapters: ChapterNode[] = chapterNumbers.map((chapter) => {
     const chapterDays = days.filter((day) => day.chapterGroup === chapter);
     const zones = buildPathZones(chapterDays);
-    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays, todaysDay));
-    return { chapter, status: chapterStatus(chapterDays, plan.completedDays, todaysDay), days: chapterDays, zones, states };
+    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays));
+    return { chapter, status: chapterStatus(chapterDays, plan.completedDays), zones, states };
   });
 
   return {
@@ -151,7 +142,6 @@ export function useMindMapData(): MindMapData {
     pathKey: key,
     label: parsePathKey(key).identifier,
     completedDays: plan.completedDays,
-    todaysDay,
     chapters,
   };
 }

@@ -8,9 +8,7 @@ import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { usePericopesReady } from "@/lib/usePericopesReady";
-import { todaysDayNumber } from "@/lib/dayRollover";
 import { DaySessionController } from "@/components/gamification/DaySessionController";
-import { resolveCompletingChapterVerses } from "@/lib/completingChapterVerses";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 import { EsvAttribution } from "@/components/ui/EsvAttribution";
@@ -24,7 +22,6 @@ interface DayLoaderProps {
 export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
-  const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   // The version query param is what the path overview page treats as the source of truth
   // (see app/path/[key]/page.tsx) — omitting it would default to KJV and silently overwrite
   // an already-selected translation via PathOverviewScreen's sync effect.
@@ -94,7 +91,7 @@ export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
   // PathOverviewScreen's own chunking for the same day number (see lib/usePericopesReady.ts).
   if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
 
-  const days = buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled);
+  const days = buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan);
   const day = days.find((candidate) => candidate.dayNumber === dayNumber);
 
   if (!day) {
@@ -106,7 +103,15 @@ export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
     );
   }
 
-  const completingChapterVerses = resolveCompletingChapterVerses(day, days, verses);
+  // Book mode only: when this is the last "learn" day tagged with this chapter, that
+  // chapter's verses are handed to DaySessionController so it can graduate them straight
+  // into SRS the moment this lesson finishes — see completeBookChapter in
+  // useProgressStore.ts for why this can't just wait and re-resolve the whole book later.
+  const isFinalLearnDayOfChapter =
+    day.kind === "learn" &&
+    day.chapterGroup !== undefined &&
+    !days.some((candidate) => candidate.kind === "learn" && candidate.chapterGroup === day.chapterGroup && candidate.dayNumber > day.dayNumber);
+  const completingChapterVerses = isFinalLearnDayOfChapter ? verses.filter((verse) => verse.chapter === day.chapterGroup) : undefined;
 
   return (
     <>
@@ -114,9 +119,6 @@ export function DayLoader({ pathKey, label, dayNumber }: DayLoaderProps) {
         pathKey={pathKey}
         label={label}
         day={day}
-        allDays={days}
-        completedDays={plan.completedDays}
-        todaysDay={todaysDayNumber(plan, new Date())}
         totalDays={days.length}
         completingChapterVerses={completingChapterVerses}
       />

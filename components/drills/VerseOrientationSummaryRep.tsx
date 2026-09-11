@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
@@ -8,30 +8,25 @@ import { locationTagKey } from "@/lib/locationTags";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
-import { sliceWordAnnotations } from "@/lib/verseHighlights";
 import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
+import { VerseNumberMarker } from "@/components/drills/VerseNumberMarker";
 import { VersePOAInput } from "@/components/drills/VersePOAInput";
 import { SceneGenerator } from "@/components/drills/SceneGenerator";
 import { pegWordFor } from "@/lib/pegSystem";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
-import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
-import { LessonWholeDayPageCard } from "@/components/gamification/LessonWholeDayPageCard";
-import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { VerseContextLine } from "@/components/ui/VerseContextLine";
+import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
+import { VerseTextLine } from "@/components/ui/VerseTextLine";
 
 interface VerseOrientationSummaryRepProps {
-  // Today's own real verses (see LearnSection.tsx's `realVerses`) — every one of them renders
-  // in full on the SAME real reading-view page as the rest of the Learn flow (see
-  // LessonWholeDayPageCard.tsx), each still carrying whatever highlights it picked up in
-  // Understand (read-only here — see AnnotatedVerseWord.tsx).
-  verses: VerseSegment[];
-  // `verses[i]`'s own word offset within `wordAnnotations`' indexing (built against the whole
-  // day's joined text — see LearnSection.tsx's own `verseOffsets`).
-  verseOffsets: number[];
-  wordAnnotations: WordAnnotationMap;
+  verse: VerseSegment;
+  verseMarkers: Record<number, number>;
+  annotations: WordAnnotationMap;
   onComplete: () => void;
-  layout: ChapterReadingLayout;
+  previousVerse?: VerseSegment;
+  nextVerse?: VerseSegment;
 }
 
 // The "Visualize" stage (second half of Understand+Visualize, see VerseOrientationRep for
@@ -40,21 +35,27 @@ interface VerseOrientationSummaryRepProps {
 // verse's own location tag, if one's been added — see lib/locationTags.ts; blank otherwise)
 // and Peg (the verse-number word, only shown when the peg system is on — pre-filled with
 // lib/pegSystem.ts's recommendation but the reader can type their own word instead) for
-// context, then their own Who and Action and an optional extra detail — all anchored to
-// `verses[0]`, today's own FIRST real verse (matching the single Loci/Peg/POA a day's own
-// lesson has always kept, one shared scene for the whole day rather than one per verse).
+// context, then their own Who and Action and an optional extra detail.
 // Those feed Gemini's scene generator (see SceneGenerator.tsx) for the final line, the scene
 // itself — editable, or typeable by hand. Not graded, same "self-checked" precedent as
-// DrawFirstLetterRep. Persisted via setVersePOA so it can resurface later as the gentlest
-// level of VerseRevealHelp's hint sequence.
-export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotations, onComplete, layout }: VerseOrientationSummaryRepProps) {
-  const anchor = verses[0];
+// DrawFirstLetterRep. Shows the same highlights/notes the reader just made (read-only here —
+// see AnnotatedVerseWord.tsx). Persisted via setVersePOA so it can resurface later as the
+// gentlest level of VerseRevealHelp's hint sequence.
+export function VerseOrientationSummaryRep({
+  verse,
+  verseMarkers,
+  annotations,
+  onComplete,
+  previousVerse,
+  nextVerse,
+}: VerseOrientationSummaryRepProps) {
+  const words = tokenizeVerseWords(verse.text);
   const setVersePOA = useProgressStore((state) => state.setVersePOA);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   const locationTag = useProgressStore(
-    (state) => state.locationTags[locationTagKey({ level: "verse", book: anchor.book, chapter: anchor.chapter, verseNumber: anchor.verseNumber })],
+    (state) => state.locationTags[locationTagKey({ level: "verse", book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber })],
   );
-  const recommendedPeg = pegWordFor(anchor.verseNumber);
+  const recommendedPeg = pegWordFor(verse.verseNumber);
 
   const [who, setWho] = useState("");
   const [action, setAction] = useState("");
@@ -63,10 +64,10 @@ export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotatio
   // Pre-filled with the recommendation, but the reader can type over it — see
   // VersePOAInput.tsx and types/index.ts's VersePOA.pegWord.
   const [pegWord, setPegWord] = useState(recommendedPeg.word);
-  const pegLine = pegSystemEnabled ? `${anchor.verseNumber} - ${pegWord}` : "";
+  const pegLine = pegSystemEnabled ? `${verse.verseNumber} - ${pegWord}` : "";
 
   function handleContinue() {
-    setVersePOA(anchor.book, anchor.chapter, anchor.verseNumber, {
+    setVersePOA(verse.book, verse.chapter, verse.verseNumber, {
       who: who.trim(),
       action: action.trim(),
       additionalInfo: additionalInfo.trim(),
@@ -79,46 +80,47 @@ export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotatio
   const canContinue = who.trim().length > 0 && action.trim().length > 0 && scene.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-        Visualize <InfoTip text={INFO_TIPS.verseOrientationSummaryRep} />
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
+          Visualize <InfoTip text={INFO_TIPS.verseOrientationSummaryRep} />
+        </p>
+        <VerseReferenceHeader book={verse.book} chapter={verse.chapter} verseNumber={verse.verseNumber} />
+      </div>
+      {previousVerse && <VerseContextLine verse={previousVerse} />}
+      <p className="flex flex-wrap items-baseline gap-x-1.5 gap-y-2 text-lg leading-relaxed">
+        <VerseTextLine chapter={verse.chapter} verseNumber={verse.verseNumber} />
+        {words.map((word, index) => (
+          <Fragment key={index}>
+            {verseMarkers[index] && (
+              <>
+                <span className="basis-full" />
+                <VerseNumberMarker number={verseMarkers[index]} />
+              </>
+            )}
+            <AnnotatedVerseWord word={word} annotation={annotations[index]} />
+          </Fragment>
+        ))}
       </p>
-      <LessonWholeDayPageCard
-        layout={layout}
-        verses={verses}
-        renderActiveVerse={(verse, verseIndex) => {
-          const words = tokenizeVerseWords(verse.text);
-          const sliced = sliceWordAnnotations(wordAnnotations, verseOffsets[verseIndex] ?? 0, words.length);
-          return (
-            <>
-              {words.map((word, index) => (
-                <span key={index}>
-                  <AnnotatedVerseWord word={word} annotation={sliced[index]} />{" "}
-                </span>
-              ))}
-            </>
-          );
-        }}
+      {nextVerse && <VerseContextLine verse={nextVerse} />}
+      <VersePOAInput
+        furnitureLabel={locationTag}
+        pegWord={pegSystemEnabled ? pegWord : undefined}
+        pegEmoji={recommendedPeg.emoji}
+        onPegWordChange={setPegWord}
+        who={who}
+        action={action}
+        additionalInfo={additionalInfo}
+        onWhoChange={setWho}
+        onActionChange={setAction}
+        onAdditionalInfoChange={setAdditionalInfo}
       />
-
-      <LessonControlBar dockRef={layout.dockRef}>
-        <VersePOAInput
-          furnitureLabel={locationTag}
-          pegWord={pegSystemEnabled ? pegWord : undefined}
-          pegEmoji={recommendedPeg.emoji}
-          onPegWordChange={setPegWord}
-          who={who}
-          action={action}
-          additionalInfo={additionalInfo}
-          onWhoChange={setWho}
-          onActionChange={setAction}
-          onAdditionalInfoChange={setAdditionalInfo}
-        />
-        <SceneGenerator
-          inputs={{ locus: locationTag ?? "", pegLine, character: who, action, textProp: additionalInfo }}
-          scene={scene}
-          onSceneChange={setScene}
-        />
+      <SceneGenerator
+        inputs={{ locus: locationTag ?? "", pegLine, character: who, action, textProp: additionalInfo }}
+        scene={scene}
+        onSceneChange={setScene}
+      />
+      <div className="flex items-center gap-4">
         <motion.button
           type="button"
           whileTap={TAP_SCALE}
@@ -128,8 +130,8 @@ export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotatio
         >
           Continue
         </motion.button>
-        <AutoCompleteButton onClick={onComplete} />
-      </LessonControlBar>
+      </div>
+      <AutoCompleteButton onClick={onComplete} />
     </div>
   );
 }

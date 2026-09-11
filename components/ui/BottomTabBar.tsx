@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Award, User, type LucideIcon } from "lucide-react";
+import { Home, Map, Award, User, FlaskConical, type LucideIcon } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 
 interface TabItem {
@@ -38,12 +38,11 @@ export function BottomTabBar() {
       icon: Award,
       isActive: pathname.startsWith("/memorized") || pathname.startsWith("/stickers"),
     },
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: User,
-      isActive: pathname.startsWith("/profile"),
-    },
+    { href: "/profile", label: "Profile", icon: User, isActive: pathname.startsWith("/profile") },
+    // Experimental Mind Map view (see app/mindmap/page.tsx) — labeled "Testing" rather than
+    // folded into the Path tab since it's a rough, in-progress alternate view of the same
+    // book path, not a finished feature yet.
+    { href: "/mindmap", label: "Testing", icon: FlaskConical, isActive: pathname.startsWith("/mindmap") },
   ];
 
   return (
@@ -54,7 +53,7 @@ export function BottomTabBar() {
             <Link
               href={href}
               className={`flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${
-                isActive ? "text-ink dark:text-zinc-100" : "text-ink-muted hover:text-ink-soft dark:hover:text-zinc-300"
+                isActive ? "text-ink" : "text-ink-muted hover:text-ink-soft dark:hover:text-zinc-300"
               }`}
             >
               <Icon size={22} />

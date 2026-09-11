@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
-import { formatChapterLabel } from "@/lib/chapterContent";
 import { LearnSection } from "@/components/gamification/LearnSection";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
@@ -61,22 +60,15 @@ export function RelearnSession({ book, chapter, verseNumber, version }: RelearnS
   const day: MemorizationDay = { dayNumber: 1, kind: "learn", newVerses: [verse], reviewVerses: [] };
 
   return (
-    <LearnSection
-      day={day}
-      // Not part of any real path (see this component's own doc comment) — this one verse is
-      // its own entire "chapter" for layout purposes, always "today's" own verse (todaysDay 1
-      // matches `day.dayNumber` above) so it renders with the same gold marking a real path's
-      // today would.
-      allDays={[day]}
-      completedDays={0}
-      todaysDay={1}
-      label={formatChapterLabel(book, chapter)}
-      version={version}
-      sessionKey={`relearn:${book}|${chapter}|${verseNumber}`}
-      onComplete={() => {
-        clearProblemVerse(book, chapter, verseNumber);
-        router.push("/memorized");
-      }}
-    />
+    <div className="mx-auto w-full max-w-2xl p-6">
+      <LearnSection
+        day={day}
+        sessionKey={`relearn:${book}|${chapter}|${verseNumber}`}
+        onComplete={() => {
+          clearProblemVerse(book, chapter, verseNumber);
+          router.push("/memorized");
+        }}
+      />
+    </div>
   );
 }
