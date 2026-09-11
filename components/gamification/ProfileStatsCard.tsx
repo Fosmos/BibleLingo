@@ -29,7 +29,9 @@ export function ProfileStatsCard() {
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-xs text-ink-muted">Longest streak</span>
-          <span className="font-serif text-sm font-semibold text-ink dark:text-zinc-100">{longestStreak} days</span>
+          <span className="font-serif text-sm font-semibold text-ink dark:text-zinc-100">
+            {longestStreak} {longestStreak === 1 ? "day" : "days"}
+          </span>
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-xs text-ink-muted">Shekels</span>

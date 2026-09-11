@@ -3,14 +3,20 @@
 import { useEffect, useState } from "react";
 import type { MemorizationDay, PathProgress, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
-import { getCurrentDay, getLastCompletedDay } from "@/lib/progressSummary";
-import { hasCompletedToday } from "@/lib/dayRollover";
+import { buildPathDayPlan } from "@/lib/dayPlan";
+import { activeDayNumber, hasCompletedToday } from "@/lib/dayRollover";
 import { resolvePath } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 
 export interface TodaysDay {
   activePathKey: string | null;
   plan: PathProgress | undefined;
+  // The active path's own full day plan — undefined until verses/plan are both resolved.
+  // Exposed (alongside `plan`) so a caller that needs the reading view's own real page layout
+  // (see lib/useChapterScopedReadingLayout.ts) for one of the days below — VespersView, for
+  // its "same pagination as browsing" recall — can build it without re-fetching/re-deriving
+  // everything currentDay/lastCompletedDay already needed internally.
+  days: MemorizationDay[] | undefined;
   // The next NEW lesson to start — undefined once today's own lesson is already done (see
   // getCurrentDay's own doc comment), not just while still loading. Check restingUntilTomorrow
   // to tell those two "nothing here" cases apart.
@@ -68,12 +74,15 @@ export function useTodaysDay(): TodaysDay {
     };
   }, [activePathKey, plan, verses, retryToken]);
 
-  const currentDay = activePathKey && plan && verses ? getCurrentDay(activePathKey, verses, plan) : undefined;
-  const lastCompletedDay = activePathKey && plan && verses ? getLastCompletedDay(activePathKey, verses, plan) : undefined;
+  const days = activePathKey && plan && verses ? buildPathDayPlan(activePathKey, verses, plan) : undefined;
+  const currentDayNumber = plan ? Math.min(activeDayNumber(plan, new Date()), days?.length ?? 0) : 0;
+  const currentDay = days?.find((day) => day.dayNumber === currentDayNumber);
+  const lastCompletedDay = days?.find((day) => day.dayNumber === plan?.completedDays);
   const restingUntilTomorrow = Boolean(!currentDay && plan && verses && hasCompletedToday(plan, new Date()));
   return {
     activePathKey,
     plan,
+    days,
     currentDay,
     restingUntilTomorrow,
     lastCompletedDay,

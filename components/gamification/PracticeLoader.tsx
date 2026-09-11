@@ -110,8 +110,10 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
 
   const practiceVerses = day ? (day.newVerses.length > 0 ? day.newVerses : day.reviewVerses) : [];
   // Matches whichever button got the reader here — DayCircle.tsx's Practice (boss battles)
-  // or Review (a completed learn lesson's own verses).
-  const drillLabel = day?.kind === "learn" ? "Review" : "Practice";
+  // or Review (a completed learn lesson's own verses) — see PracticeChain.tsx's own doc
+  // comment on why Review always drills first-letter while Practice stays full-word.
+  const isReview = day?.kind === "learn";
+  const drillLabel = isReview ? "Review" : "Practice";
 
   if (!day || practiceVerses.length === 0) {
     return (
@@ -127,6 +129,7 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
       <PracticeChain
         verses={practiceVerses}
         label={drillLabel}
+        mode={isReview ? "firstLetter" : "fullWord"}
         onExit={() => router.push(pathHref)}
         sessionKey={`${pathKey}:${dayNumber}:practice`}
         layout={layout}

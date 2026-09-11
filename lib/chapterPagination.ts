@@ -1,6 +1,7 @@
 import type { VerseSegment } from "@/types";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { wrapWordsIntoLines } from "@/lib/textMeasurement";
+import { rawTokensOf, buildRun, appendVerseToRun, type TokenRun } from "@/lib/verseTokenRun";
 import type { PericopeSegment } from "@/lib/pathZones";
 import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
 import type { PageBudget } from "@/lib/pageBudget";
@@ -9,32 +10,37 @@ export interface ChapterPage {
   segments: PericopeSegment[];
 }
 
-function rawTokensOf(verse: VerseSegment): string[] {
-  return verse.text.split(/\s+/).filter((token) => token.length > 0);
+const HEADING_HEIGHT_PX = 40; // ParchmentHeadingCaption.tsx's real height (`py-3` + `text-xs`), fixed regardless of font size
+const SEGMENT_GAP_PX = 12; // ChapterPageContent.tsx's own `gap-3` between sibling segment divs.
+
+// How many real wrapped lines a token run takes — the same greedy wrap the browser renders,
+// against real measured glyph widths (see lib/textMeasurement.ts and lib/verseTokenRun.ts).
+function lineCountOf(run: TokenRun, columnWidthPx: number): number {
+  return wrapWordsIntoLines(run.tokens, columnWidthPx, FIXED_PARCHMENT_FONT_PX, run.extraLeadingPx).length;
 }
 
-// How many real, wrapped lines `verse`'s own text takes at this page's column width — the
-// exact same greedy wrap the browser's own `<p className="font-serif">` renders, run against
-// real measured glyph widths (see lib/textMeasurement.ts), not an estimate.
-function verseLineCount(verse: VerseSegment, columnWidthPx: number): number {
-  return wrapWordsIntoLines(rawTokensOf(verse), columnWidthPx, FIXED_PARCHMENT_FONT_PX).length;
+// A piece's own verses render as ONE continuously flowing `<p>` — a verse can share its opening
+// line with the previous verse's trailing words instead of always starting fresh — so its real
+// cost is the MARGINAL lines it adds on top of `precedingRun` already placed ahead of it, not
+// its line count in isolation (summing standalone counts overcounted by up to a line per verse).
+function linesAdded(precedingRun: TokenRun, verse: VerseSegment, columnWidthPx: number): number {
+  const combined = appendVerseToRun(precedingRun, verse, FIXED_PARCHMENT_FONT_PX);
+  return lineCountOf(combined, columnWidthPx) - lineCountOf(precedingRun, columnWidthPx);
 }
 
-// Splits `verse`'s own `text` into two fragments at a raw whitespace-token boundary (plain
-// `split(/\s+/)`, not the scoring tokenizer — good enough to rebuild readable text by joining
-// with spaces, the same fidelity lib/verseBatching.ts's joinVerses already accepts for combining
-// verse text elsewhere), chosen so the FIRST fragment occupies EXACTLY `roomLines` real wrapped
-// lines — the caller already knows the verse doesn't fit in `roomLines` whole, so this always
-// leaves at least one raw token for the second fragment. The second fragment's own `wordOffset`
-// (see VerseSegment's own doc comment) is computed by re-tokenizing everything before the split
-// with the SCORING tokenizer, so it lines up exactly regardless of any punctuation-only token
-// tokenizeVerseWords itself drops. Never called on a verse with fewer than 2 raw tokens (nothing
-// meaningful to split there — the caller checks first).
-function splitVerseAtLineBudget(verse: VerseSegment, roomLines: number, columnWidthPx: number): [VerseSegment, VerseSegment] {
+// Splits `verse`'s own `text` at a raw whitespace-token boundary, chosen so the FIRST fragment
+// adds EXACTLY `roomLines` more real wrapped lines on top of `precedingRun` (see linesAdded
+// above — a verse mid-piece can start partway through an already-shared line). Always leaves at
+// least one raw token for the second fragment. Its own `wordOffset` re-tokenizes everything
+// before the split with the SCORING tokenizer so it lines up exactly despite any punctuation-only
+// token tokenizeVerseWords drops. Never called on a verse with fewer than 2 raw tokens.
+function splitVerseAtLineBudget(verse: VerseSegment, roomLines: number, columnWidthPx: number, precedingRun: TokenRun): [VerseSegment, VerseSegment] {
+  const combined = appendVerseToRun(precedingRun, verse, FIXED_PARCHMENT_FONT_PX);
+  const combinedLines = wrapWordsIntoLines(combined.tokens, columnWidthPx, FIXED_PARCHMENT_FONT_PX, combined.extraLeadingPx);
+  const baseLines = lineCountOf(precedingRun, columnWidthPx);
+  const wordsThroughBudget = combinedLines.slice(0, baseLines + roomLines).reduce((sum, count) => sum + count, 0);
   const rawTokens = rawTokensOf(verse);
-  const lineWordCounts = wrapWordsIntoLines(rawTokens, columnWidthPx, FIXED_PARCHMENT_FONT_PX);
-  const wordsToTake = lineWordCounts.slice(0, roomLines).reduce((sum, count) => sum + count, 0);
-  const rawIndex = Math.max(1, Math.min(wordsToTake, rawTokens.length - 1));
+  const rawIndex = Math.max(1, Math.min(wordsThroughBudget - precedingRun.tokens.length, rawTokens.length - 1));
   const firstText = rawTokens.slice(0, rawIndex).join(" ");
   const secondText = rawTokens.slice(rawIndex).join(" ");
   const wordOffset = (verse.wordOffset ?? 0) + tokenizeVerseWords(firstText).length;
@@ -45,23 +51,15 @@ function splitVerseAtLineBudget(verse: VerseSegment, roomLines: number, columnWi
 }
 
 // Groups pericope segments (see lib/pathZones.ts's versesByPericopeSegment) into pages, packed
-// one VERSE at a time against the page's own real LINE budget (see lib/pageBudget.ts) rather
-// than an estimated word count — a segment only splits mid-pericope when it genuinely has to,
-// so the common case (a pericope that fits) still lands on one page with its heading intact.
-// Nothing stops accumulating just because a segment boundary was crossed — a short pericope with
-// room left pulls in the NEXT one's verses (new heading and all) instead of leaving that room
-// empty. A verse that doesn't fit the room left on the current page — including one longer than
-// a whole EMPTY page — SPLITS across the page break (see splitVerseAtLineBudget above and
-// VerseSegment's own `wordOffset`) at the exact line it runs out of room, rather than standing
-// alone unsplit or getting bumped whole to the next page: the reader explicitly wants every
-// page packed as full as it can genuinely hold, not a page left with blank space at the bottom
-// for the sake of never crossing a verse boundary. A pericope heading always costs exactly ONE
-// line of the budget — it renders as its own small caption (see ParchmentHeadingCaption.tsx),
-// not as part of the verse text's own line-wrapped run, so it's charged separately, once per
-// HEADING actually placed, with the same "only flush if something's already on the page" guard
-// a verse gets.
+// one VERSE at a time against the page's own real LINE budget (see lib/pageBudget.ts). A short
+// pericope with room left pulls in the NEXT one's verses (new heading and all). A verse that
+// doesn't fit the room left — even a whole EMPTY page's worth — SPLITS across the page break
+// (see splitVerseAtLineBudget and VerseSegment's own `wordOffset`) rather than bumping whole to
+// the next page. A heading and a same-page segment transition each pay their own real pixel cost
+// (see HEADING_HEIGHT_PX/SEGMENT_GAP_PX above), not a flat line each.
 export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBudget): ChapterPage[] {
   const { linesPerPage, columnWidthPx } = pageBudget;
+  const lineHeightPx = FIXED_PARCHMENT_FONT_PX * 2; // Tailwind's `leading-loose`, as in pageBudget.ts
   const pages: ChapterPage[] = [];
   let current: PericopeSegment[] = [];
   let currentLines = 0;
@@ -71,11 +69,8 @@ export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBu
       pages.push({ segments: current });
       current = [];
     }
-    // Reset unconditionally, even when there was nothing to actually push: a heading's own
-    // one-line cost can raise `currentLines` before anything real ever lands in `current`
-    // (piece/current are still empty right then), and the verse-splitting loop below relies on
-    // a `flushPage()` call always being real forward progress — leaving currentLines stuck
-    // non-zero here would spin that loop forever instead.
+    // Reset unconditionally: a heading/gap's own cost can raise `currentLines` before anything
+    // real lands in `current`, and the splitting loop below needs flushPage() to always progress.
     currentLines = 0;
   }
 
@@ -99,21 +94,29 @@ export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBu
       piece = [];
     }
 
+    if (currentLines > 0) {
+      const gapLines = SEGMENT_GAP_PX / lineHeightPx;
+      if (currentLines + gapLines > linesPerPage) flushPage();
+      else currentLines += gapLines;
+    }
+
     if (segment.heading) {
-      if (currentLines > 0 && currentLines + 1 > linesPerPage) flushPage();
-      currentLines += 1;
+      const headingLines = HEADING_HEIGHT_PX / lineHeightPx;
+      if (currentLines > 0 && currentLines + headingLines > linesPerPage) flushPage();
+      currentLines += headingLines;
     }
 
     for (const startingVerse of segment.verses) {
       let remaining: VerseSegment | undefined = startingVerse;
-      // Hard circuit breaker on top of the (proven-terminating) logic below — pagination
-      // freezing the whole app is a far worse failure than an occasional cramped page, so this
-      // guarantees a way out even if some future edit reintroduces a stuck case: a page never
-      // needs more passes than this to place one verse.
+      // Hard circuit breaker on top of the (proven-terminating) logic below — a page never needs
+      // more passes than this to place one verse.
       let guard = 1000;
       while (remaining && guard-- > 0) {
-        const linesForVerse = verseLineCount(remaining, columnWidthPx);
-        const roomLines = linesPerPage - currentLines; // == linesPerPage itself on a fresh page
+        const precedingRun = buildRun(piece, FIXED_PARCHMENT_FONT_PX);
+        const linesForVerse = linesAdded(precedingRun, remaining, columnWidthPx);
+        // Floored: text only ever renders in whole lines, so a fractional remainder left over
+        // from a heading/gap's own real cost can't hold part of another wrapped line.
+        const roomLines = Math.floor(linesPerPage - currentLines);
         if (linesForVerse <= roomLines) {
           piece.push(remaining);
           currentLines += linesForVerse;
@@ -121,23 +124,20 @@ export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBu
           continue;
         }
         if (roomLines <= 0) {
-          // Nothing left to fill on this page at all — move on to a fresh one and re-check the
-          // SAME (still whole) verse there, where it usually fits without splitting.
+          // Nothing left on this page — move to a fresh one and re-check the same verse there.
           flushPiece();
           flushPage();
           continue;
         }
-        // Doesn't fit, but there's SOME room left — split right here to fill exactly that much
-        // rather than leaving it blank and bumping the whole verse to the next page: the
-        // reader wants every page packed as full as it can genuinely hold, not a page left with
-        // space at the bottom for the sake of never crossing a verse boundary (a verse under 2
-        // raw tokens can't usefully divide, so it's the one exception — it just moves on whole).
+        // Doesn't fit, but there's SOME room left — split right here rather than bumping the
+        // whole verse to the next page (a verse under 2 raw tokens can't usefully divide, so it
+        // just moves on whole instead).
         if (rawTokensOf(remaining).length < 2) {
           flushPiece();
           flushPage();
           continue;
         }
-        const [firstPart, secondPart] = splitVerseAtLineBudget(remaining, roomLines, columnWidthPx);
+        const [firstPart, secondPart] = splitVerseAtLineBudget(remaining, roomLines, columnWidthPx, precedingRun);
         piece.push(firstPart);
         currentLines += roomLines;
         flushPiece();
@@ -147,8 +147,9 @@ export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBu
       // The guard tripped (shouldn't happen) — place whatever's left whole rather than silently
       // dropping it, same last-resort the old, pre-splitting code always fell back to.
       if (remaining) {
+        const precedingRun = buildRun(piece, FIXED_PARCHMENT_FONT_PX);
+        currentLines += linesAdded(precedingRun, remaining, columnWidthPx);
         piece.push(remaining);
-        currentLines += verseLineCount(remaining, columnWidthPx);
       }
     }
     flushPiece();
@@ -175,9 +176,7 @@ export function pageIndexForVerse(pages: ChapterPage[], verseNumber: number): nu
 // window can start in the previous chapter, where verse numbers can collide with the current one.
 export interface VerseWindow {
   verses: VerseSegment[];
-  // "" once past the page holding the pericope's heading — same "don't repeat a heading atop
-  // every page" rule paginateSegments already applies to the reading view itself.
-  heading: string;
+  heading: string; // "" once past the page holding the heading, same rule paginateSegments applies
 }
 
 export function paginateVerseWindow(verses: VerseSegment[], heading: string | undefined, activeVerseId: string, pageBudget: PageBudget): VerseWindow {

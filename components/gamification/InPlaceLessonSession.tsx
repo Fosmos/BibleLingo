@@ -46,13 +46,23 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
   if (mode === "practice") {
     // Matches whichever button got the reader here — DayCircle.tsx's Practice (boss battles)
     // or Review (a completed learn lesson's own verses) — see PracticeLoader.tsx's own
-    // identical logic, which this mirrors for the standalone-route fallback.
+    // identical logic, which this mirrors for the standalone-route fallback. See
+    // PracticeChain.tsx's own doc comment on why Review always drills first-letter while
+    // Practice stays full-word.
     const practiceVerses = day.newVerses.length > 0 ? day.newVerses : day.reviewVerses;
     if (practiceVerses.length === 0) return null;
-    const drillLabel = day.kind === "learn" ? "Review" : "Practice";
+    const isReview = day.kind === "learn";
+    const drillLabel = isReview ? "Review" : "Practice";
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
-        <PracticeChain verses={practiceVerses} label={drillLabel} onExit={onExit} sessionKey={`${pathKey}:${dayNumber}:practice`} layout={layout} />
+        <PracticeChain
+          verses={practiceVerses}
+          label={drillLabel}
+          mode={isReview ? "firstLetter" : "fullWord"}
+          onExit={onExit}
+          sessionKey={`${pathKey}:${dayNumber}:practice`}
+          layout={layout}
+        />
       </div>
     );
   }

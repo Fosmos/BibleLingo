@@ -54,7 +54,7 @@ export function BottomTabBar() {
             <Link
               href={href}
               className={`flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${
-                isActive ? "text-ink" : "text-ink-muted hover:text-ink-soft dark:hover:text-zinc-300"
+                isActive ? "text-ink dark:text-zinc-100" : "text-ink-muted hover:text-ink-soft dark:hover:text-zinc-300"
               }`}
             >
               <Icon size={22} />

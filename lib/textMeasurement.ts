@@ -28,14 +28,14 @@ function resolveSerifFontFamily(): string {
 
 let measureCtx: CanvasRenderingContext2D | null | undefined;
 let ctxFontKey = "";
-// `${fontSizePx}:${word}` -> measured px width, so re-paginating (a page-flip, a resize) never
-// re-measures a word this session already has the real answer for.
+// `${weight}:${fontSizePx}:${word}` -> measured px width, so re-paginating (a page-flip, a
+// resize) never re-measures a word this session already has the real answer for.
 const widthCache = new Map<string, number>();
 
-function getMeasureContext(fontSizePx: number): CanvasRenderingContext2D | null {
+function getMeasureContext(fontSizePx: number, weight: string): CanvasRenderingContext2D | null {
   if (typeof document === "undefined") return null;
   if (measureCtx === undefined) measureCtx = document.createElement("canvas").getContext("2d");
-  const fontKey = `${fontSizePx}px ${resolveSerifFontFamily()}`;
+  const fontKey = `${weight === "normal" ? "" : weight + " "}${fontSizePx}px ${resolveSerifFontFamily()}`;
   if (measureCtx && ctxFontKey !== fontKey) {
     measureCtx.font = fontKey;
     ctxFontKey = fontKey;
@@ -49,29 +49,39 @@ function fallbackWidth(text: string, fontSizePx: number): number {
   return text.length * fontSizePx * 0.5;
 }
 
-export function measureTextWidth(text: string, fontSizePx: number): number {
+export function measureTextWidth(text: string, fontSizePx: number, weight: "normal" | "600" = "normal"): number {
   if (text.length === 0) return 0;
-  const key = `${fontSizePx}:${text}`;
+  const key = `${weight}:${fontSizePx}:${text}`;
   const cached = widthCache.get(key);
   if (cached !== undefined) return cached;
-  const ctx = getMeasureContext(fontSizePx);
+  const ctx = getMeasureContext(fontSizePx, weight);
   const width = ctx ? ctx.measureText(text).width : fallbackWidth(text, fontSizePx);
   widthCache.set(key, width);
   return width;
 }
 
+// ChapterVerseRun.tsx's own verse-number badge — a bold `sup` at 0.9em of the base font size,
+// plus its `mr-0.5` (2px) margin — sits before a verse's first word and consumes real width on
+// whatever line that word lands on. Every non-continuation verse pays this once; a caller skips
+// it entirely for a continuation fragment (wordOffset set), which shows no number of its own.
+export function verseNumberDecorationPx(verseNumber: number, fontSizePx: number): number {
+  return measureTextWidth(String(verseNumber), fontSizePx * 0.9, "600") + 2;
+}
+
 // Greedy word-wrap — the same algorithm real inline text layout uses (keep adding
 // word-plus-space until the next word would overflow the column, then break) — run against
 // REAL measured widths, so it agrees with the actual rendered wrap instead of approximating
-// it. Returns how many of `words` land on each line; `words.length === 0` returns `[]`.
-export function wrapWordsIntoLines(words: string[], columnWidthPx: number, fontSizePx: number): number[] {
+// it. `extraLeadingPx[i]`, when given, is extra width (e.g. a verse-number badge — see
+// verseNumberDecorationPx above) to add before `words[i]` itself is measured. Returns how many
+// of `words` land on each line; `words.length === 0` returns `[]`.
+export function wrapWordsIntoLines(words: string[], columnWidthPx: number, fontSizePx: number, extraLeadingPx?: number[]): number[] {
   if (words.length === 0) return [];
   const spaceWidth = measureTextWidth(" ", fontSizePx) || fontSizePx * 0.28;
   const lines: number[] = [];
   let lineWidth = 0;
   let lineWordCount = 0;
-  for (const word of words) {
-    const wordWidth = measureTextWidth(word, fontSizePx);
+  for (let index = 0; index < words.length; index++) {
+    const wordWidth = measureTextWidth(words[index], fontSizePx) + (extraLeadingPx?.[index] ?? 0);
     const widthWithWord = lineWordCount === 0 ? wordWidth : lineWidth + spaceWidth + wordWidth;
     if (lineWordCount > 0 && widthWithWord > columnWidthPx) {
       lines.push(lineWordCount);
