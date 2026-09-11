@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { formatVerseSpanLabel } from "@/lib/chapterContent";
 import { formatFlaggedAt } from "@/lib/problemVerses";
@@ -23,10 +24,15 @@ export function ProblemVersesBin() {
   const entries = Object.values(problemVerses).sort((a, b) => b.flaggedAt.localeCompare(a.flaggedAt));
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-        Problem Verses <InfoTip text={INFO_TIPS.problemVersesBin} />
-      </p>
+    <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+          <AlertTriangle size={15} />
+        </span>
+        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
+          Problem Verses <InfoTip text={INFO_TIPS.problemVersesBin} />
+        </p>
+      </div>
       {entries.length === 0 ? (
         <p className="text-xs text-ink-muted">No problem verses — nice work!</p>
       ) : (
@@ -34,7 +40,7 @@ export function ProblemVersesBin() {
           {entries.map((entry) => (
             <li
               key={`${entry.book}|${entry.chapter}|${entry.verseNumber}`}
-              className="flex items-center justify-between gap-3 rounded-xl bg-mist px-3 py-2 text-xs font-medium text-ink-soft dark:bg-zinc-800 dark:text-zinc-300"
+              className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs font-medium text-ink-soft dark:bg-zinc-800 dark:text-zinc-300"
             >
               <span className="flex flex-col">
                 <span className="truncate">{formatVerseSpanLabel(entry.book, entry.chapter, entry.verseNumber, entry.verseNumber)}</span>
