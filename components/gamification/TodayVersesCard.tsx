@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Compass } from "lucide-react";
+import { BookOpen, Compass } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { getCurrentDay } from "@/lib/progressSummary";
@@ -69,9 +69,14 @@ export function TodayVersesCard() {
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none ${currentDay ? "flex-1" : ""}`}
+      className={`flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none ${currentDay ? "flex-1" : ""}`}
     >
-      <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Today&apos;s Verses</p>
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+          <BookOpen size={16} />
+        </span>
+        <p className="text-caption font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Today&apos;s Verses</p>
+      </div>
       {currentDay && activePathKey && plan ? (
         <>
           <p className="text-sm text-ink-muted">{label}</p>
