@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import type { MemorizationDay, ReviewStage } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useCelebration } from "@/lib/useCelebration";
+import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { ReviewChain } from "@/components/drills/ReviewChain";
+import { LessonChrome } from "@/components/gamification/LessonChrome";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 interface StageWithCelebration extends ReviewStage {
@@ -23,9 +25,23 @@ interface ReviewSectionProps {
   // no newVerses of their own anyway. "post" runs book mode's postLearnReviewStages instead
   // — see MemorizationDay.postLearnReviewStages.
   phase?: "previous" | "pre" | "post";
+  // The reading view's own real page layout (see lib/useChapterScopedReadingLayout.ts) — set
+  // by every caller that has one (VerseLessonFlow.tsx/DaySessionController.tsx), rendering
+  // this phase's own verses on the SAME real reading-view page(s) browsing shows, blanking
+  // only the verse being reviewed instead of a smaller custom-built excerpt.
+  layout?: ChapterReadingLayout;
+  // The chapter-scoped title (e.g. "Mark 2") and translation LessonTopBar shows — only
+  // actually needed (and rendered) alongside `layout`, so this section can be a complete,
+  // self-chromed screen on its own — see LessonChrome.tsx's own doc comment. Without `layout`
+  // there's no reading-view page to match chrome height against in the first place, so the
+  // standalone `ReviewChain` fallback stays caption-only, same as it always has.
+  lessonLabel?: string;
+  version?: string;
+  // See DaySessionController.tsx's own doc comment — set only by the in-place lesson flow.
+  onExit?: () => void;
 }
 
-export function ReviewSection({ day, onComplete, sessionKey, phase = "pre" }: ReviewSectionProps) {
+export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layout, lessonLabel, version, onExit }: ReviewSectionProps) {
   let stages: StageWithCelebration[];
   if (phase === "previous") {
     const previousVerses = day.previousVerses ?? [];
@@ -75,5 +91,24 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre" }: Re
     }
   }
 
-  return <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} />;
+  if (!layout) {
+    return <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} />;
+  }
+
+  // A complete, self-chromed screen — same LessonTopBar + fixed reading-view parchment every
+  // Learn stage renders (see LessonChrome.tsx/LessonPageCard.tsx), not a bare, unconstrained
+  // `ReviewChain` growing to the full viewport width: this section is rendered as a caller's
+  // own screen root (VerseLessonFlow.tsx's "previousReview"/"postReview" phases), the same way
+  // LearnSection.tsx renders its own {topBar} + width-capped wrapper, rather than being handed
+  // one by a parent. The goal is the same verse text landing in the exact same spot on the
+  // page every time a reader sees it — recognizing it there is part of what memorization
+  // through this app leans on.
+  return (
+    <>
+      <LessonChrome label={lessonLabel ?? ""} version={version ?? ""} current={stageIndex + 1} total={stages.length} onExit={onExit} layout={layout} />
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
+        <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} layout={layout} />
+      </div>
+    </>
+  );
 }

@@ -20,6 +20,7 @@ export function resolveBookChapterView(
   kind: PathKind,
   days: MemorizationDay[],
   plan: PathProgress,
+  todaysDay: number,
   label: string,
   chapterOverride: number | null,
   setChapterOverride: (group: number) => void,
@@ -31,7 +32,7 @@ export function resolveBookChapterView(
   const chapterGroups = Array.from(
     new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
   ).sort((a, b) => a - b);
-  const nextDay = days.find((day) => day.dayNumber === plan.completedDays + 1);
+  const nextDay = days.find((day) => day.dayNumber === todaysDay);
   const group = chapterOverride ?? nextDay?.chapterGroup;
   const visibleDays = days.filter((day) => day.chapterGroup === group);
 

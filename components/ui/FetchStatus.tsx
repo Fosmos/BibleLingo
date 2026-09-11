@@ -23,7 +23,7 @@ interface FetchErrorProps {
 
 export function FetchError({ message, onRetry }: FetchErrorProps) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-heart-200 bg-heart-50 p-4 text-center dark:border-heart-900 dark:bg-heart-950">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-heart-200 bg-heart-50 p-5 text-center dark:border-heart-900 dark:bg-heart-950">
       <p className="text-sm text-heart-700 dark:text-heart-300">{message}</p>
       {onRetry && (
         <motion.button

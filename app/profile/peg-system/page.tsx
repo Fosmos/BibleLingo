@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { PEG_DIGITS } from "@/lib/pegSystem";
 import { PegSystemQuiz } from "@/components/gamification/PegSystemQuiz";
+import { PageHeading } from "@/components/ui/PageHeading";
 import { TAP_SCALE } from "@/lib/motionTokens";
 
 type Mode = "overview" | "quiz" | "result";
@@ -18,7 +19,7 @@ export default function PegSystemPage() {
       <Link href="/profile" className="self-start text-sm font-medium text-brand-600 hover:underline">
         ← Back to Profile
       </Link>
-      <h1 className="text-title">The Peg System</h1>
+      <PageHeading kicker="Memory Palace">The Peg System</PageHeading>
       <p className="text-sm text-ink-muted">
         Each digit maps to a consonant sound. Chain two digits&apos; sounds with vowels between and you get a real,
         picturable word — e.g. 2 = N, 4 = R, so 24 = &quot;Noir&quot;. Learn the 10 base sounds below, then quiz yourself.
@@ -30,7 +31,7 @@ export default function PegSystemPage() {
             {Object.entries(PEG_DIGITS).map(([digit, peg]) => (
               <div
                 key={digit}
-                className="flex flex-col items-center gap-1 rounded-xl border border-line bg-white p-3 text-center dark:border-zinc-800 dark:bg-zinc-900"
+                className="flex flex-col items-center gap-1 rounded-xl bg-brand-50 p-3 text-center dark:bg-zinc-900"
               >
                 <span className="text-title text-brand-600">{digit}</span>
                 <span className="text-xs font-semibold text-ink-soft dark:text-zinc-300">{peg.consonants}</span>
@@ -60,7 +61,7 @@ export default function PegSystemPage() {
       )}
 
       {mode === "result" && result && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-brand-50 p-6 text-center shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
           <p className="text-title text-brand-600">
             {result.score} / {result.total}
           </p>

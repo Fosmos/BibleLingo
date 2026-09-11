@@ -55,7 +55,7 @@ export function PegTagField({ n, className }: PegTagFieldProps) {
         }}
         placeholder="Type a peg word"
         aria-label="Peg word"
-        className={`rounded-full border border-gold-500 bg-white px-3 py-1 text-xs text-ink focus:outline-none dark:bg-zinc-900 dark:text-zinc-100 ${className ?? ""}`}
+        className={`rounded-full border border-brand-400 bg-white px-3 py-1 text-xs text-ink focus:outline-none dark:bg-zinc-900 dark:text-zinc-100 ${className ?? ""}`}
       />
     );
   }
@@ -64,7 +64,7 @@ export function PegTagField({ n, className }: PegTagFieldProps) {
     <button
       type="button"
       onClick={startEditing}
-      className={`inline-flex items-center gap-1 rounded-full bg-gold-100 px-3 py-1 text-xs font-medium text-gold-700 hover:bg-gold-200 dark:bg-gold-500/10 dark:text-gold-300 ${className ?? ""}`}
+      className={`inline-flex items-center gap-1 rounded-full border border-line bg-mist px-3 py-1 text-xs font-medium text-ink-soft hover:bg-line dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 ${className ?? ""}`}
     >
       {!isOverridden && <span aria-hidden="true">{emoji}</span>} {word}
     </button>

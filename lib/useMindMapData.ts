@@ -12,6 +12,7 @@ import { usePericopesReady } from "@/lib/usePericopesReady";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { buildPathZones, type PathZone } from "@/lib/pathZones";
 import { computeZoneCardState, type PericopeCardState, type PericopeCardStatus } from "@/lib/pericopeCardState";
+import { todaysDayNumber } from "@/lib/dayRollover";
 
 export interface ChapterNode {
   chapter: number;
@@ -22,9 +23,9 @@ export interface ChapterNode {
   // mind-map-specific re-derivation of the same state.
   days: MemorizationDay[];
   // The same zones/states PathDayList itself would compute from `days` above — kept here too
-  // so the mind map's own small inline pericope-branch nodes (MindMapPericopeNode.tsx) can
-  // show each pericope's real status/short label without rendering a full PathDayList just
-  // to read it.
+  // so the mind map's own tree (see lib/mindMapHierarchy.ts's buildMindMapTree) can shape
+  // each pericope's real status/verses/label without rendering a full PathDayList just to
+  // read it.
   zones: PathZone[];
   states: PericopeCardState[];
 }
@@ -33,16 +34,18 @@ export type MindMapData =
   | { status: "no-path" }
   | { status: "loading" }
   | { status: "error"; message: string; retry: () => void }
-  | { status: "ready"; pathKey: string; label: string; completedDays: number; chapters: ChapterNode[] };
+  | { status: "ready"; pathKey: string; label: string; completedDays: number; todaysDay: number; chapters: ChapterNode[] };
 
 // A whole chapter's own status, mirroring computeZoneCardState's own three-state read on a
-// single pericope zone (lib/pericopeCardState.ts) — "active" the moment any of its days is
-// the one currently up next, "completed" once every one of its days (learn lessons and any
-// weekly/monthly capstones tagged into it) is behind completedDays, "locked" otherwise. A
-// chapter's days are always contiguous in dayNumber (same guarantee a PathZone's own days
-// carry), so this never needs to represent "partially done."
-function chapterStatus(chapterDays: MemorizationDay[], completedDays: number): PericopeCardStatus {
-  if (chapterDays.some((day) => day.dayNumber === completedDays + 1)) return "active";
+// single pericope zone (lib/pericopeCardState.ts) — "active" (amber) whenever any of its days
+// is TODAY's own lesson (see lib/dayRollover.ts's todaysDayNumber — always real, so a chapter
+// stays amber for today's just-finished lesson too, not just an upcoming one), "completed"
+// once every one of its days (learn lessons and any weekly/monthly capstones tagged into it)
+// is behind completedDays, "locked" otherwise. A chapter's days are always contiguous in
+// dayNumber (same guarantee a PathZone's own days carry), so this never needs to represent
+// "partially done."
+function chapterStatus(chapterDays: MemorizationDay[], completedDays: number, todaysDay: number): PericopeCardStatus {
+  if (chapterDays.some((day) => day.dayNumber === todaysDay)) return "active";
   if (chapterDays.length > 0 && chapterDays.every((day) => day.dayNumber <= completedDays)) return "completed";
   return "locked";
 }
@@ -135,11 +138,12 @@ export function useMindMapData(): MindMapData {
     new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
   ).sort((a, b) => a - b);
 
+  const todaysDay = todaysDayNumber(plan, new Date());
   const chapters: ChapterNode[] = chapterNumbers.map((chapter) => {
     const chapterDays = days.filter((day) => day.chapterGroup === chapter);
     const zones = buildPathZones(chapterDays);
-    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays));
-    return { chapter, status: chapterStatus(chapterDays, plan.completedDays), days: chapterDays, zones, states };
+    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays, todaysDay));
+    return { chapter, status: chapterStatus(chapterDays, plan.completedDays, todaysDay), days: chapterDays, zones, states };
   });
 
   return {
@@ -147,6 +151,7 @@ export function useMindMapData(): MindMapData {
     pathKey: key,
     label: parsePathKey(key).identifier,
     completedDays: plan.completedDays,
+    todaysDay,
     chapters,
   };
 }

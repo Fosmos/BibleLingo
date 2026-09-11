@@ -5,9 +5,9 @@ import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LOCAL_USER_ID } from "@/lib/authConfig";
 import { syncMemorizedEntities, addChapterVersesToEntities } from "@/lib/memorizedEntities";
-import { scheduleReview, type SrsPhase } from "@/lib/srs";
-import { SHEKELS_PER_VERSE_REVIEWED } from "@/lib/economy";
+import type { SrsPhase } from "@/lib/srs";
 import { createStreakActions, type StreakLoadStatus } from "@/store/streakActions";
+import { createSrsReviewActions } from "@/store/srsReviewActions";
 import { createManualEntityActions } from "@/store/manualEntityActions";
 import { createBuildingViewActions } from "@/store/buildingViewActions";
 import { createVersePOAActions } from "@/store/versePOAActions";
@@ -19,6 +19,8 @@ import { createProblemVerseActions } from "@/store/problemVerseActions";
 import { createReviewSettingsActions } from "@/store/reviewSettingsActions";
 import { createLearnSettingsActions } from "@/store/learnSettingsActions";
 import { createPathActions } from "@/store/pathActions";
+import { createStumbleTrackingActions } from "@/store/stumbleTrackingActions";
+import { createVespersActions } from "@/store/vespersActions";
 
 export type { StreakLoadStatus };
 
@@ -61,6 +63,11 @@ interface ProgressActions {
   markBuildingViewReviewedToday: () => void;
   setLocationTag: (key: string, value: string) => void;
   clearLocationTag: (key: string) => void;
+  setIconTag: (key: string, iconId: string) => void;
+  clearIconTag: (key: string) => void;
+  recordWordStumbles: (verse: VerseSegment, wrongIndices: number[]) => void;
+  setVespersHour: (hour: number | null) => void;
+  dismissVespersPromptToday: () => void;
   setPegMasterWord: (key: string, value: string) => void;
   clearPegMasterWord: (key: string) => void;
   upsertCustomClauseRole: (book: string, role: CustomClauseRole) => void;
@@ -69,13 +76,15 @@ interface ProgressActions {
   clearSessionCheckpointsWithPrefix: (prefix: string) => void;
   flagProblemVerse: (book: string, chapter: number, verseNumber: number, version: string) => void;
   clearProblemVerse: (book: string, chapter: number, verseNumber: number) => void;
-  setPericopeHeadingRecallEnabled: (value: boolean) => void;
+  setSrsSpeakModeEnabled: (value: boolean) => void;
   setSrsPromotionThreshold: (value: number) => void;
-  setProblemVerseThreshold: (value: number) => void;
+  setRestDayOfWeek: (value: number | null) => void;
   setUnderstandStageEnabled: (value: boolean) => void;
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setFillInTheBlankStageEnabled: (value: boolean) => void;
+  setRhythmStageEnabled: (value: boolean) => void;
+  setKineticTextStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 
@@ -109,6 +118,9 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   ...createReviewSettingsActions(set, get, persist),
   ...createLearnSettingsActions(set, get, persist),
   ...createPathActions(set, get, persist),
+  ...createStumbleTrackingActions(set, get, persist),
+  ...createVespersActions(set, get, persist),
+  ...createSrsReviewActions(set, get, persist),
 
   hydrate: (userId) => {
     set(loadProgress(userId));
@@ -119,7 +131,10 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const existing = state.paths[pathKey];
     if (!existing) return;
     const completedDays = Math.max(existing.completedDays, dayNumber);
-    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays } };
+    // Stamped every time, not just on a real advance — see PathProgress.lastCompletedAt and
+    // lib/dayRollover.ts: this is what keeps tomorrow's lesson from revealing itself as
+    // "today's" the instant this one finishes, rather than only once an actual midnight passes.
+    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays, lastCompletedAt: new Date().toISOString() } };
     const memorizedEntities = syncMemorizedEntities(paths, state.memorizedEntities);
     set(persist({ ...state, paths, memorizedEntities }));
   },
@@ -138,41 +153,6 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const state = get();
     if (state.stickers.includes(pathKey)) return;
     set(persist({ ...state, stickers: [...state.stickers, pathKey] }));
-  },
-
-  recordSrsReview: (entityId, accuracy) => {
-    const state = get();
-    const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
-    if (!entity) return;
-    const srs = scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold);
-    const memorizedEntities = state.memorizedEntities.map((candidate) =>
-      candidate.id === entityId ? { ...candidate, srs } : candidate,
-    );
-    const best = Math.max(state.srsBestAccuracy[entityId] ?? 0, accuracy);
-    set(persist({ ...state, memorizedEntities, srsBestAccuracy: { ...state.srsBestAccuracy, [entityId]: best } }));
-    // Only a perfect (100%, zero-mistake) review earns shekels — a pass that still promotes
-    // a box but needed retries along the way doesn't pay out.
-    if (accuracy === 100) {
-      const verseCount = entity.endVerse - entity.startVerse + 1;
-      get().earnShekels(verseCount * SHEKELS_PER_VERSE_REVIEWED);
-    }
-  },
-
-  earnShekels: (amount) => {
-    const state = get();
-    set(persist({ ...state, shekels: state.shekels + amount }));
-  },
-
-  recordChapterReviewAccuracy: (pathKey, accuracy) => {
-    const state = get();
-    const best = Math.max(state.chapterReviewBestAccuracy[pathKey] ?? 0, accuracy);
-    set(persist({ ...state, chapterReviewBestAccuracy: { ...state.chapterReviewBestAccuracy, [pathKey]: best } }));
-  },
-
-  recordMasteryLevel: (key, level) => {
-    const state = get();
-    const best = Math.max(state.masteryLevels[key] ?? 0, level);
-    set(persist({ ...state, masteryLevels: { ...state.masteryLevels, [key]: best } }));
   },
 
   setIncludeVerseReferences: (value) => {

@@ -25,7 +25,7 @@ export function AuthScreen({ loading }: AuthScreenProps) {
         <h1 className="text-title">Verses</h1>
         <p className="text-sm text-ink-muted">Memorize Scripture, one verse at a time.</p>
       </div>
-      <div className="w-full max-w-xs rounded-2xl border border-line bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="w-full max-w-xs rounded-2xl bg-white p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
         <div className="mb-4 flex rounded-full bg-mist p-1 dark:bg-zinc-800">
           <button
             type="button"

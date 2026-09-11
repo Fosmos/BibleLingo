@@ -1,6 +1,7 @@
 import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
 import { computeBucketStatesPerLesson } from "@/lib/bookReviewSchedule";
 import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
+import { pericopeAnchoredPreviousVerses } from "@/lib/previousVerseReview";
 
 export const DEFAULT_VERSES_PER_DAY = 5;
 
@@ -34,7 +35,7 @@ function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSeg
 // 8 chapters newly completes (not on a fixed lesson-count cadence), tagged into whichever
 // chapter's group they formed during — those stay in the path. The whole book ends with the
 // same Full Review + Boss Battle capstone every other path kind uses.
-export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): MemorizationDay[] {
+export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number, usePericopeAnchor = false): MemorizationDay[] {
   const effectiveVersesPerDay = Math.max(1, versesPerDay);
   const chunks = chunkVersesRespectingChapters(verses, effectiveVersesPerDay);
   const bucketStates = computeBucketStatesPerLesson(chunks);
@@ -45,7 +46,8 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
   let previousMonthlyBucketKey = "";
   // Just yesterday's lesson — the immediately preceding learn day's own new verses (skipping
   // over any weekly/monthly review or boss-battle days in between, which aren't "a lesson").
-  // Empty on the book's very first lesson.
+  // Empty on the book's very first lesson. Extended back to its own pericope's start verse
+  // when usePericopeAnchor is on — see lib/previousVerseReview.ts.
   let previousChunk: VerseSegment[] = [];
 
   chunks.forEach((chunk, index) => {
@@ -69,7 +71,7 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
       // reviewStages is absent (as it now always is for book-mode learn days).
       reviewVerses: [],
       postLearnReviewStages,
-      previousVerses: previousChunk,
+      previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
       chapterGroup,
     });
     previousChunk = chunk;
@@ -119,7 +121,7 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
     kind: "chapter_review",
     newVerses: [],
     reviewVerses: verses,
-    previousVerses: previousChunk,
+    previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
   });
   days.push({ dayNumber: dayNumber++, kind: "boss_battle", newVerses: [], reviewVerses: verses });
 

@@ -9,7 +9,7 @@ export const INFO_TIPS = {
   rhythmRep:
     "Every noun and verb in the verse is shown in bold capitals. One word is highlighted at a time — tap the bar below to move to the next word (it plays aloud as you go), bold words included.",
   fillInTheBlankRep:
-    "Tap the missing words, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
+    "Two rounds: first with every other word blanked, then with every word blanked. Tap the missing ones, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
   drawFirstLetterRep:
     "The whole verse is shown with the current item highlighted — not just words, but punctuation marks and verse-number markers too, each getting their own turn. Draw whatever's current with your finger, Apple Pencil, or mouse; handwriting recognition auto-advances once it detects you've drawn something legible (not auto-graded — it only checks that something was drawn, never whether it's correct). Punctuation and verse numbers auto-reveal on their own with nothing to draw. Either way, Next reveals the real printed item (a word's first letter, or the mark/number itself) in a growing strip under the verse and clears the canvas for what's next — tap it yourself any time if recognition is slow.",
   prayRep:
@@ -18,6 +18,10 @@ export const INFO_TIPS = {
     "Speak the verse aloud. Uses your browser's speech recognition to check what you said against the verse text — no exact match required, close is fine. When only first letters are shown, hover (or tap) one to reveal that word if you're stuck. If microphone access is declined, you can skip to the next exercise.",
   writeRep:
     "Type the verse from memory (or copy it, on the first rep when it's shown). Checked with fuzzy matching, so minor typos/punctuation differences still pass.",
+  kineticTextRep:
+    "The whole day's text read aloud by your browser's own voice, one word highlighted at a time as it's actually spoken. Tap Listen to play (Pause to stop partway); tap it again anytime to listen once more before continuing. Not graded — just a synced read-along pass before drilling into each verse.",
+  listenVerseRep:
+    "This verse read aloud by your browser's own voice, one word highlighted at a time as it's actually spoken — the automatic first pass on every verse, before its own Rhythm/Write/Speak/Type stages. Tap Listen to play (Pause to stop partway); tap it again anytime to listen once more before continuing. Not graded.",
   firstLetterTypeRep:
     "Type just the first letter of each word, in order, to reveal it. A wrong letter restarts this pass through the verse from word 1.",
   reviewChain:
@@ -54,7 +58,7 @@ export const INFO_TIPS = {
   srsOverview:
     "Spaced-repetition review for verses you've fully learned — due verses are surfaced on a schedule so they stay memorized long-term.",
   swordOfTheSpirit:
-    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), then Box 5 (every 30 days). Fall below 90% and it drops all the way back to Box 1, no matter how far it had climbed.",
+    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), then Box 5 (every 30 days). Fall below 90% and it drops back just one box, not all the way to Box 1.",
   stickerBook: "A collectible record of every path, boss battle, and Mastery level you've cleared.",
   includeVerseReferencesToggle:
     'When on, shows the verse number/reference inline in the text (e.g. "1:1 Paul and Timotheus...") wherever a verse is displayed.',
@@ -67,21 +71,29 @@ export const INFO_TIPS = {
   sectionEndPegToggle:
     "Only shown when Pericope tags and Pegs are both on. Adds a second peg chip to each section, pegged to the verse it ENDS with (its own start-verse peg is always shown) — handy for a two-ended mnemonic route through a longer section. Off by default; chosen once per path, same as the tag scopes above.",
   understandStageToggle:
-    "When off, a Learn day skips straight to Visualize (or straight to Rhythm, if that's off too) — no clause-tagging step. Turn it back on any time to bring it back for later lessons.",
+    "When off, a Learn day skips straight to Visualize (or straight to Listen/each verse's own first stage, if that's off too) — no clause-tagging step. Turn it back on any time to bring it back for later lessons.",
   visualizeStageToggle:
-    "When off, a Learn day skips straight to each verse's own Rhythm stage — no Loci/Peg + Who/Action/scene step. Verses learned with it off just show no room item, peg word, or scene wherever those would otherwise appear (their circle, SRS review, etc.). Turn it back on any time to bring it back for later lessons.",
+    "When off, a Learn day skips straight to Listen (or each verse's own first stage, if that's off too) — no Loci/Peg + Who/Action/scene step. Verses learned with it off just show no room item, peg word, or scene wherever those would otherwise appear (their circle, SRS review, etc.). Turn it back on any time to bring it back for later lessons.",
   writeFirstLetterStageToggle:
-    "When off, each verse's Learn stages skip straight from Rhythm to Speak (the first-letter hint) — no handwriting-recognition canvas. Turn it back on any time to bring it back for later lessons.",
+    "When off, each verse's Learn stages skip straight from Rhythm (or straight to Speak, the first-letter hint, if Rhythm is off too) — no handwriting-recognition canvas. Turn it back on any time to bring it back for later lessons.",
   fillInTheBlankStageToggle:
-    "When off, each verse's Learn stages skip straight from the Speak hint to Type it by first letter — no word-bank tap exercise in between. Turn it back on any time to bring it back for later lessons.",
+    "When off, each verse's Learn stages skip straight to the Speak hint (from Rhythm or Write First Letter, whichever ran last) — no word-bank tap exercise beforehand. Turn it back on any time to bring it back for later lessons.",
+  kineticTextStageToggle:
+    "When on, adds a \"Listen\" step right after Visualize (or right after Understand, or first thing, if those are off) — the whole day's text read aloud with each word highlighted as it's spoken. On by default, as the introduction to each fresh verse. Uses your browser's own built-in voice — no audio files, nothing downloaded.",
+  rhythmStageToggle:
+    "When on, adds a \"Rhythm\" step for each verse — tap through its words at your own pace before Write First Letter/Speak. Off by default now that Listen (above) is the default whole-day introduction to a fresh verse; turn this back on for the per-verse tap-through pacing too.",
   srsPromotionThresholdSlider:
-    "How high an SRS review's first-letter typing accuracy must be to promote a verse group up a box (Sword of the Spirit) instead of dropping it back to Box 1. Defaults to 90%.",
-  problemVerseThresholdSlider:
-    "How low a single verse's SRS review accuracy must fall to flag it into the Problem Verses bin. Defaults to 80% — kept lower than the promotion threshold so a review can land strictly between the two without flagging or promoting anything. A verse still clears the bin once a later review reaches the promotion threshold above.",
-  pericopeHeadingRecallToggle:
-    "When on, an SRS review of a chapter/book verse group that opens a new section requires typing that section's heading, blind, by first letter, before the verse itself — doesn't count against your accuracy. When off, review skips straight to the verse, same as usual.",
+    "How high an SRS review's first-letter typing accuracy must be to promote a verse group up a box (Sword of the Spirit) instead of dropping it back one box. Defaults to 90%.",
+  srsSpeakModeToggle:
+    "When on, SRS review's verse-recall step listens to you recite the verse aloud instead of typing its first letters — words reveal as you say them, the same word-by-word way. When off (the default), review uses the on-screen keyboard as usual. Needs microphone access.",
+  restDayPicker:
+    "Pick one day a week to always have off. On that day, missing your streak doesn't cost a freeze or reset it, and a fresh SRS review never comes due exactly on it either — everything just picks back up the next day. Tap the same day again to clear it.",
+  vespersHourPicker:
+    "Pick a local hour, and Home offers a quiet, warm-toned prompt to recall a few previous lessons' verses by first letter once the clock reaches it — a calm retrieval moment, not a graded one, and it never affects your progress, SRS boxes, or streak. Tap \"Not tonight\" to skip it for the rest of that day; it'll offer again the next evening.",
   problemVersesBin:
     "Any individual verse whose most recent SRS review accuracy fell below 80% lands here — a standing list, separate from its Sword of the Spirit box, so a weak verse in an otherwise-strong group still stands out for extra practice. It clears back out once a later review scores 90% or higher, or tap Relearn to run through the full Learn flow for that verse again.",
+  stumbleMapsSection:
+    "Every verse you've reviewed at least once, worst first — tap one to see exactly which words have tripped you up, color-coded by how many times each word's been missed (1-2 misses, 3-4, or 5+). The scale is fixed and the same for every verse, so a color always means the same thing everywhere, not just \"worse than the rest of this verse.\"",
   resetProgressButton: "Erases all progress for this account — paths, streak, stickers, memorized verses. Cannot be undone.",
   signOutButton: "Signs out of this account. Your progress stays saved and reloads next time you sign back in.",
   signInButton:

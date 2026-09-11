@@ -1,10 +1,14 @@
 // Data table for the Learn intensity slider (see LearnIntensityPicker.tsx) — 5 preset levels
 // from least time/weakest encoding to most time/strongest encoding. Every level keeps the same
-// floor of per-verse stages (Rhythm, Speak with a first-letter hint, Type by first letter,
-// Speak with nothing) plus whatever stages it adds on top — these are the same four booleans
+// floor of per-verse stages (Speak with a first-letter hint, Type by first letter, Speak with
+// nothing) plus whatever stages it adds on top — these are the same four booleans
 // LearnSection.tsx's buildSteps/versePhases already gate the flattened step list on (see
-// UserProgress.understandStageEnabled etc. in types/index.ts). Review, Pray, and cumulative
-// multiverse review are unconditional at every level, by design — never touched here.
+// UserProgress.understandStageEnabled etc. in types/index.ts). Listen and Rhythm are each a
+// separate, global Profile > Advanced toggle instead (see kineticTextStageEnabled/
+// rhythmStageEnabled) — not part of this per-path slider — so they're not represented in the
+// floor above either; Listen still runs by default (see its own doc comment), just not
+// something this particular picker controls. Review, Pray, and cumulative multiverse review
+// are unconditional at every level, by design — never touched here.
 export interface LearnIntensityLevel {
   level: number;
   label: string;
@@ -32,7 +36,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 1,
     label: "Quick Pass",
-    description: "Rhythm, Speak with a first-letter hint, Type it by first letter, Speak with nothing.",
+    description: "Speak with a first-letter hint, Type it by first letter, Speak with nothing.",
     estimateSecondsPerVerse: 135,
     understandStageEnabled: false,
     visualizeStageEnabled: false,
@@ -85,4 +89,30 @@ export function formatIntensityEstimate(secondsPerVerse: number): string {
   if (secondsPerVerse < 60) return `~${secondsPerVerse}s / verse`;
   const minutes = Math.round((secondsPerVerse / 60) * 10) / 10;
   return `~${minutes} min / verse`;
+}
+
+// Level 1's own 135s/verse floor, then each optional stage's own additive share worked out
+// from the gap between consecutive LEARN_INTENSITY_LEVELS entries above (e.g. level 2 minus
+// level 1 = Fill in the Blank's own 60s). Reconstructed this way, rather than looked up from
+// the preset table directly, because a reader's actual four booleans (Customize Stages) don't
+// have to match any single preset level — DayPathDiagram.tsx's own "Today's Lesson" estimate
+// needs to work for any combination, not just the five named presets.
+const BASE_SECONDS_PER_VERSE = 135;
+const FILL_IN_THE_BLANK_SECONDS_PER_VERSE = 60;
+const VISUALIZE_SECONDS_PER_VERSE = 75;
+const WRITE_FIRST_LETTER_SECONDS_PER_VERSE = 90;
+const UNDERSTAND_SECONDS_PER_VERSE = 90;
+
+export function estimateLessonSeconds(verseCount: number, stages: LearnIntensityStages): number {
+  let perVerse = BASE_SECONDS_PER_VERSE;
+  if (stages.fillInTheBlankStageEnabled) perVerse += FILL_IN_THE_BLANK_SECONDS_PER_VERSE;
+  if (stages.visualizeStageEnabled) perVerse += VISUALIZE_SECONDS_PER_VERSE;
+  if (stages.writeFirstLetterStageEnabled) perVerse += WRITE_FIRST_LETTER_SECONDS_PER_VERSE;
+  if (stages.understandStageEnabled) perVerse += UNDERSTAND_SECONDS_PER_VERSE;
+  return perVerse * verseCount;
+}
+
+export function formatLessonDuration(totalSeconds: number): string {
+  const minutes = Math.round(totalSeconds / 60);
+  return minutes <= 0 ? "<1 min" : `${minutes} min${minutes === 1 ? "" : "s"}`;
 }

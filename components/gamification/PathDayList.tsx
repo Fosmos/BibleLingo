@@ -9,6 +9,7 @@ import { PericopeCard } from "@/components/gamification/PericopeCard";
 interface PathDayListProps {
   days: MemorizationDay[];
   completedDays: number;
+  todaysDayNumber: number;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
 }
@@ -23,11 +24,11 @@ interface PathDayListProps {
 // Opening the path always scrolls the current card to the middle of the screen rather than
 // leaving the reader to hunt for it. No location tags here — those are a Building-view-only
 // feature (see BuildingRoomView.tsx).
-export function PathDayList({ days, completedDays, onSelectDay, onPracticeDay }: PathDayListProps) {
+export function PathDayList({ days, completedDays, todaysDayNumber, onSelectDay, onPracticeDay }: PathDayListProps) {
   const zones = buildPathZones(days);
   const activeCardRef = useRef<HTMLDivElement | null>(null);
-  const states = zones.map((zone) => computeZoneCardState(zone, completedDays));
-  const showsToday = zones.map((zone, index) => zoneShowsTodaysVerses(zone, states[index], completedDays));
+  const states = zones.map((zone) => computeZoneCardState(zone, completedDays, todaysDayNumber));
+  const showsToday = zones.map((zone, index) => zoneShowsTodaysVerses(zone, states[index], todaysDayNumber));
 
   useEffect(() => {
     activeCardRef.current?.scrollIntoView({ block: "center" });
@@ -44,6 +45,7 @@ export function PathDayList({ days, completedDays, onSelectDay, onPracticeDay }:
             index={index}
             isLast={index === zones.length - 1}
             completedDays={completedDays}
+            todaysDayNumber={todaysDayNumber}
             connectToPrevious={showsToday[index] && showsToday[index - 1] === true}
             connectToNext={showsToday[index] && showsToday[index + 1] === true}
             cardRef={states[index].status === "active" ? activeCardRef : undefined}

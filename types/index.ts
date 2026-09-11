@@ -11,6 +11,16 @@ export interface VerseSegment {
   book: string;
   chapter: number;
   verseNumber: number;
+  // Set only on a page FRAGMENT of a verse split across two pages — lib/chapterPagination.ts's
+  // own paginateSegments, once a verse no longer has to fit a single page whole (the parchment
+  // is a fixed size; packing every page as full as the word budget allows means a long verse
+  // occasionally straddles the page break, its `text` here holding just this fragment's own
+  // slice). How many of this verse's OWN words (lib/verseWords.ts's tokenizeVerseWords count —
+  // the same unit every word-reveal drill already indexes by) come before this fragment.
+  // Undefined for an ordinary whole verse, or the first fragment of a split one — every reader
+  // that isn't specifically rendering a paginated page (drilling/scoring/audio, which always
+  // work from real, unfragmented verses fetched directly) never sees this set at all.
+  wordOffset?: number;
 }
 
 export interface WordDiffToken {
@@ -90,6 +100,13 @@ export interface PathProgress {
   // time, right alongside locationTagLevels (see LocationTagLevelPicker.tsx). Undefined means
   // off, same "never asked/older path" convention as locationTagLevels.
   sectionEndPegEnabled?: boolean;
+  // ISO timestamp of the last time completeDay bumped this path's completedDays — the gate
+  // behind lib/dayRollover.ts's activeDayNumber: a lesson finished today shouldn't reveal
+  // tomorrow's as "today's active lesson" until an actual calendar day boundary passes, even
+  // though completedDays itself (real, permanent progress) advances immediately. Undefined for
+  // a path with no completion yet, or one completed before this field existed — both read as
+  // "no completion today," same self-healing convention this app already uses elsewhere.
+  lastCompletedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,9 +114,10 @@ export interface PathProgress {
 // Memorized section — separate from a path's own day-to-day Review section)
 // ---------------------------------------------------------------------------
 
-// The "Sword of the Spirit" Leitner-box review system — 4 boxes, each its own fixed cadence
-// (see lib/srs.ts's BOX_INTERVAL_DAYS). A 90%+ accuracy review promotes one box; anything
-// below sends it all the way back to Box 1, however far up it had climbed.
+// The "Sword of the Spirit" Leitner-box review system — 5 boxes, each its own fixed cadence
+// (see lib/srs.ts's BOX_INTERVAL_DAYS). A review's accuracy is graded into an Again/Hard/Good/
+// Easy rating (see lib/srsRating.ts) and steps the box up or down by that rating's own amount
+// (see lib/srs.ts's stepBox) — a graduated move by 1 or 2 boxes, not a reset to Box 1.
 export type SrsBox = 1 | 2 | 3 | 4 | 5;
 
 export interface SRSState {
@@ -222,6 +240,11 @@ export interface UserProgress {
   // option instead of a tag; a verse reached before its own tag is set just proceeds with no
   // Loci context in Visualize.
   locationTags: Record<string, string>;
+  // A dual-coding companion to locationTags above — one small icon (a Lucide icon id, see
+  // lib/verseIcons.ts) per verse, keyed the same way (lib/locationTags.ts's locationTagKey,
+  // "verse" scope only). Shown as a margin glyph in the same slot as the loci/peg markers
+  // (see ChapterVerseRun.tsx) and as the tap target in IconTagField.tsx.
+  iconTags: Record<string, string>;
   // The reader's own Master Peg List — one word per NUMBER (0-99, zero-padded key — see
   // lib/pegSystem.ts's pegMasterListKey), not per scope: unlike locationTags, this is the same
   // single flat map whether it's edited from the Master Peg List settings page
@@ -262,33 +285,35 @@ export interface UserProgress {
   // defined once while working through a book keeps showing up as a quick-select option for
   // every later lesson in that same book, without redefining it each time.
   customClauseRoles: Record<string, CustomClauseRole[]>;
-  // Whether an SRS review of a chapter/book verse group that opens a new pericope requires
-  // typing that section's heading, blind, before the verse itself (see
-  // components/gamification/SrsEntityRecall.tsx) — off skips straight to the verse recall,
-  // same as an entity that doesn't open a pericope.
-  pericopeHeadingRecallEnabled: boolean;
+  // Whether SRS review's own verse-recall step is driven by speaking the verse aloud (see
+  // components/drills/FirstLetterSpeakRep.tsx / lib/useFirstLetterSpeaking.ts) instead of
+  // typing its first letters (FirstLetterTypeRep.tsx) — both reveal the same way, word by
+  // word, one by keystroke and one by recognized speech. Off (typing) by default, matching
+  // every other stage in this app defaulting to the option that needs no microphone.
+  srsSpeakModeEnabled: boolean;
   // User-configurable override for lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD default (90) —
   // how high an SRS review's accuracy must be to promote a box instead of dropping back to
   // Box 1. Optional (rather than bumped in alongside a schema version) so an existing saved
   // profile missing it just falls back to that same default at every read site, the same
   // self-healing convention SRSState.box already uses — never requires wiping progress.
   srsPromotionThreshold?: number;
-  // User-configurable override for lib/problemVerses.ts's PROBLEM_VERSE_ACCURACY_THRESHOLD
-  // default (80) — how low a single verse's SRS review accuracy must fall to flag it into
-  // the Problem Verses bin. Same undefined-falls-back-to-default convention as
-  // srsPromotionThreshold above. Deliberately not validated against it — setting this at or
-  // above the promotion threshold just means a review can flag and promote at the same time,
-  // which is confusing but not unsafe, so it's left as the reader's own call.
-  problemVerseThreshold?: number;
-  // Every individual verse whose most recent SRS review accuracy fell below
-  // PROBLEM_VERSE_ACCURACY_THRESHOLD (lib/problemVerses.ts), keyed by lib/verseKey.ts's
-  // verseKey — a standing "needs extra practice" list (see components/gamification/
+  // Every individual verse the reader had to explicitly reveal a letter for during its most
+  // recent SRS review (see VerseAccuracy.neededHint in lib/verseAccuracyBreakdown.ts), keyed
+  // by lib/verseKey.ts's verseKey — a standing "needs extra practice" list (see
+  // components/gamification/
   // ProblemVersesBin.tsx). A multi-verse SRS entity is judged per verse, not as a whole, so
   // one weak verse in an otherwise-strong group still lands here. A verse leaves this list
   // either by scoring PROMOTION_ACCURACY_THRESHOLD or higher (lib/srs.ts) on a later SRS
   // review, or by fully relearning it (components/gamification/RelearnSession.tsx) — a
   // review that lands strictly between the two thresholds changes nothing either way.
   problemVerses: Record<string, ProblemVerseEntry>;
+  // Cumulative per-word SRS miss counts, keyed by lib/verseKey.ts's verseKey — see
+  // lib/stumbleTracking.ts. Powers the Stumble Map heat-map view (surfaced from
+  // ProblemVersesBin.tsx): which exact words in a verse are the reader's actual weak points,
+  // not just which whole verses. Grows across every review, never resets — a word that was
+  // hard once but has since improved fades relative to a currently weak one rather than
+  // staying permanently flagged.
+  wordStumbleCounts: Record<string, number[]>;
   // Whether a Learn day's "Understand" stage (clause tagging — see VerseOrientationRep) runs
   // at all. Off skips straight to Visualize (orientation_summary) — every later stage already
   // tolerates empty wordAnnotations, the same as an entity that simply never got tagged.
@@ -299,13 +324,46 @@ export interface UserProgress {
   // it, the same as one simply never visualized.
   visualizeStageEnabled: boolean;
   // Whether each verse's "Write First Letter" stage (the handwriting-recognition canvas —
-  // see DrawFirstLetterRep) runs during Learn. Off skips straight from Rhythm to the Speak
-  // (first-letter hint) stage for every verse that day.
+  // see DrawFirstLetterRep) runs during Learn. Off skips straight from Rhythm (or Listen, if
+  // Rhythm itself is off — see rhythmStageEnabled) to the Speak (first-letter hint) stage for
+  // every verse that day.
   writeFirstLetterStageEnabled: boolean;
   // Whether each verse's "Fill in the Blank" stage (the word-bank tap exercise — see
-  // FillInTheBlankRep) runs during Learn, right after the Speak hint. Off skips straight from
-  // the Speak hint to Type it by first letter for every verse that day.
+  // FillInTheBlankRep) runs during Learn, right before the Speak hint. Off skips straight to
+  // the Speak hint (from Rhythm, or from Write First Letter if that's on) for every verse
+  // that day.
   fillInTheBlankStageEnabled: boolean;
+  // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
+  // Learn — OPTIONAL, defaulting off: Listen (kineticTextStageEnabled below) is the default
+  // whole-day introduction to a fresh verse now, and Rhythm is the deliberate, opt-in
+  // alternative/addition for a reader who still wants that per-verse tap-through pacing too.
+  // Off skips straight from Visualize to Write First Letter (or the Speak hint, if that's also
+  // off) for every verse that day — the same "just don't insert the step" convention every
+  // other optional stage here follows.
+  rhythmStageEnabled: boolean;
+  // Whether a Learn day's "Listen" stage (the whole day's text narrated aloud via the Web
+  // Speech API, each word highlighted in real time as it's spoken — see KineticTextRep) runs
+  // at all. Sits right after Visualize (orientation_summary), before the first verse's own
+  // per-verse stages — the DEFAULT introduction to a fresh verse (see rhythmStageEnabled
+  // above, its own now-optional counterpart). Off skips straight to whichever per-verse stage
+  // is first, same "just don't insert the step" convention every other optional whole-day
+  // stage here follows.
+  kineticTextStageEnabled: boolean;
+  // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
+  // set (the default — every day behaves as it always has). On that calendar day: a lapse in
+  // streakActions.ts's evaluateStreakOnLoad that would otherwise cost the streak is forgiven
+  // instead of spending a freeze or resetting it, and lib/srs.ts's scheduleReview never lands
+  // a fresh review's next due date exactly on it (pushed a day later instead) — so neither the
+  // streak nor the SRS queue pressures the reader to show up on their own chosen day off.
+  restDayOfWeek: number | null;
+  // The reader's own local wind-down hour (0-23), or null for off (the default) — Home offers
+  // to switch into Vespers mode (components/gamification/VespersView.tsx) once the local
+  // clock reaches this hour, same optional-scheduling convention as restDayOfWeek above.
+  vespersHour: number | null;
+  // Date key (see lib/dateKey.ts's todayDateKey) of the last time the reader dismissed the
+  // Vespers prompt with "Not tonight" — stops it re-offering again the same calendar day;
+  // self-clears the next day since it's compared against, not decremented.
+  vespersPromptDismissedDate: string | null;
 }
 
 // One verse flagged into the Problem Verses bin — see UserProgress.problemVerses above for

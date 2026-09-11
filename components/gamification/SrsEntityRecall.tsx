@@ -1,135 +1,96 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
 import type { VersePOA, VerseSegment } from "@/types";
 import { firstLettersDisplay } from "@/lib/verseFirstLetters";
 import type { VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
-import type { PericopeInfo } from "@/lib/chapterPericopes";
-import { buildRecallSteps } from "@/lib/pericopeHeadingSteps";
+import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { joinVerses, verseNumberMarkers } from "@/lib/verseBatching";
+import { useProgressStore } from "@/store/useProgressStore";
 import { FirstLetterTypeRep } from "@/components/drills/FirstLetterTypeRep";
-import { PericopeHeadingTypeRep } from "@/components/drills/PericopeHeadingTypeRep";
-import { CompletedRecallStepView } from "@/components/gamification/CompletedRecallStepView";
+import { FirstLetterSpeakRep } from "@/components/drills/FirstLetterSpeakRep";
 import { VerseRevealHelp } from "@/components/ui/VerseRevealHelp";
 
 interface SrsEntityRecallProps {
   verses: VerseSegment[];
   sessionKey: string;
   label: string;
-  // Every pericope this entity's range opens (see SrsReviewSession's getPericopeHeadingsInRange)
-  // — empty when none do, or when the reader has the pericope-heading-recall setting off.
-  pericopeHeadings: PericopeInfo[];
+  // The chapter's own real reading-view page layout (see lib/useWholeChapterReadingLayout.ts)
+  // — every real verse in `verses` renders on the SAME real page/size/position the reading
+  // view itself uses, any pericope heading it opens showing decoratively right there, same as
+  // everywhere else in the app (see FirstLetterMultiVersePageCard.tsx).
+  layout: ChapterReadingLayout;
   entityPOA?: VersePOA;
   onRestart: () => void;
   onComplete: (accuracy: number) => void;
-  // Per-individual-verse accuracy breakdown for a verses step (never a heading step) — used
-  // by SrsReviewSession to flag a weak verse into the Problem Verses bin.
   onVerseAccuracy: (results: VerseAccuracy[]) => void;
 }
 
-// Walks this entity's own verses interleaved with a blind type-the-heading gate right before
-// the verses each pericope heading opens (see lib/pericopeHeadingSteps.ts) — reached once, in
-// order, exactly where that section actually falls rather than all bunched up front. Every
-// step finished so far stays visible (see CompletedRecallStepView.tsx) above whichever step
-// is active now, so reaching a new heading (or the verses right after it) never clears the
-// screen of what came before. A heading step never counts toward accuracy; a verses step's
-// word-level results accumulate in totalsRef across every step of this pass, so the overall
-// accuracy reported to onComplete (and so SRS box promotion) always reflects the WHOLE
-// entity, not just its last step.
-export function SrsEntityRecall({
-  verses,
-  sessionKey,
-  label,
-  pericopeHeadings,
-  entityPOA,
-  onRestart,
-  onComplete,
-  onVerseAccuracy,
-}: SrsEntityRecallProps) {
-  const steps = useMemo(() => buildRecallSteps(verses, pericopeHeadings), [verses, pericopeHeadings]);
-  const [stepIndex, setStepIndex] = useState(0);
-  const totalsRef = useRef({ wrongWords: 0, totalWords: 0 });
-  const step = steps[stepIndex];
-
-  function advanceOrFinish() {
-    const next = stepIndex + 1;
-    if (next >= steps.length) {
-      const { wrongWords, totalWords } = totalsRef.current;
-      onComplete(totalWords > 0 ? Math.round(((totalWords - wrongWords) / totalWords) * 100) : 100);
-    } else {
-      setStepIndex(next);
-    }
-  }
-
-  if (!step) return null;
-
-  // Every already-finished step stays on screen, in order, above whichever step is active
-  // now — reaching a new pericope's heading (or its own verses right after) never clears the
-  // verses already recited, it only ever grows.
-  const history = steps.slice(0, stepIndex);
-
-  if (step.kind === "heading") {
-    return (
-      <div className="flex flex-col gap-6">
-        {history.map((completed, index) => (
-          <CompletedRecallStepView key={index} step={completed} />
-        ))}
-        <PericopeHeadingTypeRep
-          key={`heading-${stepIndex}`}
-          book={step.heading.book}
-          chapter={step.heading.chapter}
-          startVerse={step.heading.startVerse}
-          endVerse={step.heading.endVerse}
-          heading={step.heading.heading}
-          onComplete={advanceOrFinish}
-        />
-      </div>
-    );
-  }
-
-  const combinedVerse = joinVerses(step.verses, `step-${stepIndex}`);
-  const verseMarkers = verseNumberMarkers(step.verses);
+// Recites this SRS entity's whole verse range in one continuous pass — first letter only,
+// either typed or spoken (see the reader's own srsSpeakModeEnabled setting) — checkpointed
+// under this entity's own sessionKey so a reload, crash, or navigating away mid-review resumes
+// right where it left off (see lib/useSessionCheckpoint.ts) rather than restarting from word 1.
+// A merged, multi-pericope entity used to gate each new section behind its own separate blind
+// heading-typing step; now that every pericope heading already shows decoratively on the real
+// page itself (see `layout` above), that separate gate is gone — the heading is simply part of
+// what's on the page as the reader reaches it, same as Learn and the main reading view.
+export function SrsEntityRecall({ verses, sessionKey, label, layout, entityPOA, onRestart, onComplete, onVerseAccuracy }: SrsEntityRecallProps) {
+  const speakModeEnabled = useProgressStore((state) => state.srsSpeakModeEnabled);
+  const combinedVerse = joinVerses(verses, "entity");
+  const verseMarkers = verseNumberMarkers(verses);
   const fullText = verses.map((verse) => verse.text).join(" ");
-  // The step right before this one, if it's a heading, already showed this exact pericope
-  // line in the history above — showing it again via this step's own decorative header would
-  // just duplicate it.
-  const followsHeading = steps[stepIndex - 1]?.kind === "heading";
+
+  function handleComplete(_hadMistake: boolean, accuracy: number) {
+    onComplete(accuracy);
+  }
+
+  // Rendered INSIDE FirstLetterTypeRep/FirstLetterSpeakRep's own control bar (via
+  // `extraControls` — see their own doc comment) rather than as a sibling below it: content
+  // sitting below the sticky dock isn't accounted for by lib/useParchmentFillHeight.ts's own
+  // measurement, so it used to silently push the whole page taller than the viewport, forcing
+  // a document-level scroll the reading view itself never needs.
+  const revealHelp = (
+    <VerseRevealHelp
+      reference={label}
+      fullText={fullText}
+      firstLettersText={firstLettersDisplay(fullText, verseMarkers)}
+      visualHint={entityPOA ? { who: entityPOA.who, action: entityPOA.action, additionalInfo: entityPOA.additionalInfo, scene: entityPOA.scene } : undefined}
+      startLevel="firstLetters"
+      onReset={onRestart}
+    />
+  );
 
   return (
-    <div className="flex flex-col gap-6">
-      {history.map((completed, index) => (
-        <CompletedRecallStepView key={index} step={completed} />
-      ))}
-      <FirstLetterTypeRep
-        key={`verses-${stepIndex}`}
-        verse={combinedVerse}
-        reps={1}
-        sessionKey={`${sessionKey}:${stepIndex}`}
-        inlineReference
-        verseMarkers={verseMarkers}
-        restartOnMistake={false}
-        autoRevealLetterOnMistake={false}
-        hidePericopeHeader={followsHeading}
-        lettersOnly
-        onVerseAccuracy={(results) => {
-          onVerseAccuracy(results);
-          for (const result of results) {
-            totalsRef.current.wrongWords += result.wrongCount;
-            totalsRef.current.totalWords += result.totalWords;
-          }
-        }}
-        onComplete={advanceOrFinish}
-      />
-      <VerseRevealHelp
-        reference={label}
-        fullText={fullText}
-        firstLettersText={firstLettersDisplay(fullText, verseNumberMarkers(verses))}
-        visualHint={
-          entityPOA ? { who: entityPOA.who, action: entityPOA.action, additionalInfo: entityPOA.additionalInfo, scene: entityPOA.scene } : undefined
-        }
-        startLevel="firstLetters"
-        onReset={onRestart}
-      />
+    <div className="flex flex-col gap-3">
+      {speakModeEnabled ? (
+        <FirstLetterSpeakRep
+          key="speak"
+          verse={combinedVerse}
+          verses={verses}
+          layout={layout}
+          verseMarkers={verseMarkers}
+          allowPeekHint
+          onVerseAccuracy={onVerseAccuracy}
+          onComplete={handleComplete}
+          extraControls={revealHelp}
+        />
+      ) : (
+        <FirstLetterTypeRep
+          key="type"
+          verse={combinedVerse}
+          verses={verses}
+          layout={layout}
+          reps={1}
+          sessionKey={sessionKey}
+          verseMarkers={verseMarkers}
+          restartOnMistake={false}
+          autoRevealLetterOnMistake={false}
+          lettersOnly
+          allowPeekHint
+          onVerseAccuracy={onVerseAccuracy}
+          onComplete={handleComplete}
+          extraControls={revealHelp}
+        />
+      )}
     </div>
   );
 }

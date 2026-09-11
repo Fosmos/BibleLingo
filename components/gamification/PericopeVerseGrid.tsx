@@ -10,7 +10,7 @@ interface PericopeVerseGridProps {
   completedVerseNumbers: Set<number>;
   // Extra content (Building view's per-verse location/peg tags — see BuildingRoomView.tsx)
   // rendered right below the grid. Only relevant while the grid itself is showing, so a
-  // caller never needs to duplicate PericopeCard's own showsTodaysVerses gating just to know
+  // caller never needs to duplicate PericopeCard's own isEmphasized gating just to know
   // when this should render.
   extra?: ReactNode;
 }

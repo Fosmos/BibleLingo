@@ -75,3 +75,97 @@ export function speak(text: string, onEnd?: () => void, options?: SpeakOptions):
     pendingUtterances.clear();
   };
 }
+
+// KineticTextRep's own narration — one utterance for a whole passage, reporting each word's
+// own `charIndex` as it's spoken (via the engine's native `onboundary` event) rather than
+// synthesizing word-by-word the way speak() above does — a single utterance is what lets the
+// OS/browser voice read at its own natural cadence and inflection across a full passage,
+// which back-to-back single-word utterances can't reproduce. `onWordBoundary` fires with
+// where in `text` the current word starts; the caller (lib/useKineticTextSync.ts) maps that
+// back to a word index via lib/verseWordOffsets.ts's own tokenization of the SAME string.
+// Boundary-event support/accuracy is real but browser-dependent (Chrome fires them reliably
+// per word; other engines vary) — degrading to "audio plays, highlight doesn't move" on a
+// browser that never fires one is an accepted tradeoff, not a bug to work around here.
+export function speakWithWordBoundaries(text: string, onWordBoundary: (charIndex: number) => void, onEnd: () => void): () => void {
+  if (!isSpeechSynthesisSupported()) {
+    onEnd();
+    return () => {};
+  }
+  window.speechSynthesis.resume();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const preferredVoice = getPreferredVoice();
+  if (preferredVoice) utterance.voice = preferredVoice;
+  utterance.rate = 0.85;
+  utterance.onboundary = (event) => {
+    if (event.name === "word" || event.name === undefined) onWordBoundary(event.charIndex);
+  };
+  utterance.onend = () => {
+    pendingUtterances.delete(utterance);
+    onEnd();
+  };
+  utterance.onerror = (event) => {
+    pendingUtterances.delete(utterance);
+    if (event.error !== "canceled" && event.error !== "interrupted") {
+      console.warn(`[speechSynthesis] utterance for "${text}" failed: ${event.error}`);
+    }
+    onEnd();
+  };
+
+  pendingUtterances.add(utterance);
+  window.speechSynthesis.speak(utterance);
+
+  return () => {
+    window.speechSynthesis.cancel();
+    pendingUtterances.delete(utterance);
+  };
+}
+
+// SleepTimerView's own narration — one whole verse per utterance, at a slower, sleep-friendly
+// pace, with a caller-supplied `volume` (0-1) baked in at the moment THIS utterance starts.
+// The Web Speech API has no way to change an utterance's own volume once it's already
+// speaking, so lib/useSleepTimer.ts calls this fresh for every verse in the playlist rather
+// than trying to fade one long-running utterance — the fade is a smooth curve computed once
+// per verse boundary (see useSleepTimer.ts's own fadeVolume), not per animation frame, which
+// reads as a gentle step-down rather than a jarring cut as long as verses stay reasonably
+// short (true for the single-verse queue this is built for). `onEnd` is how
+// useSleepTimer.ts's own playVerse chains to the NEXT verse, so a genuine synthesis error
+// (rare, but should still skip forward rather than silently going quiet for the rest of the
+// session) calls it same as a normal finish does — but "canceled"/"interrupted" must NOT, since
+// that's exactly what firing this utterance's own cancel() below produces: calling `onEnd()`
+// there too (an earlier version of this function did) meant pressing Stop actually canceled
+// the utterance and then immediately queued the NEXT one right back up via that same
+// callback, so playback never actually stopped.
+export function speakSleepTimerVerse(text: string, volume: number, onEnd: () => void): () => void {
+  if (!isSpeechSynthesisSupported()) {
+    onEnd();
+    return () => {};
+  }
+  window.speechSynthesis.resume();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const preferredVoice = getPreferredVoice();
+  if (preferredVoice) utterance.voice = preferredVoice;
+  utterance.rate = 0.85;
+  utterance.volume = Math.max(0, Math.min(1, volume));
+  utterance.onend = () => {
+    pendingUtterances.delete(utterance);
+    onEnd();
+  };
+  utterance.onerror = (event) => {
+    pendingUtterances.delete(utterance);
+    const wasCanceled = event.error === "canceled" || event.error === "interrupted";
+    if (!wasCanceled) {
+      console.warn(`[speechSynthesis] sleep timer utterance failed: ${event.error}`);
+      onEnd();
+    }
+  };
+
+  pendingUtterances.add(utterance);
+  window.speechSynthesis.speak(utterance);
+
+  return () => {
+    window.speechSynthesis.cancel();
+    pendingUtterances.delete(utterance);
+  };
+}

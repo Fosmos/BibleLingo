@@ -25,7 +25,14 @@ export function createPathActions(
     setPath: (pathKey, version, versesPerDay, locationTagLevels, sectionEndPegEnabled) => {
       const state = get();
       const existing = state.paths[pathKey];
+      // Spreads `existing` FIRST rather than naming every field explicitly — a field this
+      // function doesn't know to ask for (e.g. PathProgress.lastCompletedAt, set only by
+      // completeDay) must never get silently dropped just because setPath ran again over an
+      // already-started path (e.g. re-picking the same translation, or a hydration race on a
+      // fresh page load re-applying the URL's own version/versesPerDay before the real saved
+      // plan has loaded).
       const plan: PathProgress = {
+        ...existing,
         version,
         completedDays: existing?.completedDays ?? 0,
         versesPerDay: versesPerDay ?? existing?.versesPerDay,

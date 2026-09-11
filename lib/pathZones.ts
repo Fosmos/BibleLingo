@@ -33,7 +33,7 @@ export interface PathZone {
   spilloverVerses?: { dayNumber: number; verses: VerseSegment[] }[];
 }
 
-interface PericopeSegment {
+export interface PericopeSegment {
   key: string;
   label: string;
   heading: string;

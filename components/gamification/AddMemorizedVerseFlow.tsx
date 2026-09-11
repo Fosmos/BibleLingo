@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { formatVerseSpanLabel } from "@/lib/chapterContent";
 import type { SrsPhase } from "@/lib/srs";
@@ -78,7 +79,13 @@ export function AddMemorizedVerseFlow() {
       : "";
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+          <Plus size={15} />
+        </span>
+        <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Add A Verse</p>
+      </div>
       {step === "mode" && (
         <div className="flex flex-col gap-3">
           <p className="text-sm font-semibold text-ink-soft dark:text-zinc-300">What do you already know?</p>

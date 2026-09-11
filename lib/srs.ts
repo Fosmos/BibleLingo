@@ -1,11 +1,18 @@
 import type { SRSState, SrsBox } from "@/types";
+import { rateSrsReview, RATING_BOX_STEP } from "@/lib/srsRating";
 
 // Leitner-box review cadence ("Sword of the Spirit" — see components/gamification/
-// SwordOfTheSpirit.tsx): 5 boxes, each with its own fixed interval. A review that scores at
-// least PROMOTION_ACCURACY_THRESHOLD% on its first-letter-typing drill promotes the entity
-// one box up (capped at the top box); anything below that drops it all the way back down to
-// the bottom box, regardless of which box it was in — a lapse means starting the climb over,
-// not stepping down gradually.
+// SwordOfTheSpirit.tsx): 5 boxes, each with its own fixed interval. A review's first-letter-
+// typing accuracy is first turned into a graduated Again/Hard/Good/Easy rating (see
+// lib/srsRating.ts's rateSrsReview) and moves the entity by that rating's own number of boxes
+// (RATING_BOX_STEP) — a critical miss (Again) steps back two, an ordinary miss (Hard) steps
+// back one, a pass (Good) steps up one, a flawless review (Easy) steps up two — always clamped
+// within BOX_ORDER's own bounds (see stepBox). A full reset-to-Box-1 on any lapse was the
+// original design here; changed deliberately, since resetting a long-form chapter/book
+// passage's entire climb over one soft review risks reading as punishing enough to abandon
+// review altogether — a graduated step-down still re-tightens the review cadence right away
+// without that cliff, and now scales with how badly the review actually went rather than
+// treating every miss the same.
 //
 // The "every 3 days" box was added after ids 1-4 already existed and sits between the daily
 // and weekly boxes in review-frequency order — but it keeps its own numeric id (5) rather
@@ -29,9 +36,12 @@ export const BOX_ORDER: SrsBox[] = [1, 5, 2, 3, 4];
 
 export const PROMOTION_ACCURACY_THRESHOLD = 90;
 
-function nextBox(box: SrsBox): SrsBox {
+// Moves `box` by `steps` positions along BOX_ORDER — negative steps back, positive steps up —
+// clamped to BOX_ORDER's own ends rather than wrapping or going out of range.
+function stepBox(box: SrsBox, steps: number): SrsBox {
   const index = BOX_ORDER.indexOf(box);
-  return BOX_ORDER[Math.min(index + 1, BOX_ORDER.length - 1)];
+  const clamped = Math.min(Math.max(index + steps, 0), BOX_ORDER.length - 1);
+  return BOX_ORDER[clamped];
 }
 
 // The "Box N" number shown to the user — sequential by position in BOX_ORDER (1-5), not the
@@ -45,6 +55,16 @@ function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+// Nudges a computed due date one day later if it would otherwise land exactly on the
+// reader's own weekly rest day (see UserProgress.restDayOfWeek) — so a fresh review's own
+// cadence never itself creates pressure to show up on the day off. Only ever shifts by the
+// one day (never loops past a second rest-day collision, which can't happen for a single day
+// of the week shifted by one), and does nothing when no rest day is set.
+function skipRestDay(date: Date, restDayOfWeek: number | null): Date {
+  if (restDayOfWeek === null || date.getDay() !== restDayOfWeek) return date;
+  return addDays(date, 1);
 }
 
 export function createInitialSRSState(now: Date = new Date()): SRSState {
@@ -68,11 +88,14 @@ export function scheduleReview(
   accuracy: number,
   now: Date = new Date(),
   promotionThreshold: number = PROMOTION_ACCURACY_THRESHOLD,
+  restDayOfWeek: number | null = null,
 ): SRSState {
   const currentBox = isValidBox(state.box) ? state.box : 1;
-  const box: SrsBox = accuracy >= promotionThreshold ? nextBox(currentBox) : 1;
+  const rating = rateSrsReview(accuracy, promotionThreshold);
+  const box: SrsBox = stepBox(currentBox, RATING_BOX_STEP[rating]);
   const intervalDays = BOX_INTERVAL_DAYS[box];
-  return { box, lastReviewedAt: now.toISOString(), nextDueAt: addDays(now, intervalDays).toISOString() };
+  const nextDueAt = skipRestDay(addDays(now, intervalDays), restDayOfWeek);
+  return { box, lastReviewedAt: now.toISOString(), nextDueAt: nextDueAt.toISOString() };
 }
 
 export function isDue(state: SRSState, now: Date = new Date()): boolean {

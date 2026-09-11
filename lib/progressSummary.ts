@@ -4,6 +4,7 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
 import { tokenizeVerseWords } from "@/lib/verseWords";
+import { activeDayNumber } from "@/lib/dayRollover";
 
 // Takes `verses` explicitly rather than re-resolving them from the client-side content
 // cache itself — callers that already fetched their own copy (e.g. TodayVersesCard, which
@@ -11,10 +12,26 @@ import { tokenizeVerseWords } from "@/lib/verseWords";
 // whose storage cap means the persistent cache can never hold every chapter at once — see
 // ensureChapterLoaded) would otherwise silently lose that content on a second, cache-only
 // lookup here.
+//
+// "Current" means "the next NEW thing to start" — gated by activeDayNumber (real calendar
+// rollover, not raw completedDays; see lib/dayRollover.ts), so this returns undefined once
+// today's own lesson is already done rather than quietly handing back tomorrow's not-yet-
+// taught verses the instant that lesson finishes. A reader who wants what was just learned
+// TODAY specifically (not what's next) wants getLastCompletedDay below instead.
 export function getCurrentDay(key: string, verses: VerseSegment[], plan: PathProgress): MemorizationDay | undefined {
   const days = buildPathDayPlan(key, verses, plan);
-  const nextDayNumber = Math.min(plan.completedDays + 1, days.length);
-  return days.find((day) => day.dayNumber === nextDayNumber);
+  const dayNumber = Math.min(activeDayNumber(plan, new Date()), days.length);
+  return days.find((day) => day.dayNumber === dayNumber);
+}
+
+// The lesson day whose verses were most recently finished, regardless of whether that was
+// today or an earlier day — unlike getCurrentDay above, this is never gated by calendar
+// rollover, since it names something that already genuinely happened. Used by
+// VespersPromptCard, which wants to prompt recall of what was ACTUALLY just learned before
+// bed, not preview a lesson that hasn't been taught yet.
+export function getLastCompletedDay(key: string, verses: VerseSegment[], plan: PathProgress): MemorizationDay | undefined {
+  const days = buildPathDayPlan(key, verses, plan);
+  return days.find((day) => day.dayNumber === plan.completedDays);
 }
 
 function tokenCount(text: string): number {
@@ -113,12 +130,23 @@ export interface MemorizedStats {
 // ranges, so they're accurate even for content the ESV storage cap has since evicted from
 // cache — word count is the one figure that genuinely needs the verse text, so it alone can
 // undercount an evicted chapter until it's fetched again.
+//
+// The raw range arithmetic (endVerse - startVerse + 1) would also count a translation's own
+// gap verse as one "memorized" — e.g. Mark 11:26, which the ESV omits entirely (see
+// lib/bibleProviders/esv.ts) and which lib/chapterChunking.ts already excludes from ever
+// filling a lesson's own verse quota. Subtracted back out here whenever the chapter's real
+// text is cached (getMemorizedEntityVerses, same call word count already needs) — when it
+// isn't, this undercounts by however many gap verses fall in that range until it's fetched
+// again, the exact same accepted tradeoff word count already makes.
 export function computeMemorizedStats(memorizedEntities: MemorizedEntity[]): MemorizedStats {
   const chapterKeys = new Set<string>();
   for (const entity of memorizedEntities) chapterKeys.add(`${entity.book}|${entity.chapter}`);
 
-  const verses = memorizedEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
-  const words = getMemorizedEntityVerses(memorizedEntities).reduce((sum, verse) => sum + tokenCount(verse.text), 0);
+  const cachedVerses = getMemorizedEntityVerses(memorizedEntities);
+  const cachedEmptyCount = cachedVerses.filter((verse) => verse.text.trim().length === 0).length;
+  const rawVerseCount = memorizedEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
+  const verses = Math.max(rawVerseCount - cachedEmptyCount, 0);
+  const words = cachedVerses.reduce((sum, verse) => sum + tokenCount(verse.text), 0);
 
   return { chapters: chapterKeys.size, verses, words };
 }

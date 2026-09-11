@@ -21,7 +21,7 @@ const CARD_HEIGHT = "h-36";
 export function MasteryVerseCard({ reference, words, wordIndex }: MasteryVerseCardProps) {
   return (
     <div
-      className={`flex ${CARD_HEIGHT} flex-col rounded-2xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900`}
+      className={`flex ${CARD_HEIGHT} flex-col rounded-2xl border border-line bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900`}
     >
       <p className="mb-1.5 shrink-0 text-caption font-semibold uppercase tracking-wide text-brand-500">{reference}</p>
       <div className="flex flex-1 items-center overflow-y-auto">

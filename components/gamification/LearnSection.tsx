@@ -1,22 +1,36 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { MemorizationDay, VerseSegment } from "@/types";
+import type { VerseSegment, MemorizationDay } from "@/types";
 import { getAdjacentVerse } from "@/lib/chapterContent";
+import { paginateVerseWindow } from "@/lib/chapterPagination";
 import { joinVerses, verseNumberMarkers } from "@/lib/verseBatching";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
-import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
+import { usePericopeHeading } from "@/lib/usePericopeHeading";
 import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
-import { LearnPhaseContent, type Phase } from "@/components/gamification/LearnPhaseContent";
+import { useLearnSteps } from "@/lib/useLearnSteps";
+import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
+import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
+import { LessonChrome } from "@/components/gamification/LessonChrome";
 import { ReviewChain } from "@/components/drills/ReviewChain";
 import { SpeakRep } from "@/components/drills/SpeakRep";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 interface LearnSectionProps {
   day: MemorizationDay;
+  // This whole path's own full day plan (see DaySessionController.tsx) — narrowed to just
+  // this lesson's own chapter (lib/chapterScopedDays.ts) before powering useChapterReadingLayout.
+  allDays: MemorizationDay[];
+  completedDays: number;
+  todaysDay: number;
+  label: string;
+  version: string;
   onComplete: () => void;
+  // See DaySessionController.tsx's own doc comment — set only by the in-place lesson flow;
+  // LessonTopBar's own "Back" calls this instead of navigating anywhere when it's set.
+  onExit?: () => void;
   sessionKey?: string;
 }
 
@@ -24,62 +38,6 @@ interface LearnSectionProps {
 // default (30s) for everything at or under this threshold.
 const PRAY_LONGER_VERSE_THRESHOLD = 3;
 const LONGER_PRAYER_DURATION_S = 60;
-
-// verseIndex is undefined for the whole-day phases (orientation, orientation summary, pray);
-// set for a single verse's own stages, including speak_verse's own (see buildSteps) — that
-// phase is intercepted before this flat-step machinery even matters, see the render below.
-type FlatStep = { phase: Phase; verseIndex?: number };
-
-// One individual verse's own drilling stages — run once, in order, before moving to the next
-// verse (no repeated rounds). Write First Letter (the handwriting canvas) and Fill In The
-// Blank each drop out entirely when their own setting is off. Fill In The Blank, when on,
-// sits after the Speak hint and before the fully-blind Type stage — one more rung on the
-// same "progressively less scaffolding" ladder: read it (Rhythm) → hear a first-letter hint
-// while speaking it (Speak hint) → recall whole words with a word bank to lean on (Fill In
-// The Blank) → recall it with no help at all (Type it by first letter).
-function versePhases(writeFirstLetterEnabled: boolean, fillInTheBlankEnabled: boolean): Phase[] {
-  const phases: Phase[] = ["rhythm"];
-  if (writeFirstLetterEnabled) phases.push("draw_first_letters");
-  phases.push("speak_hint");
-  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
-  phases.push("type_first_letters");
-  return phases;
-}
-
-// Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
-const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
-
-// Every verse's own type_first_letters — the last of its own sub-stages — is followed right
-// away by speak_verse: that one verse, just learned, spoken aloud from memory on its own.
-// From the SECOND verse of the day on, speak_verse is followed by one more check —
-// type_cumulative_today: every verse learned TODAY so far, this one included, typed by
-// first letter (see ReviewChain in the render below). The first verse skips it: with only
-// itself learned so far today, that check would just repeat the single verse speak_verse
-// already covered — which is also why a one-verse day never gets one at all. This is
-// deliberately scoped to just today's own verses, not everything ever learned (that's
-// ReviewSection's job, in its own separate Previous Verses/Chapter Review stages) — so it
-// reads as "did today's lesson actually stick together," not a second copy of the bigger
-// review. Pray always runs dead last, right before the lesson hands off to whatever review
-// follows it (Chapter Review, etc.) — a closing moment, not a mid-lesson one.
-function buildSteps(
-  verseCount: number,
-  understandEnabled: boolean,
-  visualizeEnabled: boolean,
-  writeFirstLetterEnabled: boolean,
-  fillInTheBlankEnabled: boolean,
-): FlatStep[] {
-  const steps: FlatStep[] = [];
-  if (understandEnabled) steps.push({ phase: "orientation" });
-  if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
-  const phases = versePhases(writeFirstLetterEnabled, fillInTheBlankEnabled);
-  for (let verseIndex = 0; verseIndex < verseCount; verseIndex++) {
-    for (const phase of phases) steps.push({ phase, verseIndex });
-    steps.push({ phase: "speak_verse", verseIndex });
-    if (verseIndex > 0) steps.push({ phase: "type_cumulative_today", verseIndex });
-  }
-  steps.push({ phase: "pray" });
-  return steps;
-}
 
 function noopAnnotationsChange() {
   // Only the orientation phase ever calls this — every other phase gets this no-op.
@@ -90,9 +48,16 @@ function noopAnnotationsChange() {
 // Letter → Speak (first-letter hint) → Type it by first letter → speak that one verse aloud
 // from memory → (every verse but the first) type every verse learned today so far by first
 // letter, growing verse by verse — before moving to the next verse. One prayer timer closes
-// the lesson out, dead last — right before whatever review follows (Chapter Review, etc.),
-// not mid-lesson.
-export function LearnSection({ day, onComplete, sessionKey }: LearnSectionProps) {
+// the lesson out, dead last — right before whatever review follows (Chapter Review, etc.).
+//
+// The whole session shares ONE LessonTopBar and ONE fixed set of `contextVerses` — today's own
+// real verses plus a neighbor on each side, computed once — paginated per-stage down to just
+// the one page holding the active verse (see paginateVerseWindow), so the parchment never
+// resizes as the stage changes, only the active page/verse does.
+export function LearnSection({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey }: LearnSectionProps) {
+  // See lib/useChapterScopedReadingLayout.ts — book mode's `allDays` spans every chapter;
+  // pagination needs just this lesson's own.
+  const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay);
   const wholeDay = useMemo(() => joinVerses(day.newVerses, "day"), [day.newVerses]);
   // Word offset of each verse's own first word within the whole-day joined text — lets a
   // verse's stages read the slice of wordAnnotations (made once, during Orientation, against
@@ -106,111 +71,128 @@ export function LearnSection({ day, onComplete, sessionKey }: LearnSectionProps)
     }
     return offsets;
   }, [day.newVerses]);
-  const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
-  const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
-  const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
-  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
-  const steps = useMemo(
-    () => buildSteps(day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled),
-    [day.newVerses.length, understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled],
+  // Which of day.newVerses actually have something to drill — see buildSteps's own doc
+  // comment on why a translation's gap verse (still present in day.newVerses itself) never
+  // gets its own per-verse stages.
+  const realVerseIndices = useMemo(
+    () => day.newVerses.map((_, index) => index).filter((index) => day.newVerses[index].text.trim().length > 0),
+    [day.newVerses],
   );
+  const realVerses = useMemo(() => realVerseIndices.map((index) => day.newVerses[index]), [realVerseIndices, day.newVerses]);
+  // `verseOffsets` above is indexed against `day.newVerses` (it has to be — wordAnnotations is
+  // built against the whole-day joined text, gap verses included, so offsets stay aligned to
+  // that same indexing); the whole-day phases below render `realVerses` instead (no gap
+  // verses), so they need that same offset re-indexed to `realVerses`' own positions.
+  const realVerseOffsets = useMemo(() => realVerseIndices.map((index) => verseOffsets[index]), [realVerseIndices, verseOffsets]);
+  const firstReal = realVerses[0];
+  const lastReal = realVerses[realVerses.length - 1];
+  const previousVerse = firstReal ? getAdjacentVerse(firstReal.book, firstReal.chapter, firstReal.verseNumber, -1) : undefined;
+  const nextVerse = lastReal ? getAdjacentVerse(lastReal.book, lastReal.chapter, lastReal.verseNumber, 1) : undefined;
+  // The fixed "page" every per-verse stage renders against — see this component's own doc
+  // comment on why this is computed once rather than per stage.
+  const contextVerses = useMemo(
+    () => [previousVerse, ...realVerses, nextVerse].filter((entry): entry is VerseSegment => entry !== undefined),
+    [previousVerse, realVerses, nextVerse],
+  );
+  const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
+
+  const steps = useLearnSteps(realVerseIndices);
 
   const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
   const { pending, celebrate, finish } = useCelebration();
 
-  if (pending) {
-    return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
-  }
+  if (pending) return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
 
   const step = steps[stepIndex];
   if (!step) return null;
 
   function advance() {
     const next = stepIndex + 1;
-    if (next >= steps.length) {
-      celebrate(onComplete, "New Verses Learned");
-    } else {
-      celebrate(() => setStepIndex(next));
-    }
+    if (next >= steps.length) celebrate(onComplete, "New Verses Learned");
+    else celebrate(() => setStepIndex(next));
   }
 
+  const topBar = <LessonChrome label={label} version={version} current={stepIndex + 1} total={steps.length} onExit={onExit} layout={layout} />;
+
   if (step.phase === "speak_verse") {
-    // Just the one verse this stage follows — spoken aloud from memory on its own, not
-    // folded into everything learned so far (that's ReviewSection's job, not this one's).
-    // Same mechanic (and component) ChapterReviewStage's own "Recite it all" stage uses.
-    // firstLettersOnMistake keeps a miss from just handing back the answer it's testing — a
-    // first-letter hint instead.
+    // Just the one verse this stage follows — spoken aloud from memory on its own, not folded
+    // into everything learned so far (that's ReviewSection's job). Same mechanic ChapterReviewStage's
+    // own "Recite it all" stage uses. firstLettersOnMistake keeps a miss from handing back the
+    // answer it's testing. contextVerses/heading windowed like every per-verse stage below.
     const verseForStage = day.newVerses[step.verseIndex ?? day.newVerses.length - 1];
+    const speakWindow = paginateVerseWindow(contextVerses, heading, verseForStage.id, layout.pageBudget);
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Stage {stepIndex + 1} of {steps.length}
-        </p>
-        <SpeakRep
-          label="Remember"
-          reference={verseForStage.reference}
-          targetText={verseForStage.text}
-          reps={1}
-          firstLettersOnMistake
-          onComplete={() => advance()}
-        />
-      </div>
+      <>
+        {topBar}
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
+          <SpeakRep
+            label="Remember"
+            reference={verseForStage.reference}
+            targetText={verseForStage.text}
+            reps={1}
+            verse={verseForStage}
+            contextVerses={speakWindow.verses}
+            layout={layout}
+            firstLettersOnMistake
+            onComplete={() => advance()}
+          />
+        </div>
+      </>
     );
   }
 
   if (step.phase === "type_cumulative_today") {
-    // Every verse learned TODAY so far, this one included — never day.reviewVerses (prior
-    // days' own verses), which is ReviewSection's job, not this one's.
-    const versesLearnedTodaySoFar = day.newVerses.slice(0, (step.verseIndex ?? 0) + 1);
+    // The explicit verse list buildSteps already worked out for this exact check — either a
+    // group's own so-far (a split day's per-half interim check) or every real verse learned
+    // today (the split day's own final combine stage, right before Pray) — never
+    // day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this one's.
+    const versesLearnedSoFar = (step.cumulativeVerseIndices ?? []).map((index) => day.newVerses[index]);
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Stage {stepIndex + 1} of {steps.length}
-        </p>
-        <ReviewChain verses={versesLearnedTodaySoFar} label="Remember" onComplete={() => advance()} />
-      </div>
+      <>
+        {topBar}
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
+          <ReviewChain verses={versesLearnedSoFar} label="Remember" layout={layout} onComplete={() => advance()} />
+        </div>
+      </>
     );
   }
 
   const wholeDayPhase = step.verseIndex === undefined;
   const verse = wholeDayPhase ? wholeDay : day.newVerses[step.verseIndex!];
-  const boundaryVerses = wholeDayPhase ? day.newVerses : [verse];
   const annotations = wholeDayPhase
     ? wordAnnotations
     : sliceWordAnnotations(wordAnnotations, verseOffsets[step.verseIndex!], tokenizeVerseWords(verse.text).length);
   const verseMarkers = wholeDayPhase ? verseNumberMarkers(day.newVerses) : {};
 
-  const showContext = !CONTEXT_LESS_PHASES.includes(step.phase);
-  const firstVerse = boundaryVerses[0];
-  const lastVerse = boundaryVerses[boundaryVerses.length - 1];
-  const previousVerse: VerseSegment | undefined = showContext
-    ? getAdjacentVerse(firstVerse.book, firstVerse.chapter, firstVerse.verseNumber, -1)
-    : undefined;
-  const nextVerse: VerseSegment | undefined = showContext
-    ? getAdjacentVerse(lastVerse.book, lastVerse.chapter, lastVerse.verseNumber, 1)
-    : undefined;
-
   const stageKey = `${step.phase}-${step.verseIndex ?? "day"}`;
+  // The reading view's own pagination budget, run over this fixed page and keyed to whichever
+  // verse is active — left unbounded, a normal day's verses can overflow the fixed, non-
+  // scrolling parchment box the same way an unpaginated reading-view chapter would.
+  const verseWindow = wholeDayPhase ? undefined : paginateVerseWindow(contextVerses, heading, verse.id, layout.pageBudget);
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-        Stage {stepIndex + 1} of {steps.length}
-      </p>
-      <LearnPhaseContent
-        phase={step.phase}
-        stageKey={stageKey}
-        verse={verse}
-        speakLabel="Remember"
-        verseMarkers={verseMarkers}
-        wordAnnotations={annotations}
-        onWordAnnotationsChange={step.phase === "orientation" ? setWordAnnotations : noopAnnotationsChange}
-        previousVerse={previousVerse}
-        nextVerse={nextVerse}
-        prayDurationSeconds={day.newVerses.length > PRAY_LONGER_VERSE_THRESHOLD ? LONGER_PRAYER_DURATION_S : undefined}
-        onAdvance={advance}
-      />
-    </div>
+    <>
+      {topBar}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
+        <LearnPhaseContent
+          phase={step.phase}
+          stageKey={stageKey}
+          verse={verse}
+          verses={realVerses}
+          verseOffsets={realVerseOffsets}
+          speakLabel="Remember"
+          verseMarkers={verseMarkers}
+          wordAnnotations={annotations}
+          onWordAnnotationsChange={step.phase === "orientation" ? setWordAnnotations : noopAnnotationsChange}
+          contextVerses={verseWindow?.verses}
+          previousVerse={previousVerse}
+          nextVerse={nextVerse}
+          layout={layout}
+          prayDurationSeconds={realVerseIndices.length > PRAY_LONGER_VERSE_THRESHOLD ? LONGER_PRAYER_DURATION_S : undefined}
+          onAdvance={advance}
+        />
+      </div>
+    </>
   );
 }

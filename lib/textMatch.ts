@@ -115,3 +115,21 @@ export function wordMatchRatio(input: string, target: string): number {
 export function looseMatch(input: string, target: string, threshold = 0.85): boolean {
   return wordMatchRatio(input, target) >= threshold;
 }
+
+// How many of targetWords, counting from the very start, have already been recognized in a
+// live (possibly still-interim) speech transcript — used to reveal a verse's words in place as
+// they're spoken (see SpeakRep.tsx) rather than only judging the whole attempt once it ends.
+// LCS-aligns the transcript against the target the same way diffAttempt does (so one misheard
+// word doesn't derail everything after it), then reports the length of the longest unbroken run
+// of matched target words starting at index 0 — a later, isolated match deeper in the verse
+// doesn't count until every word before it has too, since "revealed" means "recited in order
+// from the beginning," not "recognized somewhere in what was heard."
+export function spokenPrefixMatchCount(transcript: string, targetWords: string[]): number {
+  const normalizedTargetWords = normalizedTokens(targetWords);
+  const spokenWords = normalizedWords(transcript);
+  if (spokenWords.length === 0) return 0;
+  const { matchedA } = lcsAlign(normalizedTargetWords, spokenWords);
+  let count = 0;
+  while (count < matchedA.length && matchedA[count]) count++;
+  return count;
+}

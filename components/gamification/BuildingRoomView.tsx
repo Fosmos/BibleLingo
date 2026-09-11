@@ -8,6 +8,7 @@ import { computeZoneCardState, zoneShowsTodaysVerses } from "@/lib/pericopeCardS
 import { locationTagKey } from "@/lib/locationTags";
 import { LocationTagField } from "@/components/gamification/LocationTagField";
 import { PegTagField } from "@/components/gamification/PegTagField";
+import { IconTagField } from "@/components/gamification/IconTagField";
 import { PericopeCard } from "@/components/gamification/PericopeCard";
 
 // A stable empty-array fallback for the `locationTagLevels` selector below — `?? []` inline
@@ -19,6 +20,7 @@ const NO_LOCATION_TAG_LEVELS: never[] = [];
 interface BuildingRoomViewProps {
   days: MemorizationDay[];
   completedDays: number;
+  todaysDayNumber: number;
   pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
@@ -42,15 +44,15 @@ interface BuildingRoomViewProps {
 // once "pericope" and Pegs are both picked), a second chip pegged to the section's own last
 // verse (zone.endVerse) sits right beside the start one, each labeled so it's clear which is
 // which — suppressed for a one-verse section, where start and end are the same verse anyway.
-export function BuildingRoomView({ days, completedDays, pathKey, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
+export function BuildingRoomView({ days, completedDays, todaysDayNumber, pathKey, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
   const levels = useProgressStore((state) => state.paths[pathKey]?.locationTagLevels ?? NO_LOCATION_TAG_LEVELS);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   const sectionEndPegEnabled = useProgressStore((state) => state.paths[pathKey]?.sectionEndPegEnabled ?? false);
 
   const zones = buildPathZones(days);
   const activeCardRef = useRef<HTMLDivElement | null>(null);
-  const states = zones.map((zone) => computeZoneCardState(zone, completedDays));
-  const showsToday = zones.map((zone, index) => zoneShowsTodaysVerses(zone, states[index], completedDays));
+  const states = zones.map((zone) => computeZoneCardState(zone, completedDays, todaysDayNumber));
+  const showsToday = zones.map((zone, index) => zoneShowsTodaysVerses(zone, states[index], todaysDayNumber));
 
   useEffect(() => {
     activeCardRef.current?.scrollIntoView({ block: "center" });
@@ -112,6 +114,7 @@ export function BuildingRoomView({ days, completedDays, pathKey, onSelectDay, on
                     tagKey={locationTagKey({ level: "verse", book: zone.anchorBook, chapter: zone.anchorChapter, verseNumber })}
                   />
                   {pegSystemEnabled && <PegTagField n={verseNumber} />}
+                  <IconTagField tagKey={locationTagKey({ level: "verse", book: zone.anchorBook, chapter: zone.anchorChapter, verseNumber })} />
                 </div>
               ))}
             </div>
@@ -124,6 +127,7 @@ export function BuildingRoomView({ days, completedDays, pathKey, onSelectDay, on
               index={index}
               isLast={index === zones.length - 1}
               completedDays={completedDays}
+              todaysDayNumber={todaysDayNumber}
               connectToPrevious={showsToday[index] && showsToday[index - 1] === true}
               connectToNext={showsToday[index] && showsToday[index + 1] === true}
               cardRef={states[index].status === "active" ? activeCardRef : undefined}

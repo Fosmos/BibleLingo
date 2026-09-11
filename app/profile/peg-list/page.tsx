@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PegMasterListRow } from "@/components/gamification/PegMasterListRow";
+import { PageHeading } from "@/components/ui/PageHeading";
 
 const NUMBERS = Array.from({ length: 99 }, (_, i) => i + 1);
 
@@ -15,7 +16,7 @@ export default function PegListPage() {
       <Link href="/profile" className="self-start text-sm font-medium text-brand-600 hover:underline">
         ← Back to Profile
       </Link>
-      <h1 className="text-title">Master Peg List</h1>
+      <PageHeading kicker="Memory Palace">Master Peg List</PageHeading>
       <p className="text-sm text-ink-muted">
         Your own word for each number, 01-99 — pre-filled with the Major System&apos;s own recommendation until you
         change one. Editing a peg tag anywhere in a path view changes it here too, and every future peg tag for that
