@@ -1,16 +1,23 @@
-// SERVER ONLY — reads/writes local disk. Never import this from a "use client" component;
-// only the app/api/account/* Route Handlers should call it.
-//
-// Accounts and progress used to live purely in the browser's localStorage, which is scoped
-// per-origin (scheme+host+port). On this LAN dev setup the origin is a raw IP that changes
-// whenever DHCP renews the lease, so every IP change looked like signing in on a brand new,
-// empty device — the account and progress weren't actually lost, just invisible from the new
-// origin. Storing both here instead — on the one thing that stays constant across an IP
-// change, this dev server's own machine — fixes that: any origin that reaches this same
-// server process sees the same accounts and progress.
+// SERVER ONLY — stores accounts and progress.
+// Uses Supabase REST API when NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+// are set in the environment (ideal for production / Vercel serverless deployments).
+// Falls back to local disk (.data/) if Supabase is unconfigured (offline dev).
 import { promises as fs } from "fs";
 import path from "path";
 import type { AccountRecord, UserProgress } from "@/types";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+function getSupabaseHeaders() {
+  return {
+    apikey: SUPABASE_KEY!,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
@@ -20,7 +27,8 @@ async function ensureDataDirs(): Promise<void> {
   await fs.mkdir(PROGRESS_DIR, { recursive: true });
 }
 
-export async function readAccounts(): Promise<AccountRecord[]> {
+// Fallback disk operations
+async function readDiskAccounts(): Promise<AccountRecord[]> {
   try {
     const raw = await fs.readFile(ACCOUNTS_FILE, "utf-8");
     return JSON.parse(raw) as AccountRecord[];
@@ -29,18 +37,16 @@ export async function readAccounts(): Promise<AccountRecord[]> {
   }
 }
 
-export async function writeAccounts(accounts: AccountRecord[]): Promise<void> {
+async function writeDiskAccounts(accounts: AccountRecord[]): Promise<void> {
   await ensureDataDirs();
   await fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2));
 }
 
-// `userId` is always a crypto.randomUUID() (see useAuthStore.ts's signUp) — safe to use
-// directly as a filename with no further sanitizing.
 function progressFile(userId: string): string {
   return path.join(PROGRESS_DIR, `${userId}.json`);
 }
 
-export async function readServerProgress(userId: string): Promise<UserProgress | null> {
+async function readDiskProgress(userId: string): Promise<UserProgress | null> {
   try {
     const raw = await fs.readFile(progressFile(userId), "utf-8");
     return JSON.parse(raw) as UserProgress;
@@ -49,7 +55,100 @@ export async function readServerProgress(userId: string): Promise<UserProgress |
   }
 }
 
-export async function writeServerProgress(userId: string, progress: UserProgress): Promise<void> {
+async function writeDiskProgress(userId: string, progress: UserProgress): Promise<void> {
   await ensureDataDirs();
   await fs.writeFile(progressFile(userId), JSON.stringify(progress));
+}
+
+export async function readAccounts(): Promise<AccountRecord[]> {
+  if (isSupabaseConfigured) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/accounts?select=*`, {
+        headers: getSupabaseHeaders(),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows.map((r: { id: string; username: string; password_hash: string; salt: string; created_at: string }) => ({
+          id: r.id,
+          username: r.username,
+          passwordHash: r.password_hash,
+          salt: r.salt,
+          createdAt: r.created_at,
+        }));
+      }
+    } catch {
+      // If network error, fall through to disk
+    }
+  }
+  return readDiskAccounts();
+}
+
+export async function writeAccounts(accounts: AccountRecord[]): Promise<void> {
+  if (isSupabaseConfigured) {
+    try {
+      const latest = accounts[accounts.length - 1];
+      if (latest) {
+        await fetch(`${SUPABASE_URL}/rest/v1/accounts`, {
+          method: "POST",
+          headers: {
+            ...getSupabaseHeaders(),
+            Prefer: "resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            id: latest.id,
+            username: latest.username,
+            password_hash: latest.passwordHash,
+            salt: latest.salt,
+            created_at: latest.createdAt,
+          }),
+        });
+      }
+    } catch {
+      // Ignore or fall through
+    }
+  }
+  await writeDiskAccounts(accounts);
+}
+
+export async function readServerProgress(userId: string): Promise<UserProgress | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/user_progress?user_id=eq.${encodeURIComponent(userId)}&select=progress`, {
+        headers: getSupabaseHeaders(),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows.length > 0 && rows[0].progress) {
+          return rows[0].progress as UserProgress;
+        }
+      }
+    } catch {
+      // Fall through to disk
+    }
+  }
+  return readDiskProgress(userId);
+}
+
+export async function writeServerProgress(userId: string, progress: UserProgress): Promise<void> {
+  if (isSupabaseConfigured) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_progress`, {
+        method: "POST",
+        headers: {
+          ...getSupabaseHeaders(),
+          Prefer: "resolution=merge-duplicates",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          progress: progress,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    } catch {
+      // Fall through to disk
+    }
+  }
+  await writeDiskProgress(userId, progress);
 }
