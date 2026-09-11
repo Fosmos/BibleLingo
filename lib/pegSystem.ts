@@ -132,19 +132,35 @@ export const TWO_DIGIT_PEG_WORDS: Record<string, PegWord> = {
   "99": { word: "Pipe", emoji: "🪈" },
 };
 
+// The zero-padded 2-digit key TWO_DIGIT_PEG_WORDS (and UserProgress.pegMasterList — see
+// resolvePegWord below) are keyed by — verse 1 -> "01", verse 24 -> "24", verse 100+ wraps to
+// its own last two digits (a number that high is rare, and encoding every digit into one real
+// word stops being practical).
+export function pegMasterListKey(n: number): string {
+  return String(Math.abs(Math.trunc(n)) % 100).padStart(2, "0");
+}
+
 // The full peg word (not just the emoji) for a verse number. A single digit still displays as
 // itself (e.g. verse 1 stays "1"), but is registered in the 2-digit table zero-padded (verse 1
 // -> "01" -> "Seed"), not the bare single-consonant table (which would give "Toes") — the
 // 2-digit word is the more distinctive, less-collision-prone mnemonic even for small numbers.
-// 100+ falls back to the last two digits' word, since a verse number that high is rare and
-// encoding every digit into one real word stops being practical.
 export function pegWordFor(n: number): PegWord {
-  const value = Math.abs(Math.trunc(n));
-  const lastTwo = String(value % 100).padStart(2, "0");
-  const digit = PEG_DIGITS[String(value % 10)];
+  const lastTwo = pegMasterListKey(n);
+  const digit = PEG_DIGITS[String(Math.abs(Math.trunc(n)) % 10)];
   return TWO_DIGIT_PEG_WORDS[lastTwo] ?? { word: digit.word, emoji: digit.emoji };
 }
 
 export function suggestPegEmoji(n: number): string {
   return pegWordFor(n).emoji;
+}
+
+// Resolves a number's peg word using the reader's own Master Peg List override (see
+// UserProgress.pegMasterList, app/profile/peg-list/page.tsx, and PegTagField.tsx — both write
+// to this same map, so editing a peg tag anywhere in a path view changes the master entry for
+// that number too) when one exists, falling back to this file's own recommendation otherwise.
+// The emoji is always the recommendation's own — decorative only, never overridden.
+export function resolvePegWord(n: number, masterList: Record<string, string>): PegWord {
+  const recommended = pegWordFor(n);
+  const override = masterList[pegMasterListKey(n)];
+  return override ? { word: override, emoji: recommended.emoji } : recommended;
 }

@@ -9,6 +9,8 @@ import { TAP_SCALE } from "@/lib/motionTokens";
 import { WordTypeEntry } from "@/components/drills/WordTypeEntry";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
+import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import { ChapterFitProbes } from "@/components/gamification/ChapterFitProbes";
 
 interface PracticeChainProps {
   verses: VerseSegment[];
@@ -18,6 +20,16 @@ interface PracticeChainProps {
   // see DayCircle.tsx/PracticeLoader.tsx) — same drill either way, just matches whichever
   // button the reader tapped to get here.
   label?: string;
+  // "fullWord" (default) for Practice — mirrors the real Boss Battle's own word-for-word
+  // typing, since this is meant as prep for it. "firstLetter" for Review (a completed learn
+  // lesson's own verses, tapped from the reading view) — a lighter, faster recall check, same
+  // mechanic every other review surface in this app (Vespers, SRS, chapter review) uses.
+  mode?: "fullWord" | "firstLetter";
+  // The reading view's own real page layout (see lib/useChapterScopedReadingLayout.ts) —
+  // computed once by this component's own callers (PracticeLoader.tsx/
+  // InPlaceLessonSession.tsx) and rendered once here, matching the "once per lesson, not once
+  // per verse" convention every other layout caller follows.
+  layout: ChapterReadingLayout;
 }
 
 // A low-stakes companion to the boss battle: same word-for-word typing, but a mistake just
@@ -26,7 +38,7 @@ interface PracticeChainProps {
 // attempt as prep or after one for upkeep. Leaving early (Exit practice) keeps the
 // verseIndex checkpoint so coming back resumes here — it's only cleared on genuinely
 // finishing every verse, since there's nothing left to resume at that point.
-export function PracticeChain({ verses, onExit, sessionKey, label = "Practice" }: PracticeChainProps) {
+export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord", layout }: PracticeChainProps) {
   const [verseIndex, setVerseIndex] = useCheckpointField(sessionKey, "verseIndex", 0);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const [attempt, setAttempt] = useState(0);
@@ -34,6 +46,10 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice" }
   const [donePracticing, setDonePracticing] = useState(false);
 
   const verse = verses[verseIndex];
+  // Destructured into plain local bindings before the JSX below — see LessonChrome.tsx's own
+  // identical comment on why (this codebase's react-hooks/refs lint rule).
+  const { bodyTopRef, probeContainerRef, pages, fillHeightPx, dayNumberByVerse, todaysVerseNumbers, completedDays, locationTags, iconTags, pegActive } =
+    layout;
 
   function startVerse(index: number) {
     setVerseIndex(index);
@@ -119,7 +135,19 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice" }
           Verse {verseIndex + 1} of {verses.length}
         </p>
       </div>
-      <WordTypeEntry key={`${verse.id}-${attempt}`} verse={verse} mode="fullWord" onComplete={handleVerseComplete} />
+      <div ref={bodyTopRef} />
+      <ChapterFitProbes
+        ref={probeContainerRef}
+        pages={pages}
+        fillHeightPx={fillHeightPx}
+        dayNumberByVerse={dayNumberByVerse}
+        todaysVerseNumbers={todaysVerseNumbers}
+        completedDays={completedDays}
+        locationTags={locationTags}
+        iconTags={iconTags}
+        pegActive={pegActive}
+      />
+      <WordTypeEntry key={`${verse.id}-${attempt}`} verse={verse} mode={mode} onComplete={handleVerseComplete} layout={layout} />
       <button type="button" onClick={onExit} className="self-start text-sm font-medium text-ink-muted hover:underline">
         Exit {label.toLowerCase()}
       </button>
