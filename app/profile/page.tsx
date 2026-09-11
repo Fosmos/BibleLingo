@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Settings2, UserRound } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LOCAL_USER_ID } from "@/lib/authConfig";
-import { StreakCounter } from "@/components/gamification/StreakCounter";
-import { StreakFreezeBadge } from "@/components/gamification/StreakFreezeBadge";
-import { ShekelCounter } from "@/components/gamification/ShekelCounter";
+import { ProfileStatsCard } from "@/components/gamification/ProfileStatsCard";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { InfoTip } from "@/components/ui/InfoTip";
+import { PageHeading } from "@/components/ui/PageHeading";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { TAP_SCALE } from "@/lib/motionTokens";
 
 export default function ProfilePage() {
-  const longestStreak = useProgressStore((state) => state.streak.longestStreak);
   const resetProgress = useProgressStore((state) => state.resetProgress);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const setIncludeVerseReferences = useProgressStore((state) => state.setIncludeVerseReferences);
@@ -43,36 +42,22 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-title">Profile</h1>
+        <PageHeading kicker="Account">Profile</PageHeading>
         {isRealAccount && username && <span className="text-sm text-ink-muted">Signed in as {username}</span>}
       </div>
 
-      <div className="rounded-2xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Stats</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-muted">Current streak</span>
-            <div className="flex items-center gap-2">
-              <StreakCounter showInfo />
-              <StreakFreezeBadge showInfo />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-muted">Longest streak</span>
-            <span className="text-sm font-semibold text-ink-soft dark:text-zinc-300">{longestStreak} days</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-muted">Shekels</span>
-            <ShekelCounter showInfo />
-          </div>
-        </div>
-      </div>
+      <ProfileStatsCard />
 
-      <div className="rounded-2xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Settings</p>
-        <div className="mt-3 flex items-start gap-1.5">
+      <div className="rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+            <Settings2 size={15} />
+          </span>
+          <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Settings</p>
+        </div>
+        <div className="mt-4 flex items-start gap-1.5">
           <ToggleSwitch
             checked={includeVerseReferences}
             onChange={setIncludeVerseReferences}
@@ -139,6 +124,15 @@ export default function ProfilePage() {
             description="When reviewing a verse group that opens a new section, type its heading by first letter before the verse — doesn't count against accuracy"
           />
           <InfoTip text={INFO_TIPS.pericopeHeadingRecallToggle} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+            <UserRound size={15} />
+          </span>
+          <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Account</p>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <motion.button
