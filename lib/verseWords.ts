@@ -9,12 +9,38 @@ const HAS_WORD_CHARACTER = /[\p{L}\p{N}]/u;
 
 // A hyphen always joins two otherwise-separate words (e.g. "well-being", "God-fearing") — the
 // word after it is its own entry, not part of a compound token, so it gets its own beat/tile/
-// letter-prompt/etc. downstream the same as any other word.
+// letter-prompt/etc. downstream the same as any other word. The hyphen itself is discarded,
+// same as any other punctuation-only token.
+//
+// An em dash or en dash is different: it's sentence punctuation the source text sometimes
+// prints with no surrounding space (e.g. Mark 11:32's `man'?"—they`, where the em dash sits
+// flush against the closing quote on one side and "they" on the other) rather than part of a
+// compound word, so "they" still needs to split off into its own word to type/recite — but
+// unlike a hyphen, the dash character itself should stay visible rather than silently
+// disappearing, so it's kept attached to the end of the word before it (`man'?"—`) instead of
+// being dropped. stripPunctuation still strips it back out wherever a word needs comparing
+// without punctuation, and verseClauses.ts's own trailing-dash clause-boundary check keys off
+// exactly this placement.
+function splitOnDashes(token: string): string[] {
+  const pieces = token.split(/([–—])/);
+  const words: string[] = [];
+  for (const piece of pieces) {
+    if (piece === "–" || piece === "—") {
+      if (words.length > 0) words[words.length - 1] += piece;
+      else words.push(piece);
+    } else if (piece.length > 0) {
+      words.push(piece);
+    }
+  }
+  return words;
+}
+
 export function tokenizeVerseWords(text: string): string[] {
   if (!text) return [];
   return text
     .split(/\s+/)
     .flatMap((token) => token.split(/-/))
+    .flatMap(splitOnDashes)
     .filter((token) => HAS_WORD_CHARACTER.test(token));
 }
 
