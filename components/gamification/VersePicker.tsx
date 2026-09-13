@@ -10,18 +10,23 @@ interface VersePickerProps {
   totalVerses: number;
   onSelectVerse: (verse: number) => void;
   onBack: () => void;
+  // Overridden by GuidedPathFlow.tsx's own "I've already learned some of this" starting-point
+  // step, which reuses this same grid to ask a different question than the normal "which
+  // verse do you want to start memorizing" flow every other caller uses it for.
+  backLabel?: string;
+  prompt?: string;
 }
 
-export function VersePicker({ book, chapter, totalVerses, onSelectVerse, onBack }: VersePickerProps) {
+export function VersePicker({ book, chapter, totalVerses, onSelectVerse, onBack, backLabel = "← Chapters", prompt = "Choose a verse." }: VersePickerProps) {
   const verses = Array.from({ length: totalVerses }, (_, index) => index + 1);
 
   return (
     <div className="flex flex-col gap-4">
       <button type="button" onClick={onBack} className="self-start text-sm font-medium text-brand-600 hover:underline">
-        ← Chapters
+        {backLabel}
       </button>
       <h3 className="text-title">{formatChapterLabel(book, chapter)}</h3>
-      <p className="text-sm text-ink-muted">Choose a verse.</p>
+      <p className="text-sm text-ink-muted">{prompt}</p>
       <div className="grid grid-cols-6 gap-2 sm:grid-cols-8 md:grid-cols-10">
         {verses.map((verse) => (
           <motion.button

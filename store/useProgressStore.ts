@@ -27,7 +27,15 @@ interface ProgressActions {
   consumeStreakFreeze: () => boolean;
   addStreakFreeze: (amount: number) => void;
   evaluateStreakOnLoad: () => { status: StreakLoadStatus; previousStreak: number };
-  setPath: (pathKey: string, version: string, versesPerDay?: number, locationTagLevels?: LocationTagLevel[]) => void;
+  setPath: (
+    pathKey: string,
+    version: string,
+    versesPerDay?: number,
+    locationTagLevels?: LocationTagLevel[],
+    // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at
+    // creation, seeding a brand-new plan past the days it claims are already known.
+    startingCompletedDays?: number,
+  ) => void;
   setActivePath: (pathKey: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
@@ -98,12 +106,12 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     set(loadProgress(userId));
   },
 
-  setPath: (pathKey, version, versesPerDay, locationTagLevels) => {
+  setPath: (pathKey, version, versesPerDay, locationTagLevels, startingCompletedDays) => {
     const state = get();
     const existing = state.paths[pathKey];
     const plan: PathProgress = {
       version,
-      completedDays: existing?.completedDays ?? 0,
+      completedDays: existing?.completedDays ?? startingCompletedDays ?? 0,
       lastCompletedAt: existing?.lastCompletedAt ?? null,
       versesPerDay: versesPerDay ?? existing?.versesPerDay,
       locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,

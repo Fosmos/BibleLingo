@@ -22,9 +22,18 @@ interface PathOverviewScreenProps {
   version: string;
   versesPerDay?: number;
   locationTagLevels?: LocationTagLevel[];
+  // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at creation.
+  startAtCompletedDays?: number;
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, locationTagLevels }: PathOverviewScreenProps) {
+export function PathOverviewScreen({
+  pathKey: key,
+  label,
+  version,
+  versesPerDay,
+  locationTagLevels,
+  startAtCompletedDays,
+}: PathOverviewScreenProps) {
   const router = useRouter();
   // `verses` below is lazily seeded from the localStorage-backed content cache (via
   // resolvePath), which is empty during SSR but may already be populated on the client's
@@ -101,9 +110,9 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
     if (!plan || plan.version !== version || versesPerDayChanged) {
-      setPath(key, version, versesPerDay, locationTagLevels);
+      setPath(key, version, versesPerDay, locationTagLevels, startAtCompletedDays);
     }
-  }, [plan, verses, key, version, versesPerDay, locationTagLevels, setPath]);
+  }, [plan, verses, key, version, versesPerDay, locationTagLevels, startAtCompletedDays, setPath]);
 
   const pericopesReady = usePericopesReady(verses);
 

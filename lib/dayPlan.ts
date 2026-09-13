@@ -62,3 +62,20 @@ export function buildPathDayPlan(key: string, verses: VerseSegment[], plan: Path
   }
   return buildDayPlan(verses, plan.versesPerDay ?? 1);
 }
+
+// GuidedPathFlow.tsx's own "I've already learned some of this" starting-point picker: how
+// many days count as already done if the reader claims everything through `chapter`/
+// `verseNumber` (inclusive) is already memorized — the LAST day whose entire `newVerses`
+// chunk falls at or before that point, so day (result + 1) is the first one that would
+// actually teach them something new.
+export function completedDaysThroughVerse(days: MemorizationDay[], chapter: number, verseNumber: number): number {
+  let completedDays = 0;
+  for (const day of days) {
+    const hasLaterVerse = day.newVerses.some(
+      (verse) => verse.chapter > chapter || (verse.chapter === chapter && verse.verseNumber > verseNumber),
+    );
+    if (hasLaterVerse) break;
+    completedDays = day.dayNumber;
+  }
+  return completedDays;
+}
