@@ -17,14 +17,25 @@ export interface PericopeCardState {
 }
 
 // A pericope zone's days are always contiguous in dayNumber (see lib/pathZones.ts), and a
-// path's days unlock strictly in dayNumber order (see DayPathDiagram.tsx's isUnlocked
-// pattern) — so a zone can only ever be entirely before, straddling, or entirely after
-// `completedDays + 1`. This never needs to represent a zone as "partially done but not the
-// currently active one," which is why one card only ever needs one action.
-export function computeZoneCardState(zone: PathZone, completedDays: number): PericopeCardState {
-  const activeDay = zone.days.find((day) => day.dayNumber === completedDays + 1);
-  if (activeDay) {
-    return { status: "active", actionDay: activeDay, actionKind: "select" };
+// path's days unlock strictly in dayNumber order — so a zone can only ever be entirely
+// before, straddling, or entirely after `todaysDay`. This never needs to represent a zone as
+// "partially done but not the currently active one," which is why one card only ever needs
+// one action.
+//
+// `completedDays` and `todaysDay` are deliberately two separate numbers, not one — see
+// lib/dayRollover.ts's own todaysDayNumber. completedDays (real, permanent progress) decides
+// whether a day already counts as done; todaysDay is whichever day counts as TODAY's own
+// lesson, whether it's already done, in progress, or not started — a zone containing it
+// always reads "active" (amber), even once it's also fully completed, so today's own work
+// keeps standing out from the rest of an otherwise-green path until a real calendar day
+// boundary moves todaysDay on to something else. Only `actionKind` flips (select -> practice)
+// once that day is actually done — so the button can't be used to start a NEW lesson again
+// before tomorrow, even while the card stays visually "today's."
+export function computeZoneCardState(zone: PathZone, completedDays: number, todaysDay: number): PericopeCardState {
+  const todaysDayInZone = zone.days.find((day) => day.dayNumber === todaysDay);
+  if (todaysDayInZone) {
+    const actionKind = todaysDayInZone.dayNumber <= completedDays ? "practice" : "select";
+    return { status: "active", actionDay: todaysDayInZone, actionKind };
   }
 
   const lastDay = zone.days[zone.days.length - 1];
@@ -47,8 +58,8 @@ export function computeZoneCardState(zone: PathZone, completedDays: number): Per
 // zone(s) that lesson merely spills through on its way there (see PathZone.spilloverVerses).
 // Shared by PericopeCard.tsx (to decide what a card shows) and PathDayList.tsx (to decide
 // which consecutive cards visually connect into one continuous box for that lesson).
-export function zoneShowsTodaysVerses(zone: PathZone, state: PericopeCardState, completedDays: number): boolean {
+export function zoneShowsTodaysVerses(zone: PathZone, state: PericopeCardState, todaysDay: number): boolean {
   const isHome = state.status === "active" && state.actionDay?.kind === "learn";
-  const hasActiveSpillover = zone.spilloverVerses?.some((entry) => entry.dayNumber === completedDays + 1) ?? false;
+  const hasActiveSpillover = zone.spilloverVerses?.some((entry) => entry.dayNumber === todaysDay) ?? false;
   return isHome || hasActiveSpillover;
 }

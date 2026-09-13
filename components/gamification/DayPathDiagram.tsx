@@ -15,6 +15,14 @@ interface DayPathDiagramProps {
   label: string;
   days: MemorizationDay[];
   completedDays: number;
+  // completedDays + 1, gated so it only advances once a real calendar day has passed since
+  // this path's last completion — see lib/dayRollover.ts's own activeDayNumber. -1 (never a
+  // real dayNumber) whenever today's own lesson is already done.
+  activeDayNumber: number;
+  // Whichever day counts as TODAY's own lesson (lib/dayRollover.ts's todaysDayNumber) —
+  // always a real dayNumber, never gated to -1, so today's own verses/pericope keep reading
+  // as "today" (highlighted card, amber circle) even once that lesson is done.
+  todaysDayNumber: number;
   pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
@@ -39,6 +47,8 @@ export function DayPathDiagram({
   label,
   days,
   completedDays,
+  activeDayNumber,
+  todaysDayNumber,
   pathKey,
   onSelectDay,
   onPracticeDay,
@@ -87,9 +97,16 @@ export function DayPathDiagram({
         </div>
       </div>
       {buildingViewEnabled ? (
-        <BuildingRoomView days={days} completedDays={completedDays} pathKey={pathKey} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
+        <BuildingRoomView
+          days={days}
+          completedDays={completedDays}
+          activeDayNumber={activeDayNumber}
+          pathKey={pathKey}
+          onSelectDay={onSelectDay}
+          onPracticeDay={onPracticeDay}
+        />
       ) : (
-        <PathDayList days={days} completedDays={completedDays} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
+        <PathDayList days={days} completedDays={completedDays} todaysDayNumber={todaysDayNumber} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
       )}
     </div>
   );

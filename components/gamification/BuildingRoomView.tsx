@@ -17,6 +17,12 @@ const NO_LOCATION_TAG_LEVELS: never[] = [];
 interface BuildingRoomViewProps {
   days: MemorizationDay[];
   completedDays: number;
+  // completedDays + 1, gated so it only advances once a real calendar day has passed since
+  // this path's last completion — see lib/dayRollover.ts's own activeDayNumber. -1 (never a
+  // real dayNumber) whenever today's own lesson is already done, so no circle glows as
+  // freshly "unlocked" until tomorrow (every circle stays tappable regardless — see
+  // DayCircle.tsx's own comment — this only changes which one visually reads as "next").
+  activeDayNumber: number;
   pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
@@ -36,7 +42,7 @@ function zoneLearnDays(zone: PathZone): MemorizationDay[] {
 // location tag is always scoped to a single verse even when several share one lesson. No
 // walls, no rooms, no predefined suggestions of any kind — every tag is free text, entered
 // and edited the same way via LocationTagField.tsx.
-export function BuildingRoomView({ days, completedDays, pathKey, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
+export function BuildingRoomView({ days, completedDays, activeDayNumber, pathKey, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
   const versePOA = useProgressStore((state) => state.versePOA);
   const levels = useProgressStore((state) => state.paths[pathKey]?.locationTagLevels ?? NO_LOCATION_TAG_LEVELS);
 
@@ -87,7 +93,7 @@ export function BuildingRoomView({ days, completedDays, pathKey, onSelectDay, on
                       <DayCircle
                         day={day}
                         isCompleted={day.dayNumber <= completedDays}
-                        isUnlocked={day.dayNumber === completedDays + 1}
+                        isUnlocked={day.dayNumber === activeDayNumber}
                         progress={0}
                         offset={index % 2 === 0 ? "left" : "right"}
                         versePOA={poa}

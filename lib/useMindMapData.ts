@@ -12,6 +12,7 @@ import { usePericopesReady } from "@/lib/usePericopesReady";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { buildPathZones, type PathZone } from "@/lib/pathZones";
 import { computeZoneCardState, type PericopeCardState, type PericopeCardStatus } from "@/lib/pericopeCardState";
+import { todaysDayNumber } from "@/lib/dayRollover";
 
 export interface ChapterNode {
   chapter: number;
@@ -27,13 +28,14 @@ export type MindMapData =
   | { status: "ready"; pathKey: string; label: string; completedDays: number; chapters: ChapterNode[] };
 
 // A whole chapter's own status, mirroring computeZoneCardState's own three-state read on a
-// single pericope zone (lib/pericopeCardState.ts) — "active" the moment any of its days is
-// the one currently up next, "completed" once every one of its days (learn lessons and any
-// weekly/monthly capstones tagged into it) is behind completedDays, "locked" otherwise. A
-// chapter's days are always contiguous in dayNumber (same guarantee a PathZone's own days
-// carry), so this never needs to represent "partially done."
-function chapterStatus(chapterDays: MemorizationDay[], completedDays: number): PericopeCardStatus {
-  if (chapterDays.some((day) => day.dayNumber === completedDays + 1)) return "active";
+// single pericope zone (lib/pericopeCardState.ts) — "active" (the Mind Map's amber ring)
+// whenever any of its days is todaysDay (lib/dayRollover.ts), whether or not that day is
+// already done, "completed" once every one of its days (learn lessons and any weekly/monthly
+// capstones tagged into it) is behind completedDays, "locked" otherwise. A chapter's days are
+// always contiguous in dayNumber (same guarantee a PathZone's own days carry), so this never
+// needs to represent "partially done."
+function chapterStatus(chapterDays: MemorizationDay[], completedDays: number, todaysDay: number): PericopeCardStatus {
+  if (chapterDays.some((day) => day.dayNumber === todaysDay)) return "active";
   if (chapterDays.length > 0 && chapterDays.every((day) => day.dayNumber <= completedDays)) return "completed";
   return "locked";
 }
@@ -129,12 +131,13 @@ export function useMindMapData(): MindMapData {
   const chapterNumbers = Array.from(
     new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
   ).sort((a, b) => a - b);
+  const todaysDay = todaysDayNumber(plan, new Date());
 
   const chapters: ChapterNode[] = chapterNumbers.map((chapter) => {
     const chapterDays = days.filter((day) => day.chapterGroup === chapter);
     const zones = buildPathZones(chapterDays);
-    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays));
-    return { chapter, status: chapterStatus(chapterDays, plan.completedDays), zones, states };
+    const states = zones.map((zone) => computeZoneCardState(zone, plan.completedDays, todaysDay));
+    return { chapter, status: chapterStatus(chapterDays, plan.completedDays, todaysDay), zones, states };
   });
 
   return {

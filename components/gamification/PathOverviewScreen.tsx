@@ -10,6 +10,7 @@ import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { usePericopesReady } from "@/lib/usePericopesReady";
+import { activeDayNumber, todaysDayNumber } from "@/lib/dayRollover";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 // TEMPORARILY DISABLED along with its own usage below — see that comment.
 // import { DailyChapterReviewGate } from "@/components/gamification/DailyChapterReviewGate";
@@ -132,11 +133,17 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
 
   const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan);
   const basePath = `/path/${encodeURIComponent(key)}`;
+  // See lib/dayRollover.ts: activeDay gates what's newly startable (never advances until a
+  // real calendar day passes since the last completion); todaysDay is whichever day still
+  // counts as "today" for display, whether or not it's already done.
+  const now = new Date();
+  const activeDay = activeDayNumber(plan, now);
+  const todaysDay = todaysDayNumber(plan, now);
 
   // Book mode shows one chapter at a time rather than the whole book's lesson list —
-  // the visible group is whichever chapter the next incomplete day belongs to. Once every
-  // day in a chapter's group is done, the next incomplete day naturally belongs to the
-  // next chapter (or, after the last chapter, to the undefined-group whole-book capstone).
+  // the visible group is whichever chapter today's own day belongs to. Once every day in a
+  // chapter's group is done, today's day naturally belongs to the next chapter (or, after
+  // the last chapter, to the undefined-group whole-book capstone).
   const { kind } = parsePathKey(key);
   let visibleDays = days;
   let title = label;
@@ -149,7 +156,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     const chapterGroups = Array.from(
       new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
     ).sort((a, b) => a - b);
-    const nextDay = days.find((day) => day.dayNumber === plan.completedDays + 1);
+    const nextDay = days.find((day) => day.dayNumber === todaysDay);
     const group = chapterOverride ?? nextDay?.chapterGroup;
     visibleDays = days.filter((day) => day.chapterGroup === group);
     if (group !== undefined) {
@@ -178,6 +185,8 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
       label={title}
       days={visibleDays}
       completedDays={plan.completedDays}
+      activeDayNumber={activeDay}
+      todaysDayNumber={todaysDay}
       pathKey={key}
       chapterMemorizedFraction={chapterMemorizedFraction}
       onSelectDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}`)}

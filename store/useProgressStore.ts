@@ -104,6 +104,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const plan: PathProgress = {
       version,
       completedDays: existing?.completedDays ?? 0,
+      lastCompletedAt: existing?.lastCompletedAt ?? null,
       versesPerDay: versesPerDay ?? existing?.versesPerDay,
       locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,
     };
@@ -121,7 +122,8 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const existing = state.paths[pathKey];
     if (!existing) return;
     const completedDays = Math.max(existing.completedDays, dayNumber);
-    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays } };
+    const lastCompletedAt = new Date().toISOString();
+    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays, lastCompletedAt } };
     const memorizedEntities = syncMemorizedEntities(paths, state.memorizedEntities);
     set(persist({ ...state, paths, memorizedEntities }));
   },

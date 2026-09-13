@@ -4,6 +4,7 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
 import { tokenizeVerseWords } from "@/lib/verseWords";
+import { todaysDayNumber } from "@/lib/dayRollover";
 
 // Takes `verses` explicitly rather than re-resolving them from the client-side content
 // cache itself — callers that already fetched their own copy (e.g. TodayVersesCard, which
@@ -11,10 +12,13 @@ import { tokenizeVerseWords } from "@/lib/verseWords";
 // whose storage cap means the persistent cache can never hold every chapter at once — see
 // ensureChapterLoaded) would otherwise silently lose that content on a second, cache-only
 // lookup here.
+// Uses todaysDayNumber (lib/dayRollover.ts), not completedDays + 1 — Today's Verses should
+// keep showing what was just accomplished today even once that lesson is done, only moving
+// on once a real calendar day passes, same as everywhere else "today" is displayed.
 export function getCurrentDay(key: string, verses: VerseSegment[], plan: PathProgress): MemorizationDay | undefined {
   const days = buildPathDayPlan(key, verses, plan);
-  const nextDayNumber = Math.min(plan.completedDays + 1, days.length);
-  return days.find((day) => day.dayNumber === nextDayNumber);
+  const dayNumber = Math.min(todaysDayNumber(plan, new Date()), days.length);
+  return days.find((day) => day.dayNumber === dayNumber);
 }
 
 function tokenCount(text: string): number {

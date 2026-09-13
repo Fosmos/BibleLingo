@@ -15,6 +15,10 @@ interface PericopeCardProps {
   index: number;
   isLast: boolean;
   completedDays: number;
+  // Whichever day counts as TODAY's own lesson — see lib/dayRollover.ts's todaysDayNumber.
+  // Never gated to a sentinel, so this stays the same real dayNumber whether today's lesson
+  // is still to come, in progress, or already finished.
+  todaysDayNumber: number;
   // Whether the card immediately before/after this one in the list is also part of today's
   // one active lesson (see lib/pericopeCardState.ts's zoneShowsTodaysVerses) — when either
   // is true, this card visually merges into that neighbor instead of reading as its own
@@ -48,7 +52,7 @@ interface PericopeCardProps {
 // "not now." A spillover-only card (part of today's lesson, but not its home) drops its own
 // independent button entirely and merges visually into its connected neighbor — the one
 // "Learn" button for the whole lesson lives only in the home section.
-export function PericopeCard({ zone, state, index, isLast, completedDays, connectToPrevious, connectToNext, cardRef, onSelectDay, onPracticeDay }: PericopeCardProps) {
+export function PericopeCard({ zone, state, index, isLast, completedDays, todaysDayNumber, connectToPrevious, connectToNext, cardRef, onSelectDay, onPracticeDay }: PericopeCardProps) {
   const { status, actionDay, actionKind } = state;
   const isActive = status === "active";
   const isCompleted = status === "completed";
@@ -63,10 +67,10 @@ export function PericopeCard({ zone, state, index, isLast, completedDays, connec
   // lib/pathZones.ts's buildPathZones for why the button itself is always the LATTER
   // section).
   const todaysVerses = isTodaysLesson && actionDay ? (versesByPericopeSegment(actionDay.newVerses)?.at(-1)?.verses ?? actionDay.newVerses) : [];
-  // Only ever shows for the lesson that's actually active right now — a day that's since
-  // finished or hasn't come up yet contributes no spillover here, same as its own home zone
-  // dropping its verse text once it's no longer the active lesson either.
-  const activeSpillover = zone.spilloverVerses?.find((entry) => entry.dayNumber === completedDays + 1)?.verses;
+  // Only ever shows for the lesson that's actually today's own — a day that's already
+  // finished by a real calendar day boundary or hasn't come up yet contributes no spillover
+  // here, same as its own home zone dropping its verse text once it's no longer today's.
+  const activeSpillover = zone.spilloverVerses?.find((entry) => entry.dayNumber === todaysDayNumber)?.verses;
   const hasActiveSpillover = (activeSpillover?.length ?? 0) > 0;
   // Drives the card's own highlight — every box actually showing today's verses stays at
   // full strength, not just the one that happens to hold the "Learn" button. A section that
@@ -88,8 +92,10 @@ export function PericopeCard({ zone, state, index, isLast, completedDays, connec
   // now-completed lesson that once spilled through here on its way to a later section (a
   // spillover entry stops showing once its day is no longer active — see activeSpillover
   // above — so this checks every entry's own dayNumber directly instead of reusing that).
-  // Never overlaps highlightedVerseNumbers by construction: a day only lands here once its
-  // dayNumber is <= completedDays, while today's active lesson is always completedDays + 1.
+  // Can overlap highlightedVerseNumbers once today's own lesson is finished (todaysDayNumber
+  // then equals completedDays exactly, not completedDays + 1) — the render below always
+  // prefers the highlighted style when both apply, so a just-finished today's verse still
+  // reads as "today's," with its completed checkmark layered on top rather than replaced.
   const completedVerseNumbers = new Set<number>();
   for (const homeDay of zone.days) {
     if (homeDay.dayNumber <= completedDays) {

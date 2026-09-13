@@ -78,6 +78,10 @@ export type LocationTagLevel = "book" | "chapter" | "pericope" | "verse";
 export interface PathProgress {
   version: string;
   completedDays: number;
+  // ISO timestamp of this path's most recent completeDay call, or null before its first —
+  // see lib/dayRollover.ts, which gates "what's newly startable today" on this only
+  // advancing on a real calendar-day boundary, not the instant a lesson finishes.
+  lastCompletedAt: string | null;
   // Set for "book" and "chapter" kind paths — verse/topic paths stay one verse per lesson.
   versesPerDay?: number;
   // Which scopes get an "add location tag" option in this path's Building view — any
