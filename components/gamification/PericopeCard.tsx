@@ -209,7 +209,7 @@ export function PericopeCard({ zone, state, index, isLast, completedDays, todays
               onClick={handleClick}
               className="w-full rounded-full bg-brand-500 py-2 text-sm font-semibold text-white"
             >
-              Learn
+              {actionKind === "practice" ? "Review" : "Learn"}
             </motion.button>
           </div>
         ) : (

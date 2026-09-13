@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Compass } from "lucide-react";
+import { BookOpen, Compass, RotateCcw } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { getCurrentDay } from "@/lib/progressSummary";
+import { hasCompletedToday } from "@/lib/dayRollover";
 import { resolvePath, resolvePathLabel } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { Button } from "@/components/ui/Button";
@@ -66,6 +67,10 @@ export function TodayVersesCard() {
 
   const currentDay = activePathKey && plan && verses ? getCurrentDay(activePathKey, verses, plan) : undefined;
   const label = activePathKey ? resolvePathLabel(activePathKey) : undefined;
+  // Once today's own lesson is already done (see lib/dayRollover.ts), currentDay still
+  // resolves to that same day (todaysDayNumber never hides it) — offer a way to review it
+  // right from Home instead of just "Go to your path" again with nothing new to do there.
+  const todaysLessonDone = Boolean(plan && hasCompletedToday(plan, new Date()));
 
   return (
     <div
@@ -95,16 +100,29 @@ export function TodayVersesCard() {
           ) : (
             <p className="text-sm text-ink-muted">{DAY_KIND_LABELS[currentDay.kind] ?? "Continue your path"}</p>
           )}
-          <Button
-            // The version query param is what the path overview page treats as the source
-            // of truth (see app/path/[key]/page.tsx) — omitting it would default to KJV and
-            // silently overwrite an already-selected translation via PathOverviewScreen's
-            // sync effect.
-            href={`/path/${encodeURIComponent(activePathKey)}?version=${encodeURIComponent(plan.version)}`}
-            className="self-start"
-          >
-            Go to your path
-          </Button>
+          <div className="flex items-center gap-2 self-start">
+            {todaysLessonDone && currentDay.kind === "learn" && (
+              <Button
+                // Same first-letter recall drill DayCircle.tsx's own "Review" button opens
+                // for a completed learn day (see PracticeLoader.tsx) — reachable from Home
+                // too now that there's nothing new to start until tomorrow.
+                href={`/path/${encodeURIComponent(activePathKey)}/day/${currentDay.dayNumber}/practice`}
+                variant="secondary"
+              >
+                <RotateCcw size={14} className="mr-1 inline -translate-y-px" />
+                Review
+              </Button>
+            )}
+            <Button
+              // The version query param is what the path overview page treats as the source
+              // of truth (see app/path/[key]/page.tsx) — omitting it would default to KJV and
+              // silently overwrite an already-selected translation via PathOverviewScreen's
+              // sync effect.
+              href={`/path/${encodeURIComponent(activePathKey)}?version=${encodeURIComponent(plan.version)}`}
+            >
+              Go to your path
+            </Button>
+          </div>
         </>
       ) : error ? (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
