@@ -15,9 +15,14 @@ interface PracticeChainProps {
   onExit: () => void;
   sessionKey?: string;
   // "Practice" (default, boss battles) or "Review" (a completed learn lesson's own verses —
-  // see DayCircle.tsx/PracticeLoader.tsx) — same drill either way, just matches whichever
-  // button the reader tapped to get here.
+  // see DayCircle.tsx/PracticeLoader.tsx) — just matches whichever button the reader tapped
+  // to get here; `mode` below is what actually changes what the drill requires.
   label?: string;
+  // "fullWord" (default) for Practice — mirrors the real Boss Battle's own word-for-word
+  // typing, since this is meant as prep for it. "firstLetter" for Review (a completed learn
+  // lesson's own verses) — a lighter, faster recall check, same mechanic every other review
+  // surface in this app (SRS, chapter review) uses.
+  mode?: "fullWord" | "firstLetter";
 }
 
 // A low-stakes companion to the boss battle: same word-for-word typing, but a mistake just
@@ -26,7 +31,7 @@ interface PracticeChainProps {
 // attempt as prep or after one for upkeep. Leaving early (Exit practice) keeps the
 // verseIndex checkpoint so coming back resumes here — it's only cleared on genuinely
 // finishing every verse, since there's nothing left to resume at that point.
-export function PracticeChain({ verses, onExit, sessionKey, label = "Practice" }: PracticeChainProps) {
+export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord" }: PracticeChainProps) {
   const [verseIndex, setVerseIndex] = useCheckpointField(sessionKey, "verseIndex", 0);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const [attempt, setAttempt] = useState(0);
@@ -119,7 +124,7 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice" }
           Verse {verseIndex + 1} of {verses.length}
         </p>
       </div>
-      <WordTypeEntry key={`${verse.id}-${attempt}`} verse={verse} mode="fullWord" onComplete={handleVerseComplete} />
+      <WordTypeEntry key={`${verse.id}-${attempt}`} verse={verse} mode={mode} onComplete={handleVerseComplete} />
       <button type="button" onClick={onExit} className="self-start text-sm font-medium text-ink-muted hover:underline">
         Exit {label.toLowerCase()}
       </button>
