@@ -28,7 +28,13 @@ const LONGER_PRAYER_DURATION_S = 60;
 // verseIndex is undefined for the whole-day phases (orientation, orientation summary, pray);
 // set for a single verse's own stages, including speak_verse's own (see buildSteps) — that
 // phase is intercepted before this flat-step machinery even matters, see the render below.
-type FlatStep = { phase: Phase; verseIndex?: number };
+//
+// cumulativeVerseIndices is set only on type_cumulative_today steps — the explicit list of
+// day.newVerses indices that step combines, rather than deriving it from verseIndex's own
+// position in the array. Explicit because a 6+ verse day splits into two halves (see
+// buildSteps), each with its OWN progressively-growing cumulative check scoped to just that
+// half — position-in-array alone can no longer say which verses a given check should cover.
+type FlatStep = { phase: Phase; verseIndex?: number; cumulativeVerseIndices?: number[] };
 
 // One individual verse's own drilling stages — run once, in order, before moving to the next
 // verse (no repeated rounds). Write First Letter (the handwriting canvas) drops out entirely
@@ -48,16 +54,42 @@ const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 
 // Every verse's own type_first_letters — the last of its own sub-stages — is followed right
 // away by speak_verse: that one verse, just learned, spoken aloud from memory on its own.
-// From the SECOND verse of the day on, speak_verse is followed by one more check —
-// type_cumulative_today: every verse learned TODAY so far, this one included, typed by
-// first letter (see ReviewChain in the render below). The first verse skips it: with only
-// itself learned so far today, that check would just repeat the single verse speak_verse
-// already covered — which is also why a one-verse day never gets one at all. This is
-// deliberately scoped to just today's own verses, not everything ever learned (that's
+// From the SECOND real verse of its own group on, speak_verse is followed by one more check —
+// type_cumulative_today: every verse learned TODAY so far IN THIS GROUP, this one included,
+// typed by first letter (see ReviewChain in the render below). The first verse of a group
+// skips it: with only itself learned so far, that check would just repeat the single verse
+// speak_verse already covered — which is also why a one-verse group never gets one at all.
+// This is deliberately scoped to just today's own verses, not everything ever learned (that's
 // ReviewSection's job, in its own separate Previous Verses/Chapter Review stages) — so it
 // reads as "did today's lesson actually stick together," not a second copy of the bigger
-// review. Pray always runs dead last, right before the lesson hands off to whatever review
-// follows it (Chapter Review, etc.) — a closing moment, not a mid-lesson one.
+// review.
+//
+// A heavy day (6+ verses) splits into two halves, each running the normal verse-by-verse
+// sequence above independently — the SECOND half's own cumulative checks start fresh (scoped
+// to just its own half, not carrying half one along), the same "not too much to hold at once"
+// idea a single normal-sized day's own per-verse progression already follows one level down.
+// Once both halves finish, one dedicated combine stage — type first letters of EVERY verse
+// learned today, both halves together — runs once, right before Pray, so the day still closes
+// on "does it all fit together," just deferred to a single final stage instead of happening
+// automatically as a side effect of one long unbroken sequence. A day under the split
+// threshold never sees this: its own last verse's normal cumulative check already covers
+// everything today by construction, same as before. Pray always runs dead last, right before
+// the lesson hands off to whatever review follows it (Chapter Review, etc.) — a closing
+// moment, not a mid-lesson one.
+const SPLIT_THRESHOLD = 6;
+
+function buildGroupSteps(group: number[], phases: Phase[]): FlatStep[] {
+  const steps: FlatStep[] = [];
+  group.forEach((verseIndex, position) => {
+    for (const phase of phases) steps.push({ phase, verseIndex });
+    steps.push({ phase: "speak_verse", verseIndex });
+    if (position > 0) {
+      steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: group.slice(0, position + 1) });
+    }
+  });
+  return steps;
+}
+
 function buildSteps(
   verseCount: number,
   understandEnabled: boolean,
@@ -68,11 +100,17 @@ function buildSteps(
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
   const phases = versePhases(writeFirstLetterEnabled);
-  for (let verseIndex = 0; verseIndex < verseCount; verseIndex++) {
-    for (const phase of phases) steps.push({ phase, verseIndex });
-    steps.push({ phase: "speak_verse", verseIndex });
-    if (verseIndex > 0) steps.push({ phase: "type_cumulative_today", verseIndex });
+  const verseIndices = Array.from({ length: verseCount }, (_, index) => index);
+
+  if (verseIndices.length >= SPLIT_THRESHOLD) {
+    const midpoint = Math.ceil(verseIndices.length / 2);
+    steps.push(...buildGroupSteps(verseIndices.slice(0, midpoint), phases));
+    steps.push(...buildGroupSteps(verseIndices.slice(midpoint), phases));
+    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
+  } else {
+    steps.push(...buildGroupSteps(verseIndices, phases));
   }
+
   steps.push({ phase: "pray" });
   return steps;
 }
@@ -84,10 +122,13 @@ function noopAnnotationsChange() {
 // A day's new verses go through Orientation (highlight/annotate + 3-word summary) ONCE across
 // every verse selected today. Then each verse, one at a time, runs Rhythm → Write First
 // Letter → Speak (first-letter hint) → Type it by first letter → speak that one verse aloud
-// from memory → (every verse but the first) type every verse learned today so far by first
-// letter, growing verse by verse — before moving to the next verse. One prayer timer closes
-// the lesson out, dead last — right before whatever review follows (Chapter Review, etc.),
-// not mid-lesson.
+// from memory → (every verse but the first IN ITS OWN GROUP — see buildSteps' own SPLIT_
+// THRESHOLD) type every verse learned so far that group by first letter, growing verse by
+// verse — before moving to the next verse. A day of 6+ verses runs this whole sequence twice,
+// once per half, each half's own growing check starting fresh, then one final combine stage
+// covering everything learned today, both halves together, right before Pray. One prayer
+// timer closes the lesson out, dead last — right before whatever review follows (Chapter
+// Review, etc.), not mid-lesson.
 export function LearnSection({ day, onComplete, sessionKey }: LearnSectionProps) {
   const wholeDay = useMemo(() => joinVerses(day.newVerses, "day"), [day.newVerses]);
   // Word offset of each verse's own first word within the whole-day joined text — lets a
@@ -155,9 +196,10 @@ export function LearnSection({ day, onComplete, sessionKey }: LearnSectionProps)
   }
 
   if (step.phase === "type_cumulative_today") {
-    // Every verse learned TODAY so far, this one included — never day.reviewVerses (prior
-    // days' own verses), which is ReviewSection's job, not this one's.
-    const versesLearnedTodaySoFar = day.newVerses.slice(0, (step.verseIndex ?? 0) + 1);
+    // Every verse this particular check covers — either one half's own growing progress, or
+    // (the final combine stage) every verse learned today across both halves — never
+    // day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this one's.
+    const versesLearnedTodaySoFar = (step.cumulativeVerseIndices ?? []).map((index) => day.newVerses[index]);
     return (
       <div className="flex flex-col gap-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">

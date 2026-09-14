@@ -1,4 +1,4 @@
-import type { MemorizationDay, PathProgress, VerseSegment } from "@/types";
+import type { MemorizationDay, PathProgress, ReviewStage, VerseSegment } from "@/types";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { buildBookDayPlan, DEFAULT_VERSES_PER_DAY } from "@/lib/bookDayPlan";
 import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
@@ -10,7 +10,16 @@ import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
 // only ever comes up short when a CHAPTER boundary falls inside it (see
 // lib/chapterChunking.ts), which every path kind here is single-chapter for anyway (a
 // multi-chapter selection is book mode's own buildBookDayPlan, below).
-export function buildDayPlan(verses: VerseSegment[], versesPerDay = 1): MemorizationDay[] {
+//
+// `includePostLearnChapterReview` (chapter mode only — see buildPathDayPlan below) gives each
+// "learn" day the SAME sliding-window post-lesson review book mode's own buildBookDayPlan
+// already runs: everything learned in the chapter so far, including today's own new chunk,
+// typed first-letter from the beginning right after the lesson (see
+// MemorizationDay.postLearnReviewStages, consumed by VerseLessonFlow.tsx's own "postReview"
+// phase → ReviewSection → ReviewChain). Verse/topic mode paths skip it — their own `verses`
+// can span several books/chapters, so "review the chapter from the beginning" has no single
+// chapter to mean.
+export function buildDayPlan(verses: VerseSegment[], versesPerDay = 1, includePostLearnChapterReview = false): MemorizationDay[] {
   const days: MemorizationDay[] = [];
   const chunks = chunkVersesRespectingChapters(verses, versesPerDay);
   // Just yesterday's lesson — the immediately preceding learn day's own new verses, whatever
@@ -18,11 +27,19 @@ export function buildDayPlan(verses: VerseSegment[], versesPerDay = 1): Memoriza
   let previousChunk: VerseSegment[] = [];
   let consumed = 0;
   for (const chunk of chunks) {
+    const learnedSoFar = verses.slice(0, consumed);
+    const postLearnReviewStages: ReviewStage[] =
+      includePostLearnChapterReview && learnedSoFar.length + chunk.length > 0
+        ? [{ label: "Chapter Review", verses: [...learnedSoFar, ...chunk] }]
+        : [];
     days.push({
       dayNumber: days.length + 1,
       kind: "learn",
       newVerses: chunk,
-      reviewVerses: verses.slice(0, consumed),
+      // Empty (not learnedSoFar) once the post-learn stage above covers that same ground —
+      // same "don't review it twice" convention buildBookDayPlan's own reviewVerses follows.
+      reviewVerses: includePostLearnChapterReview ? [] : learnedSoFar,
+      postLearnReviewStages: postLearnReviewStages.length > 0 ? postLearnReviewStages : undefined,
       previousVerses: previousChunk,
     });
     previousChunk = chunk;
@@ -60,7 +77,7 @@ export function buildPathDayPlan(key: string, verses: VerseSegment[], plan: Path
   if (kind === "book") {
     return buildBookDayPlan(verses, plan.versesPerDay ?? DEFAULT_VERSES_PER_DAY);
   }
-  return buildDayPlan(verses, plan.versesPerDay ?? 1);
+  return buildDayPlan(verses, plan.versesPerDay ?? 1, kind === "chapter");
 }
 
 // GuidedPathFlow.tsx's own "I've already learned some of this" starting-point picker: how
