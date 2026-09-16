@@ -2,11 +2,24 @@ import { linkVertical } from "d3-shape";
 import type { LayoutPoint, MindMapLayout } from "@/lib/mindMapTreeLayout";
 import type { MindMapDatum } from "@/lib/mindMapHierarchy";
 import { LINK_STROKE_CLASS } from "@/lib/mindMapGenreColor";
+import { ACTIVE_SCALE, INACTIVE_SCALE } from "@/lib/useMindMapFocusState";
 import { RING_SIZE_PX } from "@/components/gamification/MindMapRingNode";
 
 interface MindMapLinksProps {
   layout: MindMapLayout;
   isOnFocusedBranch: (id: string) => boolean;
+  // The single open trail (see BookMindMap.tsx's own CAFD doc comment) — needed here for the
+  // exact same reason MindMapNodeCard.tsx's own `sizeScale` prop exists: a link's target isn't
+  // always drawn at its node's plain 1x size (see nodeScale below), so trimming a link's
+  // endpoint back to the node's real on-screen edge (see trimTowardSource) has to account for
+  // that too, not just its unscaled RING_SIZE_PX/kind — otherwise an inactive (0.8x, visibly
+  // smaller) node's own incoming links stop short of its real edge, leaving a gap.
+  activePath: string[];
+  // A pericope card's own REAL rendered width (see lib/useMindMapNodeWidths.ts) — content-sized
+  // between an 80px min and 150px max, so no single fixed guess ever matches every label's own
+  // real edge (see nodeHalfSize's own doc comment below). Keyed by node id; a ring/theme/root
+  // node never appears here since their own fixed formula is already exact/close enough.
+  pericopeWidthById: Map<string, number>;
 }
 
 // lib/mindMapTreeLayout.ts already hands back each link's own (x, y) pair for both ends —
@@ -18,24 +31,39 @@ const linkGenerator = linkVertical<{ source: LayoutPoint; target: LayoutPoint },
   .x((point) => point.x)
   .y((point) => point.y);
 
-// Root's own fixed circle (h-20/w-20) and the two variable-width shapes (a pericope card, a
-// theme pill) all lack one single real "radius" the way a plain ring does — these are generous
-// fixed approximations of their own typical on-screen half-size, not an exact measurement.
+// Root's own fixed circle (h-20/w-20) and the theme pill both lack one single real "radius" the
+// way a plain ring does — generous fixed approximations of their own typical on-screen
+// half-size, not an exact measurement (a theme pill's own real range, 72-118px wide, is narrow
+// enough this rarely shows). A pericope card's own real range (80-150px) is wide enough that no
+// single fixed guess works for both ends of it — see PERICOPE_HALF_SIZE_PX_FALLBACK below.
 const ROOT_HALF_SIZE_PX = 40;
-const PERICOPE_HALF_SIZE_PX = 40;
 const THEME_PILL_HALF_SIZE_PX = 45;
+// Used ONLY before a pericope card's own real width has been measured yet (see
+// lib/useMindMapNodeWidths.ts) — a generous max-w-[150px]-sized guess so that one frame
+// trims a bit too FAR back (a small gap) rather than not far enough (the line showing through
+// the card's own dimmed 25% opacity), the safer of the two failure modes for a single frame.
+const PERICOPE_HALF_SIZE_PX_FALLBACK = 75;
 
 // A node's own approximate half-size — how far its own edge sits from its (x, y) center — used
 // below to pull a link's own target point back from the dead center of a node to just short of
-// its edge. Deliberately approximate (ring nodes are the only kind with one real, exact radius;
-// CAFD's own active/inactive size swing isn't accounted for either) rather than a true runtime
-// measurement — same "generous fixed assumption" convention lib/mindMapTreeLayout.ts's own
-// spacing constants already follow.
-function nodeHalfSize(kind: MindMapDatum["kind"]): number {
-  if (kind === "root") return ROOT_HALF_SIZE_PX;
-  if (kind === "pericope") return PERICOPE_HALF_SIZE_PX;
-  if (kind === "theme") return THEME_PILL_HALF_SIZE_PX;
-  return RING_SIZE_PX[kind] / 2;
+// its edge. A pericope card's own REAL measured width (see pericopeWidthById) is used when
+// available — its 80-150px content-sized range is too wide for one fixed guess to ever match
+// every label's own real edge, unlike a plain ring (one real, exact radius) or CAFD's own
+// active/inactive size swing (handled separately, see nodeScale below).
+function nodeHalfSize(data: MindMapDatum, pericopeWidthById: Map<string, number>): number {
+  if (data.kind === "root") return ROOT_HALF_SIZE_PX;
+  if (data.kind === "pericope") return (pericopeWidthById.get(data.id) ?? PERICOPE_HALF_SIZE_PX_FALLBACK * 2) / 2;
+  if (data.kind === "theme") return THEME_PILL_HALF_SIZE_PX;
+  return RING_SIZE_PX[data.kind] / 2;
+}
+
+// Mirrors MindMapNodeCard.tsx's own `sizeScale` prop exactly (root always 1x, a pericope by its
+// own `status`, everything else by whether it's on the open trail) — see this file's own
+// `activePath` doc comment above on why a link's target trim needs to match it.
+function nodeScale(data: MindMapDatum, activePath: string[]): number {
+  if (data.kind === "root") return 1;
+  if (data.kind === "pericope") return data.status === "active" ? 1 : INACTIVE_SCALE;
+  return activePath.includes(data.id) ? ACTIVE_SCALE : INACTIVE_SCALE;
 }
 
 // Pulls `target` back toward `source` by `distance` pixels along their own straight line — used
@@ -59,8 +87,8 @@ function trimTowardSource(source: LayoutPoint, target: LayoutPoint, distance: nu
 // pericope trunk-and-stubs (see lib/mindMapTreeLayout.ts's own placePericopes) — split out of
 // BookMindMap.tsx purely to keep that file under this codebase's own 200-line file cap (see
 // CLAUDE.md), no behavior difference from having it inline there.
-export function MindMapLinks({ layout, isOnFocusedBranch }: MindMapLinksProps) {
-  const kindById = new Map(layout.nodes.map((node) => [node.data.id, node.data.kind]));
+export function MindMapLinks({ layout, isOnFocusedBranch, activePath, pericopeWidthById }: MindMapLinksProps) {
+  const dataById = new Map(layout.nodes.map((node) => [node.data.id, node.data]));
 
   return (
     <svg width={layout.width} height={layout.height} className="absolute inset-0">
@@ -78,8 +106,10 @@ export function MindMapLinks({ layout, isOnFocusedBranch }: MindMapLinksProps) {
         />
       ))}
       {layout.links.map((link, index) => {
-        const targetKind = kindById.get(link.targetId);
-        const target = targetKind ? trimTowardSource(link.source, link.target, nodeHalfSize(targetKind)) : link.target;
+        const targetData = dataById.get(link.targetId);
+        const target = targetData
+          ? trimTowardSource(link.source, link.target, nodeHalfSize(targetData, pericopeWidthById) * nodeScale(targetData, activePath))
+          : link.target;
         return (
           <path
             key={index}
