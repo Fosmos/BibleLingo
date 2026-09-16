@@ -54,6 +54,11 @@ interface LessonPageCardProps {
   // Undefined keeps the old "always this verse's first page" behavior — fine for a caller that
   // only ever shows a verse in full at once, never mid-reveal.
   activeWordIndex?: number;
+  // SRS review only (see FirstLetterMultiVersePageCard.tsx) — hides the trailing ghost line
+  // entirely, since it previews words from BEYOND the entity's own range, a real recall test
+  // shouldn't hint at. Left on (the default) everywhere else, matching ChapterReadingView.tsx's
+  // own always-on prev/next pair.
+  showNextGhost?: boolean;
 }
 
 // The Learn/Review "verse lives here" surface — the SAME real reading-view page (every verse
@@ -87,6 +92,7 @@ export function LessonPageCard({
   isHeadingVisible,
   isVerseNumberVisible,
   activeWordIndex,
+  showNextGhost = true,
 }: LessonPageCardProps) {
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
@@ -158,13 +164,15 @@ export function LessonPageCard({
         />
       </ParchmentCard>
 
-      <GhostContextLine
-        verse={nextEdgeVerse}
-        text={nextGhostText}
-        ellipsis="trailing"
-        align="right"
-        onNavigate={allowManualFlip && pageIndex < layout.pages.length - 1 ? () => setManualPageIndex(pageIndex + 1) : undefined}
-      />
+      {showNextGhost && (
+        <GhostContextLine
+          verse={nextEdgeVerse}
+          text={nextGhostText}
+          ellipsis="trailing"
+          align="right"
+          onNavigate={allowManualFlip && pageIndex < layout.pages.length - 1 ? () => setManualPageIndex(pageIndex + 1) : undefined}
+        />
+      )}
     </div>
   );
 }
