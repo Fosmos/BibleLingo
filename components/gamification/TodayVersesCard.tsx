@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Compass, MoonStar } from "lucide-react";
+import { BookOpen, Compass, MoonStar, RotateCcw } from "lucide-react";
 import { useTodaysDay } from "@/lib/useTodaysDay";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
 import { resolvePathLabel } from "@/lib/memorizationContent";
@@ -22,6 +22,13 @@ function pathHref(activePathKey: string, version: string): string {
   return `/path/${encodeURIComponent(activePathKey)}?version=${encodeURIComponent(version)}&today=1`;
 }
 
+// The standalone practice route (app/path/[key]/day/[dayNumber]/practice) — same first-letter
+// recall drill PathBottomDock.tsx's own "Review" button opens in-place from the Path screen,
+// reachable directly from Home too now that today's lesson is done here.
+function practiceHref(activePathKey: string, dayNumber: number): string {
+  return `/path/${encodeURIComponent(activePathKey)}/day/${dayNumber}/practice`;
+}
+
 export function TodayVersesCard() {
   const { activePathKey, plan, currentDay, restingUntilTomorrow, lastCompletedDay, error, retry } = useTodaysDay();
   const label = activePathKey ? resolvePathLabel(activePathKey) : undefined;
@@ -30,9 +37,7 @@ export function TodayVersesCard() {
     // A warm-tinted "hero" card, not a plain white one — the one thing on Home actually
     // worth memorizing right now, so it gets more visual weight than everything below it
     // (see ReviewNeededCard.tsx, which deliberately stays plain/secondary by comparison).
-    <div
-      className={`flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none ${currentDay || restingUntilTomorrow ? "flex-1" : ""}`}
-    >
+    <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
       <div className="flex items-center gap-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
           <BookOpen size={16} />
@@ -96,14 +101,26 @@ export function TodayVersesCard() {
           ) : (
             <p className="text-sm text-ink-muted">Completed today.</p>
           )}
-          <div className="flex flex-1 items-end justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-ink-muted">
               <MoonStar size={13} className="mr-1 inline -translate-y-px text-brand-400 dark:text-brand-600" />
               Come back tomorrow for more.
             </p>
-            <Button href={pathHref(activePathKey, plan.version)} className="self-start">
-              Go to your path
-            </Button>
+            {/* flex-wrap on the row above matters together with Button.tsx's own shrink-0 (so
+                a button's own label never gets squeezed into a multi-line stack — see its own
+                doc comment): this row's total content can genuinely exceed a narrow viewport's
+                width now that neither button will shrink, so flex-wrap is what lets the button
+                group drop to its own line below the caption in that case instead of overflowing
+                the card. */}
+            <div className="flex shrink-0 items-center gap-2">
+              {lastCompletedDay.kind === "learn" && (
+                <Button href={practiceHref(activePathKey, lastCompletedDay.dayNumber)} variant="secondary">
+                  <RotateCcw size={14} className="mr-1 inline -translate-y-px" />
+                  Review
+                </Button>
+              )}
+              <Button href={pathHref(activePathKey, plan.version)}>Go to your path</Button>
+            </div>
           </div>
         </>
       ) : restingUntilTomorrow ? (

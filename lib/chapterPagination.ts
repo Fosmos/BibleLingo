@@ -1,7 +1,6 @@
 import type { VerseSegment } from "@/types";
-import { tokenizeVerseWords } from "@/lib/verseWords";
-import { wrapWordsIntoLines } from "@/lib/textMeasurement";
-import { rawTokensOf, buildRun, appendVerseToRun, type TokenRun } from "@/lib/verseTokenRun";
+import { wrapWordsIntoLines, verseNumberDecorationPx } from "@/lib/textMeasurement";
+import { parseSenseLines, clauseColumnWidthPx, type SenseLineClause } from "@/lib/senseLines";
 import type { PericopeSegment } from "@/lib/pathZones";
 import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
 import type { PageBudget } from "@/lib/pageBudget";
@@ -10,161 +9,112 @@ export interface ChapterPage {
   segments: PericopeSegment[];
 }
 
-const HEADING_HEIGHT_PX = 40; // ParchmentHeadingCaption.tsx's real height (`py-3` + `text-xs`), fixed regardless of font size
-const SEGMENT_GAP_PX = 12; // ChapterPageContent.tsx's own `gap-3` between sibling segment divs.
-
-// How many real wrapped lines a token run takes — the same greedy wrap the browser renders,
-// against real measured glyph widths (see lib/textMeasurement.ts and lib/verseTokenRun.ts).
-function lineCountOf(run: TokenRun, columnWidthPx: number): number {
-  return wrapWordsIntoLines(run.tokens, columnWidthPx, FIXED_PARCHMENT_FONT_PX, run.extraLeadingPx).length;
+// One verse's own sense-line clauses, pre-measured against the real column width each one gets
+// — see lib/senseLines.ts's clauseColumnWidthPx. Every clause is its own forced line break (no
+// more sharing a line with whatever came before it, the way plain paragraph flow used to), so a
+// verse's own real line cost is just the sum of these, no marginal "how many lines did this ADD
+// on top of what's already there" bookkeeping needed.
+interface MeasuredClause extends SenseLineClause {
+  lines: number;
 }
 
-// A piece's own verses render as ONE continuously flowing `<p>` — a verse can share its opening
-// line with the previous verse's trailing words instead of always starting fresh — so its real
-// cost is the MARGINAL lines it adds on top of `precedingRun` already placed ahead of it, not
-// its line count in isolation (summing standalone counts overcounted by up to a line per verse).
-function linesAdded(precedingRun: TokenRun, verse: VerseSegment, columnWidthPx: number): number {
-  const combined = appendVerseToRun(precedingRun, verse, FIXED_PARCHMENT_FONT_PX);
-  return lineCountOf(combined, columnWidthPx) - lineCountOf(precedingRun, columnWidthPx);
+function measureClauses(verse: VerseSegment, columnWidthPx: number): MeasuredClause[] {
+  const clauses = parseSenseLines(verse.text);
+  return clauses.map((clause, index) => {
+    const words = clause.text.split(/\s+/).filter((word) => word.length > 0);
+    // Only the verse's own FIRST clause pays for its number badge — every later clause of the
+    // same verse is a plain continuation, same as ChapterVerseRun.tsx's own rule. A
+    // continuation fragment (verse.wordOffset set — this verse is the second half of an
+    // earlier page-break split) never pays it at all; its own number already showed before it.
+    const extraLeadingPx = index === 0 && !verse.wordOffset ? verseNumberDecorationPx(verse.verseNumber, FIXED_PARCHMENT_FONT_PX) : 0;
+    const extra = words.map((_, wordIndex) => (wordIndex === 0 ? extraLeadingPx : 0));
+    const width = clauseColumnWidthPx(columnWidthPx);
+    const lines = wrapWordsIntoLines(words, width, FIXED_PARCHMENT_FONT_PX, extra).length;
+    return { ...clause, lines };
+  });
 }
 
-// Splits `verse`'s own `text` at a raw whitespace-token boundary, chosen so the FIRST fragment
-// adds EXACTLY `roomLines` more real wrapped lines on top of `precedingRun` (see linesAdded
-// above — a verse mid-piece can start partway through an already-shared line). Always leaves at
-// least one raw token for the second fragment. Its own `wordOffset` re-tokenizes everything
-// before the split with the SCORING tokenizer so it lines up exactly despite any punctuation-only
-// token tokenizeVerseWords drops. Never called on a verse with fewer than 2 raw tokens.
-function splitVerseAtLineBudget(verse: VerseSegment, roomLines: number, columnWidthPx: number, precedingRun: TokenRun): [VerseSegment, VerseSegment] {
-  const combined = appendVerseToRun(precedingRun, verse, FIXED_PARCHMENT_FONT_PX);
-  const combinedLines = wrapWordsIntoLines(combined.tokens, columnWidthPx, FIXED_PARCHMENT_FONT_PX, combined.extraLeadingPx);
-  const baseLines = lineCountOf(precedingRun, columnWidthPx);
-  const wordsThroughBudget = combinedLines.slice(0, baseLines + roomLines).reduce((sum, count) => sum + count, 0);
-  const rawTokens = rawTokensOf(verse);
-  const rawIndex = Math.max(1, Math.min(wordsThroughBudget - precedingRun.tokens.length, rawTokens.length - 1));
-  const firstText = rawTokens.slice(0, rawIndex).join(" ");
-  const secondText = rawTokens.slice(rawIndex).join(" ");
-  const wordOffset = (verse.wordOffset ?? 0) + tokenizeVerseWords(firstText).length;
-  return [
-    { ...verse, text: firstText },
-    { ...verse, text: secondText, wordOffset },
-  ];
+function totalLines(clauses: MeasuredClause[]): number {
+  return clauses.reduce((sum, clause) => sum + clause.lines, 0);
 }
 
-// Groups pericope segments (see lib/pathZones.ts's versesByPericopeSegment) into pages, packed
-// one VERSE at a time against the page's own real LINE budget (see lib/pageBudget.ts). A short
-// pericope with room left pulls in the NEXT one's verses (new heading and all). A verse that
-// doesn't fit the room left — even a whole EMPTY page's worth — SPLITS across the page break
-// (see splitVerseAtLineBudget and VerseSegment's own `wordOffset`) rather than bumping whole to
-// the next page. A heading and a same-page segment transition each pay their own real pixel cost
-// (see HEADING_HEIGHT_PX/SEGMENT_GAP_PX above), not a flat line each.
+// Up to this many verses share one page — never more, and a verse is never split across two
+// pages to make room for it (see paginateSegments below): a page holding fewer than 3 whole
+// verses because the next one wouldn't fit the line budget is the deliberate trade-off, not a
+// verse fractured mid-clause.
+const MAX_VERSES_PER_PAGE = 3;
+
+// Packs each segment's own verses onto pages of up to MAX_VERSES_PER_PAGE, never splitting a
+// single verse across two pages — a verse that doesn't fit what's left of the current page (or
+// the whole empty budget, for one long enough on its own) simply opens the next page instead of
+// being fractured mid-clause. ChapterReadingView.tsx shows the pericope title OUTSIDE the card,
+// persisting across every page a pericope's verses span, so there's no "does this page open a
+// new pericope" bookkeeping here — every page just carries its own segment's real heading/label
+// unconditionally.
 export function paginateSegments(segments: PericopeSegment[], pageBudget: PageBudget): ChapterPage[] {
   const { linesPerPage, columnWidthPx } = pageBudget;
-  const lineHeightPx = FIXED_PARCHMENT_FONT_PX * 2; // Tailwind's `leading-loose`, as in pageBudget.ts
   const pages: ChapterPage[] = [];
-  let current: PericopeSegment[] = [];
-  let currentLines = 0;
-
-  function flushPage() {
-    if (current.length > 0) {
-      pages.push({ segments: current });
-      current = [];
-    }
-    // Reset unconditionally: a heading/gap's own cost can raise `currentLines` before anything
-    // real lands in `current`, and the splitting loop below needs flushPage() to always progress.
-    currentLines = 0;
-  }
 
   for (const segment of segments) {
-    let piece: VerseSegment[] = [];
     let pieceIndex = 0;
-    let headingUsed = false;
+    let currentVerses: VerseSegment[] = [];
+    let currentLines = 0;
 
-    function flushPiece() {
-      if (piece.length === 0) return;
-      current.push({
-        ...segment,
-        key: `${segment.key}-p${pieceIndex++}`,
-        heading: headingUsed ? "" : segment.heading,
-        label: headingUsed ? "" : segment.label,
-        startVerse: piece[0].verseNumber,
-        endVerse: piece[piece.length - 1].verseNumber,
-        verses: piece,
+    function flush() {
+      if (currentVerses.length === 0) return;
+      pages.push({
+        segments: [
+          {
+            ...segment,
+            key: `${segment.key}-p${pieceIndex++}`,
+            startVerse: currentVerses[0].verseNumber,
+            endVerse: currentVerses[currentVerses.length - 1].verseNumber,
+            verses: currentVerses,
+          },
+        ],
       });
-      headingUsed = true;
-      piece = [];
+      currentVerses = [];
+      currentLines = 0;
     }
 
-    if (currentLines > 0) {
-      const gapLines = SEGMENT_GAP_PX / lineHeightPx;
-      if (currentLines + gapLines > linesPerPage) flushPage();
-      else currentLines += gapLines;
+    for (const verse of segment.verses) {
+      const measured = measureClauses(verse, columnWidthPx);
+      if (measured.length === 0) continue; // empty/whitespace-only verse — nothing to place.
+      const verseLines = totalLines(measured);
+      const atCountLimit = currentVerses.length >= MAX_VERSES_PER_PAGE;
+      // Only counts against a page that already holds something — a lone verse longer than the
+      // whole budget still gets its own page rather than looping forever trying to fit it.
+      const wouldOverflow = currentVerses.length > 0 && currentLines + verseLines > linesPerPage;
+      if (atCountLimit || wouldOverflow) flush();
+      currentVerses.push(verse);
+      currentLines += verseLines;
     }
-
-    if (segment.heading) {
-      const headingLines = HEADING_HEIGHT_PX / lineHeightPx;
-      if (currentLines > 0 && currentLines + headingLines > linesPerPage) flushPage();
-      currentLines += headingLines;
-    }
-
-    for (const startingVerse of segment.verses) {
-      let remaining: VerseSegment | undefined = startingVerse;
-      // Hard circuit breaker on top of the (proven-terminating) logic below — a page never needs
-      // more passes than this to place one verse.
-      let guard = 1000;
-      while (remaining && guard-- > 0) {
-        const precedingRun = buildRun(piece, FIXED_PARCHMENT_FONT_PX);
-        const linesForVerse = linesAdded(precedingRun, remaining, columnWidthPx);
-        // Floored: text only ever renders in whole lines, so a fractional remainder left over
-        // from a heading/gap's own real cost can't hold part of another wrapped line.
-        const roomLines = Math.floor(linesPerPage - currentLines);
-        if (linesForVerse <= roomLines) {
-          piece.push(remaining);
-          currentLines += linesForVerse;
-          remaining = undefined;
-          continue;
-        }
-        if (roomLines <= 0) {
-          // Nothing left on this page — move to a fresh one and re-check the same verse there.
-          flushPiece();
-          flushPage();
-          continue;
-        }
-        // Doesn't fit, but there's SOME room left — split right here rather than bumping the
-        // whole verse to the next page (a verse under 2 raw tokens can't usefully divide, so it
-        // just moves on whole instead).
-        if (rawTokensOf(remaining).length < 2) {
-          flushPiece();
-          flushPage();
-          continue;
-        }
-        const [firstPart, secondPart] = splitVerseAtLineBudget(remaining, roomLines, columnWidthPx, precedingRun);
-        piece.push(firstPart);
-        currentLines += roomLines;
-        flushPiece();
-        flushPage();
-        remaining = secondPart;
-      }
-      // The guard tripped (shouldn't happen) — place whatever's left whole rather than silently
-      // dropping it, same last-resort the old, pre-splitting code always fell back to.
-      if (remaining) {
-        const precedingRun = buildRun(piece, FIXED_PARCHMENT_FONT_PX);
-        currentLines += linesAdded(precedingRun, remaining, columnWidthPx);
-        piece.push(remaining);
-      }
-    }
-    flushPiece();
+    flush();
   }
-  flushPage();
   return pages.length > 0 ? pages : [{ segments: [] }];
 }
 
-// Which page a given verse number lands on — opens the book to today's page, not page 1.
-export function pageIndexForVerse(pages: ChapterPage[], verseNumber: number): number {
+// Which page a given verse number lands on — opens the book to today's page, not page 1. A
+// verse is never split across pages (see paginateSegments above), so each verse number lands on
+// exactly one page; `activeWordIndex` is accepted only to keep this call shape compatible with
+// every caller still passing it from the earlier mid-verse-split design, and is otherwise unused.
+export function pageIndexForVerse(pages: ChapterPage[], verseNumber: number, activeWordIndex?: number): number {
+  let bestIndex = -1;
+  let bestOffset = -1;
   for (let index = 0; index < pages.length; index++) {
     for (const segment of pages[index].segments) {
-      if (segment.verses.some((verse) => verse.verseNumber === verseNumber)) return index;
+      for (const verse of segment.verses) {
+        if (verse.verseNumber !== verseNumber) continue;
+        if (activeWordIndex === undefined) return index;
+        const offset = verse.wordOffset ?? 0;
+        if (offset <= activeWordIndex && offset > bestOffset) {
+          bestOffset = offset;
+          bestIndex = index;
+        }
+      }
     }
   }
+  if (bestIndex >= 0) return bestIndex;
   return 0;
 }
 

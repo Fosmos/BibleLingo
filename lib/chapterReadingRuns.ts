@@ -34,9 +34,14 @@ export type RunState = "completed" | "today" | "future";
 // necessarily uniform across the whole run, never per-verse. Every state renders inline in
 // the same flowing paragraph (see ChapterVerseRun.tsx) — "today" gets its own inline
 // highlight and number color, never a separate boxed-out block, so a verse's own position on
-// the page never shifts depending on which state it happens to be in today.
+// the page never shifts depending on which state it happens to be in today. Completion is
+// checked BEFORE today-ness: today's own lesson still reads as "today" (gold) while it's
+// still to do, but the moment it's actually finished — completedDays bumps immediately on
+// completion, same real calendar day or not (see lib/dayRollover.ts) — it flips straight to
+// "completed" (green) rather than staying gold until a calendar day boundary passes.
 export function runState(run: DayRun, completedDays: number, todaysVerseNumbers: Set<number>): RunState {
   if (run.dayNumber === undefined) return "future";
+  if (run.dayNumber <= completedDays) return "completed";
   if (todaysVerseNumbers.has(run.verses[0].verseNumber)) return "today";
-  return run.dayNumber <= completedDays ? "completed" : "future";
+  return "future";
 }

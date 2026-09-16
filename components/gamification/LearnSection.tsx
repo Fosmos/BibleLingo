@@ -13,9 +13,9 @@ import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlig
 import { useLearnSteps } from "@/lib/useLearnSteps";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
+import { LearnCumulativeStage } from "@/components/gamification/LearnCumulativeStage";
+import { LearnSpeakVerseStage } from "@/components/gamification/LearnSpeakVerseStage";
 import { LessonChrome } from "@/components/gamification/LessonChrome";
-import { ReviewChain } from "@/components/drills/ReviewChain";
-import { SpeakRep } from "@/components/drills/SpeakRep";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 interface LearnSectionProps {
@@ -113,48 +113,42 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
     else celebrate(() => setStepIndex(next));
   }
 
-  const topBar = <LessonChrome label={label} version={version} current={stepIndex + 1} total={steps.length} onExit={onExit} layout={layout} />;
+  const topBar = (
+    <LessonChrome
+      label={label}
+      version={version}
+      current={stepIndex + 1}
+      total={steps.length}
+      onExit={onExit}
+      layout={layout}
+    />
+  );
 
   if (step.phase === "speak_verse") {
-    // Just the one verse this stage follows — spoken aloud from memory on its own, not folded
-    // into everything learned so far (that's ReviewSection's job). Same mechanic ChapterReviewStage's
-    // own "Recite it all" stage uses. firstLettersOnMistake keeps a miss from handing back the
-    // answer it's testing. contextVerses/heading windowed like every per-verse stage below.
-    const verseForStage = day.newVerses[step.verseIndex ?? day.newVerses.length - 1];
-    const speakWindow = paginateVerseWindow(contextVerses, heading, verseForStage.id, layout.pageBudget);
     return (
-      <>
-        {topBar}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-          <SpeakRep
-            label="Remember"
-            reference={verseForStage.reference}
-            targetText={verseForStage.text}
-            reps={1}
-            verse={verseForStage}
-            contextVerses={speakWindow.verses}
-            layout={layout}
-            firstLettersOnMistake
-            onComplete={() => advance()}
-          />
-        </div>
-      </>
+      <LearnSpeakVerseStage
+        day={day}
+        verseIndex={step.verseIndex}
+        contextVerses={contextVerses}
+        heading={heading}
+        layout={layout}
+        topBar={topBar}
+        onAdvance={advance}
+      />
     );
   }
 
   if (step.phase === "type_cumulative_today") {
-    // The explicit verse list buildSteps already worked out for this exact check — either a
-    // group's own so-far (a split day's per-half interim check) or every real verse learned
-    // today (the split day's own final combine stage, right before Pray) — never
-    // day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this one's.
-    const versesLearnedSoFar = (step.cumulativeVerseIndices ?? []).map((index) => day.newVerses[index]);
+    // Never day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this
+    // one's.
     return (
-      <>
-        {topBar}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-          <ReviewChain verses={versesLearnedSoFar} label="Remember" layout={layout} onComplete={() => advance()} />
-        </div>
-      </>
+      <LearnCumulativeStage
+        day={day}
+        cumulativeVerseIndices={step.cumulativeVerseIndices ?? []}
+        layout={layout}
+        topBar={topBar}
+        onAdvance={advance}
+      />
     );
   }
 

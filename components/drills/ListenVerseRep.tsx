@@ -9,6 +9,7 @@ import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
@@ -23,14 +24,11 @@ interface ListenVerseRepProps {
 
 // Per-verse Listen: this ONE verse narrated aloud (Web Speech API), each word highlighted in
 // real time as it's actually spoken — the automatic FIRST stage of every verse's own drilling
-// sequence (see lib/learnSteps.ts's versePhases), a quick "hear it before you drill it" pass.
-// Distinct from the whole-day Listen that still opens the day as a whole (KineticTextRep.tsx,
-// which reads through EVERY verse learned today in one pass before this one ever starts) — the
-// two are gated by the same kineticTextStageEnabled setting (Profile > Advanced) since they're
-// the same idea at two different scopes. No verseMarkers/context needed, unlike Speak/Type:
-// only ever drills exactly one verse's own text, never a joined multi-verse segment. Not
-// graded, and never auto-advances on its own — same "self-checked" precedent as
-// KineticTextRep/DrawFirstLetterRep.
+// sequence (see lib/learnSteps.ts's versePhases), a quick "hear it before you drill it" pass,
+// gated by kineticTextStageEnabled (Profile > Advanced). No verseMarkers/context needed, unlike
+// Speak/Type: only ever drills exactly one verse's own text, never a joined multi-verse
+// segment. Not graded, and never auto-advances on its own — same "self-checked" precedent as
+// DrawFirstLetterRep.
 export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProps) {
   const sync = useKineticTextSync(verse.text);
 
@@ -53,10 +51,41 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
     </>
   );
 
+  // Same word-by-word state as activeVerseWords above, sliced to just this ONE clause's own
+  // range (see LessonPageCard.tsx's own renderActiveVerse doc comment) — `sync.words` comes
+  // from lib/verseWordOffsets.ts's own speech-sync tokenizer (deliberately NOT
+  // tokenizeVerseWords — see that file's own doc comment), which can very rarely disagree with
+  // tokenizeVerseWords' own word count (a hyphenated word, a bare punctuation-only token) —
+  // this stage is never scored, so a clause boundary landing a word off by one on a verse like
+  // that is a cosmetic nit, not a functional bug.
+  function renderActiveVerseRange(_: VerseSegment, range: SenseLineWordRange) {
+    return (
+      <>
+        {sync.words.slice(range.startIndex, range.endIndex).map((wordOffset, offset) => {
+          const index = range.startIndex + offset;
+          return (
+            <span
+              key={index}
+              className={
+                index === sync.activeWordIndex
+                  ? "rounded bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300"
+                  : index < sync.activeWordIndex
+                    ? "text-ink-muted dark:text-zinc-600"
+                    : ""
+              }
+            >
+              {wordOffset.word}{" "}
+            </span>
+          );
+        })}
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {layout ? (
-        <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={() => activeVerseWords} />
+        <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={renderActiveVerseRange} />
       ) : (
         <LessonParchmentCard>
           <p className="mb-1 flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
@@ -66,7 +95,7 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
         </LessonParchmentCard>
       )}
 
-      <LessonControlBar dockRef={layout?.dockRef}>
+      <LessonControlBar dockRef={layout?.dockRef} verseText={verse.text}>
         {/* No caption row above the card in `layout` mode — unmeasured chrome there pushes the
             page past one viewport (useParchmentFillHeight.ts); the InfoTip rides by Continue. */}
         {sync.isSupported ? (

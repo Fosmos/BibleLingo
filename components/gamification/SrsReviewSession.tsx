@@ -8,7 +8,6 @@ import { formatVerseSpanLabel, applyReferencePreference } from "@/lib/chapterCon
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { isChapterTrackedAsEsv } from "@/lib/esvCacheTracker";
 import { isDue, PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
-import { verseKey } from "@/lib/verseKey";
 import { useCelebration } from "@/lib/useCelebration";
 import { usePericopesReady } from "@/lib/usePericopesReady";
 import { useWholeChapterReadingLayout } from "@/lib/useWholeChapterReadingLayout";
@@ -26,7 +25,6 @@ export function SrsReviewSession() {
   const clearSessionCheckpointsWithPrefix = useProgressStore((state) => state.clearSessionCheckpointsWithPrefix);
   const sessionCheckpoints = useProgressStore((state) => state.sessionCheckpoints);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
-  const versePOA = useProgressStore((state) => state.versePOA);
   const flagProblemVerse = useProgressStore((state) => state.flagProblemVerse);
   const clearProblemVerse = useProgressStore((state) => state.clearProblemVerse);
   const recordWordStumbles = useProgressStore((state) => state.recordWordStumbles);
@@ -124,9 +122,6 @@ export function SrsReviewSession() {
   const displayVerses = applyReferencePreference(verses, includeVerseReferences);
   const label = formatVerseSpanLabel(entity.book, entity.chapter, entity.startVerse, entity.endVerse);
   const sessionKey = `srs:${entity.id}`;
-  // Only a genuinely one-verse entity has one Visualize POA to recall — a merged range spans
-  // multiple verses' worth of scenes, none of which alone represents the whole review.
-  const entityPOA = entity.startVerse === entity.endVerse ? versePOA[verseKey(entity.book, entity.chapter, entity.startVerse)] : undefined;
   const { bodyTopRef, probeContainerRef, pages, fillHeightPx, dayNumberByVerse, todaysVerseNumbers, completedDays, locationTags, iconTags, pegActive } = layout;
 
   function restart() {
@@ -180,10 +175,7 @@ export function SrsReviewSession() {
           key={`${entity.id}-${restartToken}`}
           verses={displayVerses}
           sessionKey={sessionKey}
-          label={label}
           layout={layout}
-          entityPOA={entityPOA}
-          onRestart={restart}
           onVerseAccuracy={handleVerseAccuracy}
           onComplete={(accuracy) => {
             celebrate(() => {

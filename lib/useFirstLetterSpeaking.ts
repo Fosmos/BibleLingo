@@ -29,7 +29,6 @@ export interface FirstLetterSpeaking {
   permissionDenied: boolean;
   start: () => void;
   stop: () => void;
-  peekHint: () => void;
 }
 
 function normalizeWord(word: string): string {
@@ -65,19 +64,18 @@ function countMatchedPrefix(transcriptWords: string[], expected: string[]): numb
 // The speech-driven counterpart to lib/useFirstLetterTyping.ts, used by SRS review's own
 // speak-mode toggle (see SrsEntityRecall.tsx) — same progressive reveal-by-word UX as typing,
 // but triggered by actually SAYING each word instead of tapping its first letter. Live reveal
-// (wordIndex, driven by countMatchedPrefix above and the reader's own optional peekHint taps)
-// is best-effort and forgiving — real-time speech recognition is far noisier than a keystroke,
-// so it only ever drives what's shown WHILE the reader is speaking, never the actual score.
-// Final accuracy instead comes from lib/textMatch.ts's diffAttempt — the same LCS word-
-// alignment SpeakRep.tsx already relies on — run once against the finished transcript, so one
-// dropped or misheard word only ever costs that one word rather than throwing off everything
-// said after it. Listening auto-stops (and scores) the instant every word's been heard, so a
-// clean recitation never needs a manual "Done" tap at all.
+// (wordIndex, driven by countMatchedPrefix above) is best-effort and forgiving — real-time
+// speech recognition is far noisier than a keystroke, so it only ever drives what's shown
+// WHILE the reader is speaking, never the actual score. Final accuracy instead comes from
+// lib/textMatch.ts's diffAttempt — the same LCS word-alignment SpeakRep.tsx already relies on
+// — run once against the finished transcript, so one dropped or misheard word only ever costs
+// that one word rather than throwing off everything said after it. Listening auto-stops (and
+// scores) the instant every word's been heard, so a clean recitation never needs a manual
+// "Done" tap at all.
 export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVerseAccuracy }: UseFirstLetterSpeakingOptions): FirstLetterSpeaking {
   const words = tokenizeVerseWords(verse.text);
   const normalizedExpected = words.map(normalizeWord);
   const [liveMatched, setLiveMatched] = useState(0);
-  const [peeked, setPeeked] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -90,7 +88,7 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     };
   }, []);
 
-  const wordIndex = Math.min(Math.max(liveMatched, peeked), words.length);
+  const wordIndex = Math.min(liveMatched, words.length);
   const currentVerseNumber = verseNumberAtWordIndex(verseMarkers, wordIndex, verse.verseNumber);
 
   function finalize(finalTranscript: string) {
@@ -102,15 +100,7 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     diffVerse.forEach((token, index) => {
       if (!token.correct) wrongWordIndices.add(index);
     });
-    // A peeked word costs the same as a genuine miss even if the reader went on to say it
-    // correctly too — same "never free" rule lib/useFirstLetterTyping.ts's own peekHint
-    // follows, so switching to speak mode can't turn the escape valve into a shortcut.
-    const hintedWordIndices = new Set<number>();
-    for (let index = 0; index < peeked; index++) {
-      wrongWordIndices.add(index);
-      hintedWordIndices.add(index);
-    }
-    onVerseAccuracy?.(computeVerseAccuracies(words, verseMarkers, verse.verseNumber, wrongWordIndices, hintedWordIndices));
+    onVerseAccuracy?.(computeVerseAccuracies(words, verseMarkers, verse.verseNumber, wrongWordIndices));
     const accuracy = words.length > 0 ? Math.round(((words.length - wrongWordIndices.size) / words.length) * 100) : 100;
     onComplete(wrongWordIndices.size > 0, accuracy);
   }
@@ -119,8 +109,8 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     stopRef.current?.();
   }
 
-  // Every word heard (live-matched or peeked) — stop listening and score right away instead
-  // of waiting for a manual tap, which a reader who recited cleanly would never think to make.
+  // Every word heard — stop listening and score right away instead of waiting for a manual
+  // tap, which a reader who recited cleanly would never think to make.
   useEffect(() => {
     if (isListening && wordIndex >= words.length && words.length > 0) stop();
   }, [isListening, wordIndex, words.length]);
@@ -128,7 +118,6 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
   function start() {
     finishedRef.current = false;
     setLiveMatched(0);
-    setPeeked(0);
     setLiveTranscript("");
 
     requestMicPermission().then((perm) => {
@@ -163,10 +152,6 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     });
   }
 
-  function peekHint() {
-    setPeeked((prev) => Math.min(prev + 1, words.length));
-  }
-
   return {
     words,
     wordIndex,
@@ -179,6 +164,5 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     permissionDenied,
     start,
     stop,
-    peekHint,
   };
 }

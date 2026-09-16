@@ -12,6 +12,7 @@ interface PhaseOption {
 
 const OPTIONS: PhaseOption[] = [
   { phase: "daily", label: "Just memorized it", description: "Start it fresh in Box 1 — review daily at first, like any new verse." },
+  { phase: "every3days", label: "Know it a little", description: "Skip ahead to Box 2 — review every 3 days at first." },
   { phase: "weekly", label: "Know it fairly well", description: "Skip ahead to Box 3 — the weekly review rotation." },
   { phase: "biweekly", label: "Know it well", description: "Skip ahead to Box 4 — the biweekly review rotation." },
   { phase: "monthly", label: "Know it solidly", description: "Skip ahead to Box 5 — the monthly review rotation." },

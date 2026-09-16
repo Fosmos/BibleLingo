@@ -100,6 +100,13 @@ export interface PathProgress {
   // time, right alongside locationTagLevels (see LocationTagLevelPicker.tsx). Undefined means
   // off, same "never asked/older path" convention as locationTagLevels.
   sectionEndPegEnabled?: boolean;
+  // How many of this path's own verses (array position, not a verse NUMBER — see
+  // lib/dayPlan.ts's buildDayPlan) the reader already claimed to know at path-creation time
+  // (GuidedPathFlow.tsx's "I've already learned some of this" step) — excluded from lesson
+  // chunking entirely, so day 1 starts exactly at the next verse after them instead of
+  // wherever the fixed versesPerDay grid would otherwise land. Undefined/0 for the ordinary
+  // "starting from scratch" case. Set once at creation; never changes afterward.
+  priorKnownVerseCount?: number;
   // ISO timestamp of the last time completeDay bumped this path's completedDays — the gate
   // behind lib/dayRollover.ts's activeDayNumber: a lesson finished today shouldn't reveal
   // tomorrow's as "today's active lesson" until an actual calendar day boundary passes, even
@@ -231,8 +238,7 @@ export interface UserProgress {
   buildingViewEnabled: boolean;
   // The reader's own Who/Action/scene for a verse (see VersePOA above), keyed by
   // lib/verseKey.ts's verseKey — shown as that verse's DayCircle icon (alongside its room
-  // item) and recalled later as the first, gentlest level of VerseRevealHelp's hint sequence
-  // (the scene, then first letters, then the full word).
+  // item).
   versePOA: Record<string, VersePOA>;
   // The reader's own free-text location tags, keyed by lib/locationTags.ts's locationTagKey —
   // one flat map covering every scope (book/chapter/pericope/verse), no predefined
@@ -328,26 +334,26 @@ export interface UserProgress {
   // Rhythm itself is off — see rhythmStageEnabled) to the Speak (first-letter hint) stage for
   // every verse that day.
   writeFirstLetterStageEnabled: boolean;
-  // Whether each verse's "Fill in the Blank" stage (the word-bank tap exercise — see
-  // FillInTheBlankRep) runs during Learn, right before the Speak hint. Off skips straight to
-  // the Speak hint (from Rhythm, or from Write First Letter if that's on) for every verse
-  // that day.
+  // Whether each verse's Fill in the Blank pair (the word-bank tap exercise — see
+  // FillInTheBlankRep — and the type-the-first-letter exercise right after it — see
+  // FirstLetterBlankRep, both run twice: about half the verse blanked, then all of it) runs
+  // during Learn, before the Speak hint. Off skips straight to the Speak hint (from Rhythm, or
+  // from Write First Letter if that's on) for every verse that day.
   fillInTheBlankStageEnabled: boolean;
   // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
   // Learn — OPTIONAL, defaulting off: Listen (kineticTextStageEnabled below) is the default
-  // whole-day introduction to a fresh verse now, and Rhythm is the deliberate, opt-in
-  // alternative/addition for a reader who still wants that per-verse tap-through pacing too.
+  // introduction to a fresh verse now, and Rhythm is the deliberate, opt-in alternative/
+  // addition for a reader who still wants that per-verse tap-through pacing too.
   // Off skips straight from Visualize to Write First Letter (or the Speak hint, if that's also
   // off) for every verse that day — the same "just don't insert the step" convention every
   // other optional stage here follows.
   rhythmStageEnabled: boolean;
-  // Whether a Learn day's "Listen" stage (the whole day's text narrated aloud via the Web
-  // Speech API, each word highlighted in real time as it's spoken — see KineticTextRep) runs
-  // at all. Sits right after Visualize (orientation_summary), before the first verse's own
-  // per-verse stages — the DEFAULT introduction to a fresh verse (see rhythmStageEnabled
-  // above, its own now-optional counterpart). Off skips straight to whichever per-verse stage
-  // is first, same "just don't insert the step" convention every other optional whole-day
-  // stage here follows.
+  // Whether each verse's own "Listen" stage (that ONE verse narrated aloud via the Web Speech
+  // API, each word highlighted in real time as it's spoken — see ListenVerseRep) runs at all.
+  // Opens every verse's own per-verse ladder — the DEFAULT introduction to a fresh verse (see
+  // rhythmStageEnabled above, its own now-optional counterpart). Off skips straight to
+  // whichever per-verse stage is next, same "just don't insert the step" convention every
+  // other optional stage here follows.
   kineticTextStageEnabled: boolean;
   // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
   // set (the default — every day behaves as it always has). On that calendar day: a lapse in

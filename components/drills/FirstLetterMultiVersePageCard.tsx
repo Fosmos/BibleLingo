@@ -38,8 +38,14 @@ export function FirstLetterMultiVersePageCard({ layout, verses, revealedCount, c
     return offsets;
   }, [verseWords]);
   const verseIds = useMemo(() => new Set(verses.map((verse) => verse.id)), [verses]);
-  const activeVerse = verses.find((verse) => verse.verseNumber === currentVerseNumber) ?? verses[0];
+  const activeVerseIndex = verses.findIndex((verse) => verse.verseNumber === currentVerseNumber);
+  const activeVerse = (activeVerseIndex >= 0 ? verses[activeVerseIndex] : undefined) ?? verses[0];
   if (!activeVerse) return null;
+  // How far into `activeVerse` ITSELF (not the whole combined entity) recall currently is —
+  // disambiguates which page a verse split across the page break should open to (see
+  // lib/chapterPagination.ts's pageIndexForVerse), the same way FirstLetterTypeRep.tsx's own
+  // single-verse Learn-flow case does.
+  const activeWordIndex = Math.max(revealedCount - (verseWordOffsets[activeVerseIndex] ?? 0), 0);
 
   // A verse's own number appears once every word BEFORE it has been revealed — i.e. the reader
   // has just recalled the last word of the previous verse. The entity's first verse (offset 0)
@@ -53,17 +59,23 @@ export function FirstLetterMultiVersePageCard({ layout, verses, revealedCount, c
     <LessonPageCard
       layout={layout}
       activeVerse={activeVerse}
+      activeWordIndex={activeWordIndex}
       isActive={(verse) => verseIds.has(verse.id)}
-      renderActiveVerse={(verse) => {
+      renderActiveVerse={(verse, range) => {
         // `verse` here is whatever this real PAGE actually holds — the whole verse, or (see
         // lib/chapterPagination.ts) just one fragment of it, if it was split across the page
         // break. Tokenizing `verse.text` directly (not re-deriving from the entity's own full
         // verse) renders only the words this fragment actually holds; its own `wordOffset`
         // (0 for a whole verse or the first fragment) shifts the combined-entity offset past
-        // whatever words of this SAME verse already showed on the page before it.
+        // whatever words of this SAME verse already showed on the page before it. Sliced down
+        // to just THIS clause's own [range.startIndex, range.endIndex) — called once per
+        // clause now (see LessonPageCard.tsx's own renderActiveVerse doc comment) — so a
+        // multi-clause verse still renders through the same hanging-indent line structure a
+        // non-active verse gets, not one dense merged block.
         const verseIndex = verses.findIndex((candidate) => candidate.id === verse.id);
         const fragmentOffset = (verseWordOffsets[verseIndex] ?? 0) + (verse.wordOffset ?? 0);
-        return <FirstLetterVerseWords words={tokenizeVerseWords(verse.text)} offset={fragmentOffset} revealedCount={revealedCount} />;
+        const words = tokenizeVerseWords(verse.text).slice(range.startIndex, range.endIndex);
+        return <FirstLetterVerseWords words={words} offset={fragmentOffset + range.startIndex} revealedCount={revealedCount} />;
       }}
       allowManualFlip
       isVerseNumberVisible={isVerseNumberVisible}

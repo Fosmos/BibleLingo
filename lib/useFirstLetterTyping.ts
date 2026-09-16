@@ -16,6 +16,14 @@ interface UseFirstLetterTypingOptions {
   sessionKey?: string;
   verseMarkers?: Record<number, number>;
   restartOnMistake: boolean;
+  // The Learn flow's own "gentle" mode (first time meeting this verse, not yet a real review)
+  // — a mistake never makes a sound and never interrupts the pass (overrides restartOnMistake:
+  // a mistake always just retries the same word, the same as restartOnMistake off), but a pass
+  // that had ANY mistake in it doesn't count as this rep at all — it silently resets to word 1
+  // and runs again, as many times as it takes, until one full pass comes back clean. Off (every
+  // other caller — SRS review, Mastery-adjacent reps) keeps the plain existing behavior: a
+  // mistake sounds and costs accuracy, `reps` completes regardless of how clean any one of them was.
+  requirePerfectPass?: boolean;
   onComplete: (hadMistake: boolean, accuracy: number) => void;
   onVerseAccuracy?: (results: VerseAccuracy[]) => void;
 }
@@ -28,6 +36,10 @@ export interface FirstLetterTyping {
   revealedWords: string[];
   letterInput: string;
   showError: boolean;
+  // Set ONLY by the deliberate "Peek Hint" escape valve below, never by a genuine wrong
+  // keystroke — a real mistake never reveals the letter (see FirstLetterTypingControls.tsx),
+  // so this is how it tells the two apart: showError alone (this null) means "try again," no
+  // letter shown; showError with this set means "here's the letter you asked for."
   wrongLetterExpected: string | null;
   currentWord: string | undefined;
   referenceMatch: RegExpMatchArray | null;
@@ -37,7 +49,6 @@ export interface FirstLetterTyping {
   revealCurrentWord: () => void;
   recordMistake: () => void;
   peekHint: () => void;
-  markHintUsed: () => void;
   reportComplete: () => void;
 }
 
@@ -52,6 +63,7 @@ export function useFirstLetterTyping({
   sessionKey,
   verseMarkers,
   restartOnMistake,
+  requirePerfectPass = false,
   onComplete,
   onVerseAccuracy,
 }: UseFirstLetterTypingOptions): FirstLetterTyping {
@@ -99,6 +111,14 @@ export function useFirstLetterTyping({
     setLetterInput("");
     const nextWordIndex = wordIndex + 1;
     if (nextWordIndex >= words.length) {
+      // requirePerfectPass: a pass that picked up any mistake along the way doesn't count as
+      // a real rep at all — silently back to word 1, mistakes cleared, and try the whole verse
+      // again. Only a genuinely clean pass (wrongWordIndices still empty here) advances.
+      if (requirePerfectPass && wrongWordIndices.size > 0) {
+        setWrongWordIndices(new Set());
+        setWordIndex(0);
+        return;
+      }
       const nextRep = completedReps + 1;
       if (nextRep >= reps) {
         reportComplete();
@@ -112,11 +132,12 @@ export function useFirstLetterTyping({
   }
 
   // A mistake restarts this rep's verse reveal from word 1 rather than just retrying it
-  // (unless restartOnMistake is off — see FirstLetterTypeRep's own prop doc).
+  // (unless restartOnMistake is off, or requirePerfectPass is on — see FirstLetterTypeRep's
+  // own prop doc — either way it just retries the same word instead).
   function recordMistake() {
     hadMistakeRef.current = true;
     setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-    if (restartOnMistake) setWordIndex(0);
+    if (restartOnMistake && !requirePerfectPass) setWordIndex(0);
   }
 
   // The low-priority "Peek Hint" escape valve (see FirstLetterTypeRep's `allowPeekHint`) —
@@ -133,15 +154,6 @@ export function useFirstLetterTyping({
     setHintedWordIndices((prev) => new Set(prev).add(wordIndex));
   }
 
-  // MistakeLetterHint's own "Reveal letter" tap (autoRevealLetterOnMistake off — SRS review
-  // only) — the word's already in wrongWordIndices from the mistake that triggered the hint in
-  // the first place, so this only adds to hintedWordIndices, never a second time to
-  // wrongWordIndices (see MistakeLetterHint.tsx's own doc comment on why that's not a second
-  // penalty).
-  function markHintUsed() {
-    setHintedWordIndices((prev) => new Set(prev).add(wordIndex));
-  }
-
   function handleLetterChange(value: string) {
     if (!currentWord) return;
     const expected = firstWordCharacter(currentWord)?.toLowerCase();
@@ -151,9 +163,8 @@ export function useFirstLetterTyping({
       playCorrectSfx();
       revealCurrentWord();
     } else if (typed) {
-      playIncorrectSfx();
+      if (!requirePerfectPass) playIncorrectSfx();
       setShowError(true);
-      setWrongLetterExpected(firstWordCharacter(currentWord) ?? "");
       setLetterInput("");
       recordMistake();
     }
@@ -173,7 +184,6 @@ export function useFirstLetterTyping({
     revealCurrentWord,
     recordMistake,
     peekHint,
-    markHintUsed,
     reportComplete,
   };
 }

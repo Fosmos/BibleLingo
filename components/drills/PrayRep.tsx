@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
-import { tokenizeVerseWords } from "@/lib/verseWords";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import { playCorrectSfx } from "@/lib/audio";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
-import { sliceWordAnnotations } from "@/lib/verseHighlights";
-import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
+import { AnnotatedVerseWordRange } from "@/components/drills/AnnotatedVerseWordRange";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
@@ -88,22 +86,12 @@ export function PrayRep({ verses, verseOffsets, wordAnnotations, onComplete, dur
       <LessonWholeDayPageCard
         layout={layout}
         verses={verses}
-        renderActiveVerse={(verse, verseIndex) => {
-          const words = tokenizeVerseWords(verse.text);
-          const sliced = sliceWordAnnotations(wordAnnotations, verseOffsets[verseIndex] ?? 0, words.length);
-          return (
-            <>
-              {words.map((word, index) => (
-                <span key={index}>
-                  <AnnotatedVerseWord word={word} annotation={sliced[index]} />{" "}
-                </span>
-              ))}
-            </>
-          );
-        }}
+        renderActiveVerse={(verse, verseIndex, range) => (
+          <AnnotatedVerseWordRange verse={verse} range={range} wordAnnotations={wordAnnotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
+        )}
       />
 
-      <LessonControlBar dockRef={layout.dockRef}>
+      <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
         <p className="text-center text-xs text-ink-muted">Take {durationLabel} to pray about this — what it means, and how you want to respond.</p>
         <div className="flex flex-col items-center gap-2">
           <span className="text-xl font-semibold tabular-nums text-ink dark:text-zinc-100">

@@ -60,6 +60,16 @@ function buildPericopeInfo(pericopes: Pericope[], index: number, book: string, c
   return { label, heading: covering.heading, book, chapter, startVerse: covering.startVerse, endVerse };
 }
 
+// Every pericope in a chapter, in order — the whole-chapter counterpart to getPericopeForVerse
+// below (ScripturalMindMap.tsx's own Chapter node needs the full list, not just whichever one
+// covers a single verse). Same pure-cache-read contract: [] until ensurePericopesLoaded has
+// resolved at least once for this book/chapter (or if it genuinely has no headings).
+export function getAllPericopesForChapter(book: string, chapter: number): PericopeInfo[] {
+  const pericopes = getCachedPericopes(book, chapter);
+  if (!pericopes) return [];
+  return pericopes.map((_, index) => buildPericopeInfo(pericopes, index, book, chapter));
+}
+
 // Pure cache read — undefined until ensurePericopesLoaded has resolved at least once for this
 // book/chapter (or if that chapter genuinely has no headings).
 export function getPericopeForVerse(book: string, chapter: number, verseNumber: number): PericopeInfo | undefined {

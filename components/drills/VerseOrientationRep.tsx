@@ -5,11 +5,11 @@ import { motion, Reorder } from "framer-motion";
 import type { CustomClauseRole, VerseSegment } from "@/types";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { TAP_SCALE } from "@/lib/motionTokens";
-import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
+import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import { useProgressStore } from "@/store/useProgressStore";
 import { ClauseCard, type ClauseBlock } from "@/components/drills/ClauseCard";
 import { ClauseRolePalette } from "@/components/drills/ClauseRolePalette";
-import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
+import { AnnotatedVerseWordRange } from "@/components/drills/AnnotatedVerseWordRange";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
@@ -132,23 +132,12 @@ export function VerseOrientationRep({ verse, verseMarkers, annotations, onAnnota
       <LessonWholeDayPageCard
         layout={layout}
         verses={verses}
-        renderActiveVerse={(realVerse, verseIndex) => {
-          const localWords = tokenizeVerseWords(realVerse.text);
-          const offset = verseOffsets[verseIndex] ?? 0;
-          const sliced = sliceWordAnnotations(annotations, offset, localWords.length);
-          return (
-            <>
-              {localWords.map((word, index) => (
-                <span key={index}>
-                  <AnnotatedVerseWord word={word} annotation={sliced[index]} />{" "}
-                </span>
-              ))}
-            </>
-          );
-        }}
+        renderActiveVerse={(realVerse, verseIndex, range) => (
+          <AnnotatedVerseWordRange verse={realVerse} range={range} wordAnnotations={annotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
+        )}
       />
 
-      <LessonControlBar dockRef={layout.dockRef}>
+      <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
         <p className="text-center text-xs text-ink-muted">Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.</p>
         <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex w-full flex-col gap-2">
           {orderedBlocks.map((block) => (

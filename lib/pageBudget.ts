@@ -1,4 +1,4 @@
-import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
+import { FIXED_PARCHMENT_FONT_PX, PARCHMENT_LINE_HEIGHT_MULTIPLIER } from "@/lib/parchmentFontRange";
 
 // How many lines of verse text actually fit on one parchment page, and how wide each of those
 // lines is to lay out against — real geometry throughout, no density heuristic. The OLD model
@@ -51,7 +51,7 @@ export interface PageBudget {
 // `fontSizePx` defaults to the one fixed size every parchment renders at (see
 // lib/parchmentFontRange.ts) — every real caller packs for exactly the size it's about to show.
 export function resolvePageBudget(viewportWidthPx: number, availableHeightPx: number, fontSizePx: number = FIXED_PARCHMENT_FONT_PX): PageBudget {
-  const lineHeightPx = fontSizePx * 2; // Tailwind's `leading-loose`
+  const lineHeightPx = fontSizePx * PARCHMENT_LINE_HEIGHT_MULTIPLIER; // ChapterPageContent.tsx's own `leading-[2.3]`
   const columnWidthPx = Math.max(textColumnWidthPx(viewportWidthPx), MIN_COLUMN_WIDTH_PX);
   const textAreaHeightPx = Math.max(availableHeightPx - cardVerticalPaddingPx(viewportWidthPx), 0);
   const linesPerPage = Math.max(MIN_LINES_PER_PAGE, Math.floor(textAreaHeightPx / lineHeightPx));

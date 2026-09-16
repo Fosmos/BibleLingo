@@ -18,7 +18,7 @@ export interface KineticTextSync {
   stop: () => void;
 }
 
-// Drives KineticTextRep's word-by-word highlight off the SAME SpeechSynthesisUtterance that's
+// Drives ListenVerseRep's word-by-word highlight off the SAME SpeechSynthesisUtterance that's
 // actually narrating `text` (see lib/speechSynthesis.ts's speakWithWordBoundaries) — real
 // audio-driven sync, not a timer standing in for one. `text` is tokenized once with its own
 // character offsets (lib/verseWordOffsets.ts), and every `onboundary` event during playback is

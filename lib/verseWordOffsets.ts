@@ -1,4 +1,4 @@
-// KineticTextRep's own word list — deliberately NOT tokenizeVerseWords.ts's tokenization
+// ListenVerseRep's own word list — deliberately NOT tokenizeVerseWords.ts's tokenization
 // (which drops punctuation-only tokens and doesn't track character position at all): a
 // SpeechSynthesisUtterance's onboundary event reports a `charIndex` straight into the exact
 // string handed to it, so highlighting needs a word list whose own offsets are guaranteed to

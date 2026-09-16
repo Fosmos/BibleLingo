@@ -19,16 +19,20 @@ export interface FlatStep {
 export const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 
 // One individual verse's own drilling stages — run once, in order, before moving to the next
-// verse (no repeated rounds). Listen (a per-verse pass, distinct from the whole-day one — see
-// ListenVerseRep.tsx) always opens the sequence when its setting is on, same gate as the
-// whole-day Listen (kineticTextEnabled). Rhythm, Write First Letter (the handwriting canvas),
-// and Fill In The Blank each drop out entirely when their own setting is off — Rhythm defaults
-// off now that Listen is the default introduction to a fresh verse; a reader who wants that
-// per-verse tap-through pacing too opts back into it. Fill In The Blank, when on, sits after
-// the Speak hint and before the fully-blind Type stage — one more rung on the same
-// "progressively less scaffolding" ladder: hear it (Listen) → read it (Rhythm, if on) → hear a
-// first-letter hint while speaking it (Speak hint) → recall whole words with a word bank to
-// lean on (Fill In The Blank) → recall it with no help at all (Type it by first letter).
+// verse (no repeated rounds). Listen (see ListenVerseRep.tsx — this ONE verse narrated aloud)
+// always opens the sequence when its setting (kineticTextEnabled) is on. Rhythm, Write First
+// Letter (the handwriting canvas),
+// and the Fill In The Blank pair each drop out entirely when their own setting is off — Rhythm
+// defaults off now that Listen is the default introduction to a fresh verse; a reader who wants
+// that per-verse tap-through pacing too opts back into it. The Fill In The Blank pair, when on,
+// sits BEFORE the Speak hint and before the fully-blind Type stage — one more rung on the same
+// "progressively less scaffolding" ladder: hear it (Listen) → read it (Rhythm, if on) → recall
+// whole words with a word bank to lean on (Fill In The Blank) → recall words by typing just
+// their first letter, still with most of the verse visible (Fill In The Blank, first letter) →
+// hear a first-letter hint while speaking it (Speak hint) → recall it with no help at all (Type
+// it by first letter). Both Fill In The Blank stages run their own two internal reps (about half
+// the verse blanked, then all of it — see FillInTheBlankRep.tsx/FirstLetterBlankRep.tsx), so
+// together they're four total passes over the verse before Speak even starts.
 function versePhases(
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
@@ -39,8 +43,11 @@ function versePhases(
   if (kineticTextEnabled) phases.push("listen_verse");
   if (rhythmEnabled) phases.push("rhythm");
   if (writeFirstLetterEnabled) phases.push("draw_first_letters");
+  if (fillInTheBlankEnabled) {
+    phases.push("fill_in_the_blank");
+    phases.push("fill_in_the_blank_letters");
+  }
   phases.push("speak_hint");
-  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
   phases.push("type_first_letters");
   return phases;
 }
@@ -100,7 +107,6 @@ export function buildSteps(
   const steps: FlatStep[] = [];
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
-  if (kineticTextEnabled) steps.push({ phase: "kinetic_text" });
   const phases = versePhases(kineticTextEnabled, rhythmEnabled, writeFirstLetterEnabled, fillInTheBlankEnabled);
 
   if (verseIndices.length >= SPLIT_THRESHOLD) {

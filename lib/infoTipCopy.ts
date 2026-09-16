@@ -9,7 +9,9 @@ export const INFO_TIPS = {
   rhythmRep:
     "Every noun and verb in the verse is shown in bold capitals. One word is highlighted at a time — tap the bar below to move to the next word (it plays aloud as you go), bold words included.",
   fillInTheBlankRep:
-    "Two rounds: first with every other word blanked, then with every word blanked. Tap the missing ones, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
+    "Two rounds: first about half the verse is blanked (the meaningful words first), then every word is. Tap the missing ones, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
+  firstLetterBlankRep:
+    "Two rounds: first about half the verse is blanked (the meaningful words first), then every word is. Type each blanked word's own first letter, in order, to reveal it. A wrong letter flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
   drawFirstLetterRep:
     "The whole verse is shown with the current item highlighted — not just words, but punctuation marks and verse-number markers too, each getting their own turn. Draw whatever's current with your finger, Apple Pencil, or mouse; handwriting recognition auto-advances once it detects you've drawn something legible (not auto-graded — it only checks that something was drawn, never whether it's correct). Punctuation and verse numbers auto-reveal on their own with nothing to draw. Either way, Next reveals the real printed item (a word's first letter, or the mark/number itself) in a growing strip under the verse and clears the canvas for what's next — tap it yourself any time if recognition is slow.",
   prayRep:
@@ -18,14 +20,14 @@ export const INFO_TIPS = {
     "Speak the verse aloud. Uses your browser's speech recognition to check what you said against the verse text — no exact match required, close is fine. When only first letters are shown, hover (or tap) one to reveal that word if you're stuck. If microphone access is declined, you can skip to the next exercise.",
   writeRep:
     "Type the verse from memory (or copy it, on the first rep when it's shown). Checked with fuzzy matching, so minor typos/punctuation differences still pass.",
-  kineticTextRep:
-    "The whole day's text read aloud by your browser's own voice, one word highlighted at a time as it's actually spoken. Tap Listen to play (Pause to stop partway); tap it again anytime to listen once more before continuing. Not graded — just a synced read-along pass before drilling into each verse.",
   listenVerseRep:
     "This verse read aloud by your browser's own voice, one word highlighted at a time as it's actually spoken — the automatic first pass on every verse, before its own Rhythm/Write/Speak/Type stages. Tap Listen to play (Pause to stop partway); tap it again anytime to listen once more before continuing. Not graded.",
   firstLetterTypeRep:
     "Type just the first letter of each word, in order, to reveal it. A wrong letter restarts this pass through the verse from word 1.",
   reviewChain:
-    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter, a wrong reference number, or revealing the whole word bounces you back to the start of just that one verse (every earlier verse in the chain stays revealed) — so the review only finishes once every verse has, in the end, been typed correctly in one clean pass. \"Reveal next letter\" alone is a free hint, no restart. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
+    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter, a wrong reference number, or revealing the whole word bounces you back to the start of just that one verse (every earlier verse in the chain stays revealed) — so the review only finishes once every verse has, in the end, been typed correctly in one clean pass. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
+  reviewChainNoRestart:
+    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter or a wrong reference number just costs accuracy and lets you retry that same word — nothing you've already typed correctly is lost. Revealing the whole word moves straight on to the next one. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
   chapterReviewStage:
     "A multi-part review before moving on: the full chapter's words, then a spoken recitation of the whole thing.",
   bossBattleStage:
@@ -79,7 +81,7 @@ export const INFO_TIPS = {
   fillInTheBlankStageToggle:
     "When off, each verse's Learn stages skip straight to the Speak hint (from Rhythm or Write First Letter, whichever ran last) — no word-bank tap exercise beforehand. Turn it back on any time to bring it back for later lessons.",
   kineticTextStageToggle:
-    "When on, adds a \"Listen\" step right after Visualize (or right after Understand, or first thing, if those are off) — the whole day's text read aloud with each word highlighted as it's spoken. On by default, as the introduction to each fresh verse. Uses your browser's own built-in voice — no audio files, nothing downloaded.",
+    "When on, adds a \"Listen\" step at the start of every verse — that one verse read aloud with each word highlighted as it's spoken. On by default, as the introduction to each fresh verse. Uses your browser's own built-in voice — no audio files, nothing downloaded.",
   rhythmStageToggle:
     "When on, adds a \"Rhythm\" step for each verse — tap through its words at your own pace before Write First Letter/Speak. Off by default now that Listen (above) is the default whole-day introduction to a fresh verse; turn this back on for the per-verse tap-through pacing too.",
   srsPromotionThresholdSlider:

@@ -20,14 +20,40 @@ export interface SpeakOptions {
 // a piano-tiles round can have several words queued up at once.
 const pendingUtterances = new Set<SpeechSynthesisUtterance>();
 
-// Chrome (macOS in particular) defaults to a network/cloud voice (e.g. "Google US English")
-// rather than one of the OS's own local voices. A network voice can silently produce no
-// audio at all — no error, onend still fires — if the round-trip to Google's TTS service
-// hiccups, which is indistinguishable from "speech synthesis is broken" from here. Explicitly
-// picking a local voice avoids the network dependency entirely.
+// Classic OS-shipped voices, checked in this order — the plain, long-standing system voices
+// every desktop/mobile OS ships for free, picked specifically because they read as an ordinary
+// text-to-speech voice rather than one of the newer "Natural"/"Neural"/cloud voices that are
+// deliberately tuned to sound like a real person. macOS/iOS names first (Samantha/Daniel/Alex),
+// then Windows' classic SAPI voices (David/Zira).
+const PREFERRED_VOICE_NAMES = ["Samantha", "Daniel", "Alex", "Victoria", "Fred", "Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft David", "Microsoft Zira"];
+// Substrings that mark a voice as a premium/cloud/neural one — Chrome (macOS in particular)
+// defaults to a network voice (e.g. "Google US English") rather than one of the OS's own local
+// voices, and even a LOCAL voice can be one of these newer, more human-sounding engines (e.g.
+// macOS' own "Ava (Enhanced)"). Excluded outright rather than merely deprioritized: a network
+// voice can also silently produce no audio at all (no error, onend still fires) if the
+// round-trip to the provider's TTS service hiccups, which reads as "speech synthesis is
+// broken" from here — avoiding the network dependency is a second, independent reason to skip
+// these, not just the "sounds AI" one.
+const AI_SOUNDING_VOICE_MARKERS = ["natural", "neural", "enhanced", "premium", "siri", "google", "wavenet", "online", "cloud"];
+
+function soundsAiGenerated(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  return AI_SOUNDING_VOICE_MARKERS.some((marker) => name.includes(marker));
+}
+
 function getPreferredVoice(): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis.getVoices();
-  return voices.find((voice) => voice.localService && voice.lang.startsWith("en")) ?? voices.find((voice) => voice.localService);
+  const candidates = voices.filter((voice) => !soundsAiGenerated(voice));
+  for (const name of PREFERRED_VOICE_NAMES) {
+    const match = candidates.find((voice) => voice.name === name);
+    if (match) return match;
+  }
+  return (
+    candidates.find((voice) => voice.localService && voice.lang.startsWith("en")) ??
+    candidates.find((voice) => voice.localService) ??
+    candidates.find((voice) => voice.lang.startsWith("en")) ??
+    candidates[0]
+  );
 }
 
 // Deliberately does NOT cancel an in-progress utterance before queuing the next one — the
@@ -76,7 +102,7 @@ export function speak(text: string, onEnd?: () => void, options?: SpeakOptions):
   };
 }
 
-// KineticTextRep's own narration — one utterance for a whole passage, reporting each word's
+// ListenVerseRep's own narration — one utterance for a whole passage, reporting each word's
 // own `charIndex` as it's spoken (via the engine's native `onboundary` event) rather than
 // synthesizing word-by-word the way speak() above does — a single utterance is what lets the
 // OS/browser voice read at its own natural cadence and inflection across a full passage,

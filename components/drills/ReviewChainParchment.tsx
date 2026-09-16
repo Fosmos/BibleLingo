@@ -1,6 +1,7 @@
 import type { VerseSegment } from "@/types";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { ReviewChainRevealed } from "@/components/drills/ReviewChainRevealed";
 import { ReviewChainVerseWords } from "@/components/drills/ReviewChainVerseWords";
 import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
@@ -42,6 +43,13 @@ interface ReviewChainParchmentProps {
 // codebase's 200-line cap.
 export function ReviewChainParchment({ verses, combinedWords, revealedCount, currentVerse, layout }: ReviewChainParchmentProps) {
   const verseIds = new Set(verses.map((verse) => verse.id));
+  // How far into `currentVerse` ITSELF (not the whole chain) recall currently is —
+  // disambiguates which page a verse split across the page break should open to (see
+  // lib/chapterPagination.ts's pageIndexForVerse), same as FirstLetterMultiVersePageCard.tsx's
+  // own identical math.
+  const currentVerseIndex = currentVerse ? verses.findIndex((verse) => verse.id === currentVerse.id) : -1;
+  const currentVerseWordOffset = currentVerseIndex >= 0 ? (wordsForVerse(combinedWords, currentVerseIndex)[0]?.globalIndex ?? 0) : 0;
+  const activeWordIndex = Math.max(revealedCount - currentVerseWordOffset, 0);
 
   return (
     <>
@@ -62,18 +70,25 @@ export function ReviewChainParchment({ verses, combinedWords, revealedCount, cur
         <LessonPageCard
           layout={layout}
           activeVerse={currentVerse ?? verses[verses.length - 1]}
+          activeWordIndex={activeWordIndex}
           isActive={(verse) => verseIds.has(verse.id)}
-          renderActiveVerse={(verse) => {
+          renderActiveVerse={(verse, range: SenseLineWordRange) => {
             // `verse` is whatever this real PAGE actually holds — the whole verse, or (see
             // lib/chapterPagination.ts) just one fragment of it, if it was split across the
             // page break. Slice this verse's own chain words down to just the fragment's own
             // range (`wordOffset` on, for as many words as the fragment's own text tokenizes
             // to) so a split verse's later half doesn't repeat words its earlier half already
-            // showed on the page before it.
+            // showed on the page before it — then down again to just THIS clause's own
+            // [range.startIndex, range.endIndex), called once per clause (see
+            // LessonPageCard.tsx's own renderActiveVerse doc comment) so a multi-clause verse
+            // still renders through the same hanging-indent line structure a non-active verse
+            // gets, not the whole fragment repeated on every clause row.
             const verseIndex = verses.findIndex((candidate) => candidate.id === verse.id);
             const fragmentStart = verse.wordOffset ?? 0;
             const fragmentWordCount = tokenizeVerseWords(verse.text).length;
-            const fragmentWords = wordsForVerse(combinedWords, verseIndex).slice(fragmentStart, fragmentStart + fragmentWordCount);
+            const fragmentWords = wordsForVerse(combinedWords, verseIndex)
+              .slice(fragmentStart, fragmentStart + fragmentWordCount)
+              .slice(range.startIndex, range.endIndex);
             return <ReviewChainVerseWords words={fragmentWords} revealedCount={revealedCount} />;
           }}
           isVerseNumberVisible={(verse) => {

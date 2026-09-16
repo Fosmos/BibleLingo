@@ -18,12 +18,12 @@ export interface VerseAccuracy {
   // lib/stumbleTracking.ts's recordStumbles, the one consumer that needs to know exactly
   // which words, not just how many.
   wrongIndices: number[];
-  // True wherever this verse has at least one word the reader had to explicitly ask for (SRS
-  // review's own "Peek hint"/reveal-letter escape valve — see lib/useFirstLetterTyping.ts's
-  // own peekHint, lib/useFirstLetterSpeaking.ts's own peeked count), as opposed to a word just
-  // typed or spoken wrong. SrsReviewSession.tsx gates Problem Verses flagging on THIS, not on
-  // `accuracy` — a verse recalled correctly on the first attempt but hit the wrong key once
-  // shouldn't land in the bin the same way one the reader genuinely couldn't recall at all does.
+  // True wherever this verse has at least one word the reader had to explicitly ask for (the
+  // typed-mode review's own "Peek hint" escape valve — see lib/useFirstLetterTyping.ts's own
+  // peekHint), as opposed to a word just typed or spoken wrong. SrsReviewSession.tsx gates
+  // Problem Verses flagging on THIS, not on `accuracy` — a verse recalled correctly on the
+  // first attempt but hit the wrong key once shouldn't land in the bin the same way one the
+  // reader genuinely couldn't recall at all does.
   neededHint: boolean;
 }
 

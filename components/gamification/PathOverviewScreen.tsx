@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { LocationTagLevel, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
-import { buildPathDayPlan } from "@/lib/dayPlan";
+import { buildPathDayPlan, priorKnownDayCount } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
@@ -28,6 +28,9 @@ interface PathOverviewScreenProps {
   locationTagLevels?: LocationTagLevel[];
   sectionEndPegEnabled?: boolean;
   jumpToToday?: boolean; // see lib/useJumpToTodayVerse.ts
+  // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at
+  // creation. See PathProgress.priorKnownVerseCount.
+  priorKnownVerseCount?: number;
 }
 
 export function PathOverviewScreen({
@@ -38,6 +41,7 @@ export function PathOverviewScreen({
   locationTagLevels,
   sectionEndPegEnabled,
   jumpToToday,
+  priorKnownVerseCount,
 }: PathOverviewScreenProps) {
   // `verses` below is lazily seeded from the localStorage-backed content cache, which may
   // already be populated on the client's first render but is always empty during SSR —
@@ -49,8 +53,7 @@ export function PathOverviewScreen({
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
 
-  // resolvePath() ignores translation — checked during render (not an effect, avoiding a
-  // setState-in-effect lint error), same pattern as chapterOverride below.
+  // resolvePath() ignores translation — checked during render, not an effect, same pattern as chapterOverride below.
   const [verses, setVerses] = useState<VerseSegment[] | null>(() =>
     pathContentMatchesVersion(key, version) ? (resolvePath(key)?.verses ?? null) : null,
   );
@@ -64,8 +67,7 @@ export function PathOverviewScreen({
   }
   // Book mode's own nav between its two screens: null shows the Mind Map (see render below);
   // a chapter number shows that chapter's parchment view, optionally with a specific verse to
-  // open straight to (see lib/useMindMapSelection.ts). Never persisted; reset below when the
-  // path changes (React's own "adjusting state when a prop changes" pattern).
+  // open straight to (see lib/useMindMapSelection.ts). Never persisted.
   const { chapterOverride, targetVerse, setChapterOverride, selectPericope, reset: resetMindMapSelection } = useMindMapSelection();
   useJumpToTodayVerse(key, jumpToToday, verses, plan, includeVerseReferences, pegSystemEnabled, selectPericope);
   // A lesson/practice session, rendered right here instead of navigating away (InPlaceLessonSession.tsx) — null means none running.
@@ -80,7 +82,6 @@ export function PathOverviewScreen({
   useEffect(() => {
     setActivePath(key);
   }, [key, setActivePath]);
-
   useEffect(() => {
     if (verses) return;
     let cancelled = false;
@@ -99,20 +100,22 @@ export function PathOverviewScreen({
   }, [key, version, label, verses, retryToken]);
 
   // Also re-runs when an EXISTING plan's version/versesPerDay doesn't match what was just
-  // selected, so re-picking either for an already-started path doesn't leave it stuck at the
-  // original choice. locationTagLevels/sectionEndPegEnabled only ever arrive once at creation.
+  // selected, so re-picking either doesn't leave an already-started path stuck at the
+  // original choice. locationTagLevels/sectionEndPegEnabled/priorKnownVerseCount arrive once.
   useEffect(() => {
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
     if (!plan || plan.version !== version || versesPerDayChanged) {
-      setPath(key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled);
+      // How many auto-completed days that prior-known verse count actually becomes (see
+      // lib/dayPlan.ts's own doc comment — book mode's own prefix can span several chapters,
+      // one day each, not always just one) — computed here, the one place this effect already
+      // has both the real `verses` AND this path's own `kind` in hand.
+      const priorKnownDays = priorKnownVerseCount ? priorKnownDayCount(verses, priorKnownVerseCount, parsePathKey(key).kind) : 0;
+      setPath(key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, priorKnownDays);
     }
-  }, [plan, verses, key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, setPath]);
-
+  }, [plan, verses, key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, setPath]);
   const pericopesReady = usePericopesReady(verses);
-
-  // Must win over every other early return below — the only one guaranteed identical between
-  // server and client's first render, since the others can already hold client-only values.
+  // Wins over every other early return below — the only one identical between server/client.
   if (!mounted) return <FetchLoading label={`Loading ${label}…`} />;
 
   if (error) {
@@ -126,10 +129,8 @@ export function PathOverviewScreen({
       />
     );
   }
-
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
-  // Waits for section-heading data before chunking — must never disagree with a specific
-  // lesson's own loader (DayLoader) for the same day number (see lib/usePericopesReady.ts).
+  // Waits for section-heading data before chunking (see lib/usePericopesReady.ts).
   if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
   if (!plan) return null;
 
@@ -138,8 +139,7 @@ export function PathOverviewScreen({
   const activeDay = activeDayNumber(plan, now);
   const todaysDay = todaysDayNumber(plan, now);
   const { kind } = parsePathKey(key);
-
-  // Wins over everything below — stays mounted right here until it exits.
+  // Wins over everything below — stays mounted here until it exits.
   if (lessonDay) {
     return (
       <InPlaceLessonSession
@@ -157,8 +157,9 @@ export function PathOverviewScreen({
     );
   }
 
-  // Book opens on its own Mind Map — tapping a pericope sets chapterOverride + targetVerse;
-  // "Back" returns here (onShowMindMap). Other kinds skip this.
+  // Book opens on its own Mind Map — a free pan/zoom view of the whole canon, centered on this
+  // book (see MindMapScreen.tsx/BookMindMap.tsx). Tapping a pericope sets chapterOverride +
+  // targetVerse; "Back" returns here (onShowMindMap). Other kinds skip this.
   if (kind === "book" && chapterOverride === null) {
     return <MindMapScreen onSelectChapter={selectPericope} />;
   }
@@ -178,7 +179,6 @@ export function PathOverviewScreen({
       label={title}
       version={version}
       days={visibleDays}
-      allDays={days}
       completedDays={plan.completedDays}
       activeDayNumber={activeDay}
       todaysDayNumber={todaysDay}
@@ -193,8 +193,6 @@ export function PathOverviewScreen({
     />
   );
 
-  // TEMPORARILY DISABLED — the once-a-day chapter recap gate (DailyChapterReviewGate) is
-  // switched off for now; see git history for the wrapped-`diagram` version that re-enables it.
-
+  // TEMPORARILY DISABLED — DailyChapterReviewGate; see git history to re-enable.
   return diagram;
 }

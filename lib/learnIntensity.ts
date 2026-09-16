@@ -46,8 +46,8 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 2,
     label: "+ Fill in the Blank",
-    description: "Adds a word-bank tap exercise right after the Speak hint.",
-    estimateSecondsPerVerse: 195,
+    description: "Adds a word-bank tap exercise and a type-the-first-letter exercise, both before the Speak hint, each run twice (half blanked, then all blanked).",
+    estimateSecondsPerVerse: 325,
     understandStageEnabled: false,
     visualizeStageEnabled: false,
     writeFirstLetterStageEnabled: false,
@@ -57,7 +57,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
     level: 3,
     label: "+ Visualize",
     description: "Adds a Loci/Peg + Who/Action/scene step at the start of the day.",
-    estimateSecondsPerVerse: 270,
+    estimateSecondsPerVerse: 400,
     understandStageEnabled: false,
     visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: false,
@@ -67,7 +67,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
     level: 4,
     label: "+ Write First Letter",
     description: "Adds a handwriting-recognition canvas for each word's first letter.",
-    estimateSecondsPerVerse: 360,
+    estimateSecondsPerVerse: 490,
     understandStageEnabled: false,
     visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: true,
@@ -77,7 +77,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
     level: 5,
     label: "+ Understand",
     description: "Adds a clause-tagging step at the start of the day — the strongest encoding.",
-    estimateSecondsPerVerse: 450,
+    estimateSecondsPerVerse: 580,
     understandStageEnabled: true,
     visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: true,
@@ -98,7 +98,10 @@ export function formatIntensityEstimate(secondsPerVerse: number): string {
 // have to match any single preset level — DayPathDiagram.tsx's own "Today's Lesson" estimate
 // needs to work for any combination, not just the five named presets.
 const BASE_SECONDS_PER_VERSE = 135;
-const FILL_IN_THE_BLANK_SECONDS_PER_VERSE = 60;
+// Now covers FOUR total passes over the verse (see lib/learnSteps.ts's versePhases): the
+// word-bank tap exercise's own 2 reps (FillInTheBlankRep.tsx) plus the type-the-first-letter
+// exercise's own 2 reps (FirstLetterBlankRep.tsx), both gated on this one setting.
+const FILL_IN_THE_BLANK_SECONDS_PER_VERSE = 190;
 const VISUALIZE_SECONDS_PER_VERSE = 75;
 const WRITE_FIRST_LETTER_SECONDS_PER_VERSE = 90;
 const UNDERSTAND_SECONDS_PER_VERSE = 90;

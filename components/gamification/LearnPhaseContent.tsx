@@ -12,6 +12,7 @@ import { ListenVerseRep } from "@/components/drills/ListenVerseRep";
 import { RhythmRep } from "@/components/drills/RhythmRep";
 import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
 import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
+import { FirstLetterBlankRep } from "@/components/drills/FirstLetterBlankRep";
 import { FirstLetterTypeRep } from "@/components/drills/FirstLetterTypeRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
 import { LearnWholeDayPhaseContent } from "@/components/gamification/LearnWholeDayPhaseContent";
@@ -20,12 +21,12 @@ import { VerseVisualBadge } from "@/components/ui/VerseVisualBadge";
 export type Phase =
   | "orientation"
   | "orientation_summary"
-  | "kinetic_text"
   | "listen_verse"
   | "rhythm"
   | "draw_first_letters"
   | "speak_hint"
   | "fill_in_the_blank"
+  | "fill_in_the_blank_letters"
   | "type_first_letters"
   | "pray"
   | "speak_verse"
@@ -105,7 +106,7 @@ export function LearnPhaseContent({
 
   let content: ReactNode;
 
-  if (phase === "orientation" || phase === "orientation_summary" || phase === "kinetic_text" || phase === "pray") {
+  if (phase === "orientation" || phase === "orientation_summary" || phase === "pray") {
     content = (
       <LearnWholeDayPhaseContent
         phase={phase}
@@ -154,12 +155,15 @@ export function LearnPhaseContent({
     );
   } else if (phase === "fill_in_the_blank") {
     content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
+  } else if (phase === "fill_in_the_blank_letters") {
+    content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else if (phase === "type_first_letters") {
     content = (
       <FirstLetterTypeRep
         key={stageKey}
         verse={verse}
         reps={1}
+        requirePerfectPass
         verseMarkers={verseMarkers}
         annotations={wordAnnotations}
         previousVerse={previousVerse}

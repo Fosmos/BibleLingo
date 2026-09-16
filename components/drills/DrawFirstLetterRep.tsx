@@ -4,7 +4,8 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
 import { wordLetterPlaceholder } from "@/lib/verseWords";
-import { buildDrawTokens } from "@/lib/verseDrawTokens";
+import { buildDrawTokens, bucketTokenIndicesByClause } from "@/lib/verseDrawTokens";
+import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { useDrawingCanvas } from "@/lib/useDrawingCanvas";
 import { useAutoRecognizeDraw } from "@/lib/useAutoRecognizeDraw";
 import { TAP_SCALE } from "@/lib/motionTokens";
@@ -36,6 +37,8 @@ interface DrawFirstLetterRepProps {
 // drawn) — the manual Next/Finish button stays as a fallback.
 export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLetterRepProps) {
   const tokens = useMemo(() => buildDrawTokens(verse.text, {}), [verse.text]);
+  const clauseRanges = useMemo(() => senseLineWordRanges(verse.text), [verse.text]);
+  const tokenIndicesByClause = useMemo(() => bucketTokenIndicesByClause(tokens, clauseRanges), [tokens, clauseRanges]);
   const [tokenIndex, setTokenIndex] = useState(0);
   const [revealedTokenIndices, setRevealedTokenIndices] = useState<number[]>([]);
   const [hasInk, setHasInk] = useState(false);
@@ -94,37 +97,59 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
   if (!currentToken) return null;
 
   // No verse-number sup here — ChapterVerseRun.tsx already renders that verse's own real
-  // number unconditionally (see LessonPageCard.tsx's own doc comment).
-  const activeVerseWords = (
-    <Fragment>
-      {tokens.map((token, index) => {
-        const isRevealed = revealedTokenIndices.includes(index);
-        const isCurrent = index === tokenIndex;
-        // Reference tokens (e.g. "3:16") show in full either way, same convention every other
-        // first-letter display in the app follows — see lib/verseFirstLetters.ts. Every other
-        // word token pads out to its own real length (wordLetterPlaceholder), so its letter (or
-        // its blank, before it's revealed) still sits where that word would actually be.
-        const display = token.isReference || token.kind !== "word" ? token.text : wordLetterPlaceholder(token.text, isRevealed);
-        const stateClassName = isCurrent
-          ? "text-brand-700 underline decoration-2 underline-offset-4 dark:text-brand-300"
-          : isRevealed
-            ? ""
-            : "text-ink-muted/50 dark:text-zinc-700";
-        return (
-          <Fragment key={index}>
-            <span className={stateClassName}>{display}</span>
-            {token.spaceAfter && " "}
-          </Fragment>
-        );
-      })}
-    </Fragment>
-  );
+  // number unconditionally (see LessonPageCard.tsx's own doc comment). Called once per clause
+  // (see LessonPageCard.tsx's own renderActiveVerse doc comment) — renders just the tokens
+  // bucketed into THIS clause (see tokenIndicesByClause above) so a multi-clause verse still
+  // renders through the same hanging-indent line structure a non-active verse gets.
+  function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
+    const clauseIndex = clauseRanges.findIndex((candidate) => candidate.startIndex === range.startIndex);
+    const tokenIndices = clauseIndex >= 0 ? (tokenIndicesByClause[clauseIndex] ?? []) : [];
+    return (
+      <Fragment>
+        {tokenIndices.map((index) => {
+          const token = tokens[index];
+          const isRevealed = revealedTokenIndices.includes(index);
+          const isCurrent = index === tokenIndex;
+          // Reference tokens (e.g. "3:16") show in full either way, same convention every
+          // other first-letter display in the app follows — see lib/verseFirstLetters.ts.
+          // Every other word token pads out to its own real length (wordLetterPlaceholder),
+          // so its letter (or its blank, before it's revealed) still sits where that word
+          // would actually be.
+          const display = token.isReference || token.kind !== "word" ? token.text : wordLetterPlaceholder(token.text, isRevealed);
+          const stateClassName = isCurrent
+            ? "text-brand-700 underline decoration-2 underline-offset-4 dark:text-brand-300"
+            : isRevealed
+              ? ""
+              : "text-ink-muted/50 dark:text-zinc-700";
+          return (
+            <Fragment key={index}>
+              <span className={stateClassName}>{display}</span>
+              {token.spaceAfter && " "}
+            </Fragment>
+          );
+        })}
+      </Fragment>
+    );
+  }
+
+  // The current draw token's own `wordIndex` when it's a word token — falls back to the
+  // nearest earlier word token's index for a punctuation/verse-number token currently active,
+  // so the page-selection math below always has SOME real word position to key off, even
+  // between two words.
+  let activeWordIndex = 0;
+  for (let index = tokenIndex; index >= 0; index--) {
+    const candidate = tokens[index];
+    if (candidate?.kind === "word" && candidate.wordIndex !== undefined) {
+      activeWordIndex = candidate.wordIndex;
+      break;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={() => activeVerseWords} />
+      <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={activeWordIndex} renderActiveVerse={renderActiveVerse} />
 
-      <LessonControlBar dockRef={layout.dockRef}>
+      <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
         <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
           Learn <InfoTip text={INFO_TIPS.drawFirstLetterRep} />
         </p>

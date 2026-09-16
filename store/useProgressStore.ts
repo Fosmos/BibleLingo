@@ -37,6 +37,8 @@ interface ProgressActions {
     versesPerDay?: number,
     locationTagLevels?: LocationTagLevel[],
     sectionEndPegEnabled?: boolean,
+    priorKnownVerseCount?: number,
+    priorKnownDayCount?: number,
   ) => void;
   resetPathProgress: (pathKey: string) => void;
   setActivePath: (pathKey: string) => void;

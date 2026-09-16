@@ -1,30 +1,17 @@
 "use client";
 
 interface ReviewChainHintProps {
-  firstLetter: string | undefined;
-  hintLetterShown: boolean;
-  onShowLetter: () => void;
   onRevealWord: () => void;
 }
 
-// ReviewChain.tsx's own two-step hint escalation, split out purely to keep that file under
-// this codebase's 200-line cap — reveal just the next letter first (still requires clicking
-// through to reveal the word), rather than jumping straight to the word.
-export function ReviewChainHint({ firstLetter, hintLetterShown, onShowLetter, onRevealWord }: ReviewChainHintProps) {
-  if (!hintLetterShown) {
-    return (
-      <button type="button" onClick={onShowLetter} className="text-sm font-medium text-brand-600 hover:underline">
-        Reveal next letter
-      </button>
-    );
-  }
-
+// ReviewChain.tsx's own hint action, split out purely to keep that file under this codebase's
+// 200-line cap — a single "Reveal word" action (no intermediate letter-hint step), a mistake
+// already costs accuracy the moment it happens, so asking for the word doesn't add a second
+// penalty of its own.
+export function ReviewChainHint({ onRevealWord }: ReviewChainHintProps) {
   return (
-    <>
-      <span className="text-sm text-ink-muted">Hint: &quot;{firstLetter}&quot;</span>
-      <button type="button" onClick={onRevealWord} className="text-sm font-medium text-brand-600 hover:underline">
-        Reveal word
-      </button>
-    </>
+    <button type="button" onClick={onRevealWord} className="text-sm font-medium text-brand-600 hover:underline">
+      Reveal word
+    </button>
   );
 }

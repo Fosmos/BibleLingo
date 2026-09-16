@@ -3,11 +3,10 @@ import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { VerseOrientationRep } from "@/components/drills/VerseOrientationRep";
 import { VerseOrientationSummaryRep } from "@/components/drills/VerseOrientationSummaryRep";
-import { KineticTextRep } from "@/components/drills/KineticTextRep";
 import { PrayRep } from "@/components/drills/PrayRep";
 
 interface LearnWholeDayPhaseContentProps {
-  phase: "orientation" | "orientation_summary" | "kinetic_text" | "pray";
+  phase: "orientation" | "orientation_summary" | "pray";
   stageKey: string;
   // The single joined "whole day" VerseSegment (see LearnSection.tsx's own `wholeDay`) —
   // Understand's own clause-splitting math (breakAfter, blocks, role annotations) stays keyed
@@ -27,7 +26,7 @@ interface LearnWholeDayPhaseContentProps {
   onAdvance: () => void;
 }
 
-// The four whole-day phases — split out of LearnPhaseContent.tsx purely to keep that file
+// The three whole-day phases — split out of LearnPhaseContent.tsx purely to keep that file
 // under this codebase's 200-line cap.
 export function LearnWholeDayPhaseContent({
   phase,
@@ -69,10 +68,6 @@ export function LearnWholeDayPhaseContent({
         layout={layout}
       />
     );
-  }
-
-  if (phase === "kinetic_text") {
-    return <KineticTextRep key={stageKey} verses={verses} onComplete={onAdvance} layout={layout} />;
   }
 
   return (

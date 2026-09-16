@@ -34,11 +34,15 @@ export interface ChapterReadingLayout extends ChapterPagination {
 // boundary. `bodyTopRef`/`dockRef` (see useParchmentFillHeight.ts) still need to be attached by
 // the caller to its own real top-chrome and bottom-dock elements — this hook only measures,
 // it never assumes those elements' own shape, so a lesson screen's differently-shaped chrome
-// (LessonTopBar, a per-stage control strip) still gets a real, correct fillHeightPx as long as
+// (LessonTopBar, LessonControlBar.tsx) still gets a real, correct fillHeightPx as long as
 // LessonTopBar stays the exact same rendered height as DayPathDiagram's own top bar/progress
-// bar (see LessonTopBar.tsx's own doc comment) and the control strip stays within the same
-// rough footprint PathBottomDock.tsx occupies. `probeContainerRef` still needs rendering by the
-// caller too (see ChapterFitProbes.tsx) — a hook can compute state, never render JSX.
+// bar (see LessonTopBar.tsx's own doc comment) — LessonControlBar's own height no longer
+// matters to this beyond being a real, measured `dockRef` height like PathBottomDock's own
+// already was, now that useParchmentFillHeight.ts computes `fillHeightPx` with the exact SAME
+// formula for every caller (no more Learn-flow-only `splitDock` branch — see that hook's own
+// doc comment on why that used to let the same chapter paginate differently depending on where
+// it was opened). `probeContainerRef` still needs rendering by the caller too (see
+// ChapterFitProbes.tsx) — a hook can compute state, never render JSX.
 export function useChapterReadingLayout(days: MemorizationDay[], completedDays: number, todaysDay: number): ChapterReadingLayout {
   const locationTags = useProgressStore((state) => state.locationTags);
   const iconTags = useProgressStore((state) => state.iconTags);

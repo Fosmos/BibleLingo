@@ -7,7 +7,6 @@ import { useSpeakRepMic } from "@/lib/useSpeakRepMic";
 import type { FirstLetterHintToken } from "@/lib/verseFirstLetters";
 import { MistakeDiff } from "@/components/drills/MistakeDiff";
 import { SpeakRepFallback } from "@/components/drills/SpeakRepFallback";
-import { SpeakRepHintTokens } from "@/components/drills/SpeakRepHintTokens";
 import { SpeakRepRevealLine } from "@/components/drills/SpeakRepRevealLine";
 import { SpeakRepMicButton } from "@/components/drills/SpeakRepMicButton";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
@@ -15,6 +14,7 @@ import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { SpeakRepPlainContext } from "@/components/drills/SpeakRepPlainContext";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
@@ -74,16 +74,22 @@ export function SpeakRep({
 
   const showFallback = !supported || permissionDenied || !isSecure;
   const hasContext = Boolean(verse && contextVerses && layout);
-  // contextVerses (Learn flow): live fill (SpeakRepRevealLine). Else: hover-to-peek (SpeakRepHintTokens).
-  // No verse-number sup in the Learn-flow branch — ChapterVerseRun.tsx already renders that
-  // verse's own real number unconditionally.
-  const activeVerseWords = (
-    <>
-      {showVerse && targetText}
-      {!showVerse && hasContext && <SpeakRepRevealLine text={targetText} revealedCount={revealedCount} mode={hintTokens ? "hint" : "blind"} />}
-      {!showVerse && !hasContext && hintTokens && hintTokens.length > 0 && <SpeakRepHintTokens tokens={hintTokens} openWordIndex={openWordIndex} onToggleWord={toggleWord} />}
-    </>
-  );
+  // The Learn flow's own live fill (SpeakRepRevealLine), scoped to this ONE clause's own range
+  // (see LessonPageCard.tsx's own renderActiveVerse doc comment) — only ever used when
+  // `hasContext` is true, so no need to re-check it here. `range.clause.text` is this clause's
+  // own real substring (no re-tokenizing needed for the `showVerse` case); `revealedCount` is
+  // clamped down to this clause's own word count and offset by its own startIndex, since it
+  // counts against the WHOLE verse.
+  function renderActiveVerseRange(_: VerseSegment, range: SenseLineWordRange) {
+    const clauseWordCount = range.endIndex - range.startIndex;
+    const clauseRevealedCount = Math.max(0, Math.min(clauseWordCount, revealedCount - range.startIndex));
+    return (
+      <>
+        {showVerse && range.clause.text}
+        {!showVerse && <SpeakRepRevealLine text={range.clause.text} revealedCount={clauseRevealedCount} mode={hintTokens ? "hint" : "blind"} />}
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -94,7 +100,7 @@ export function SpeakRep({
         </div>
       )}
       {hasContext && verse && layout ? (
-        <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={() => activeVerseWords} />
+        <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={renderActiveVerseRange} />
       ) : (
         <LessonParchmentCard>
           <SpeakRepPlainContext
@@ -114,7 +120,7 @@ export function SpeakRep({
         </LessonParchmentCard>
       )}
 
-      <LessonControlBar dockRef={layout?.dockRef}>
+      <LessonControlBar dockRef={layout?.dockRef} verseText={targetText}>
         {hasContext && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{label}</p>}
         {reps > 1 && <p className="text-xs text-ink-muted">Rep {completedReps + 1} of {reps}</p>}
         {hasContext && isListening && !showFallback && (

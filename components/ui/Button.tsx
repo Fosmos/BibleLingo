@@ -23,10 +23,17 @@ const VARIANT_CLASSES: Record<NonNullable<ButtonProps["variant"]>, string> = {
 
 export function Button({ href, children, variant = "brand", className }: ButtonProps) {
   return (
-    <Link href={href} className="inline-block">
+    // shrink-0 on the flex-item Link itself — a flex row's own default flex-shrink:1 would
+    // otherwise let this button get squeezed narrower than its label needs whenever it shares
+    // a tight row with a sibling that keeps growing (see TodayVersesCard.tsx's own "Review" +
+    // "Go to your path" pair on a narrow viewport), which just pushes the wrapping problem down
+    // onto the label text below instead of solving it — a short pill-shaped button reading as
+    // 3-4 stacked lines is far worse than the row itself wrapping to a second line. Paired with
+    // whitespace-nowrap on the label so the text itself never breaks either.
+    <Link href={href} className="inline-block shrink-0">
       <motion.span
         whileTap={TAP_SCALE}
-        className={`inline-block rounded-full px-6 py-3 text-sm font-semibold transition-colors ${VARIANT_CLASSES[variant]} ${className ?? ""}`}
+        className={`inline-block whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold transition-colors ${VARIANT_CLASSES[variant]} ${className ?? ""}`}
       >
         {children}
       </motion.span>

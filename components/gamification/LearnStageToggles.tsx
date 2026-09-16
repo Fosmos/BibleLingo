@@ -9,9 +9,8 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 // keep that file under this codebase's 200-line cap. Listen defaults ON and Rhythm defaults
 // OFF (both self-heal via `?? …` for a reader whose saved progress predates one of these
 // fields — see their own doc comments on UserProgress in types/index.ts for why the two
-// swapped roles): Listen is now the default whole-day introduction to a fresh verse, and
-// Rhythm is the deliberate opt-in for a reader who still wants that per-verse tap-through
-// pacing too.
+// swapped roles): Listen is now the default introduction to each fresh verse, and Rhythm is
+// the deliberate opt-in for a reader who still wants that per-verse tap-through pacing too.
 export function LearnStageToggles() {
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const setUnderstandStageEnabled = useProgressStore((state) => state.setUnderstandStageEnabled);

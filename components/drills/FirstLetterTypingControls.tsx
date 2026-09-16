@@ -1,7 +1,7 @@
 import type { FirstLetterTyping } from "@/lib/useFirstLetterTyping";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
-import { MistakeLetterHint } from "@/components/drills/MistakeLetterHint";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
+import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
 
 interface FirstLetterTypingControlsProps {
   typing: FirstLetterTyping;
@@ -10,13 +10,16 @@ interface FirstLetterTypingControlsProps {
   // label in its own header above the parchment instead.
   showLabel?: string;
   allowPeekHint?: boolean;
-  autoRevealLetterOnMistake: boolean;
+  // SRS review only (see FirstLetterTypeRep.tsx's own `moveAutoCompleteToVerseView`) — the
+  // Auto-complete button moves up beside the View First Letters/View Verse pair instead of
+  // rendering here.
+  hideAutoComplete?: boolean;
 }
 
 // The letter-input keyboard + reference-digit entry + mistake hint + auto-complete row shared
 // by every FirstLetterTypeRep.tsx render path — split out purely to keep that file under this
 // codebase's 200-line cap.
-export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, autoRevealLetterOnMistake }: FirstLetterTypingControlsProps) {
+export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hideAutoComplete }: FirstLetterTypingControlsProps) {
   return (
     <>
       {showLabel && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{showLabel}</p>}
@@ -29,33 +32,36 @@ export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, au
           onMistake={typing.recordMistake}
         />
       ) : (
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex w-full flex-col items-center gap-2">
+          {/* Visually hidden, not removed — the on-screen keyboard below is the one visible way
+              to type now (no more redundant box to tap into first), but a real physical
+              keyboard and screen readers still need a focusable text input to type into. */}
           <input
             value={typing.letterInput}
             onChange={(event) => typing.handleLetterChange(event.target.value)}
             maxLength={1}
             autoFocus
             aria-label="Type the first letter of the next word"
-            className={`w-16 rounded-xl border p-3 text-center text-xl focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${
-              typing.showError ? "border-heart-500 focus-visible:ring-heart-500" : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"
-            }`}
+            className="sr-only"
           />
           {allowPeekHint && !typing.showError && (
             <button type="button" onClick={typing.peekHint} className="text-xs font-medium text-ink-muted hover:text-brand-600 hover:underline">
               Peek hint
             </button>
           )}
+          <OnScreenKeyboard onKey={typing.handleLetterChange} />
         </div>
       )}
-      {!typing.referenceMatch && typing.showError && typing.wrongLetterExpected && (
-        <MistakeLetterHint
-          key={typing.currentWord}
-          expectedLetter={typing.wrongLetterExpected}
-          autoReveal={autoRevealLetterOnMistake}
-          onReveal={typing.markHintUsed}
-        />
+      {/* A genuine mistake never reveals the letter — just the generic notice, so it costs a
+          real retry rather than handing over the answer. "Peek Hint" is the one deliberate
+          exception (see typing.wrongLetterExpected's own doc comment): tapping it still shows
+          the letter, since the reader asked for it outright rather than getting it wrong. */}
+      {!typing.referenceMatch && typing.showError && (
+        <p className="text-sm font-medium text-heart-600">
+          {typing.wrongLetterExpected ? `Not quite — the next word starts with "${typing.wrongLetterExpected}".` : "Not quite — try again."}
+        </p>
       )}
-      <AutoCompleteButton onClick={typing.reportComplete} />
+      {!hideAutoComplete && <AutoCompleteButton onClick={typing.reportComplete} />}
     </>
   );
 }

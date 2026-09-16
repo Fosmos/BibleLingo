@@ -34,7 +34,7 @@ export type MindMapData =
   | { status: "no-path" }
   | { status: "loading" }
   | { status: "error"; message: string; retry: () => void }
-  | { status: "ready"; pathKey: string; label: string; completedDays: number; todaysDay: number; chapters: ChapterNode[] };
+  | { status: "ready"; pathKey: string; label: string; version: string; completedDays: number; todaysDay: number; chapters: ChapterNode[] };
 
 // A whole chapter's own status, mirroring computeZoneCardState's own three-state read on a
 // single pericope zone (lib/pericopeCardState.ts) — "active" (amber) whenever any of its days
@@ -150,6 +150,7 @@ export function useMindMapData(): MindMapData {
     status: "ready",
     pathKey: key,
     label: parsePathKey(key).identifier,
+    version: plan.version,
     completedDays: plan.completedDays,
     todaysDay,
     chapters,

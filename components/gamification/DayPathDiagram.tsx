@@ -18,17 +18,12 @@ interface DayPathDiagramProps {
   label: string;
   version: string;
   days: MemorizationDay[];
-  // The path's FULL, unscoped day list — book mode's `days` prop above may be narrowed to just
-  // the currently-viewed chapter, but "Next day (testing)" always needs to find whichever day
-  // is globally next regardless of which chapter happens to be in view.
-  allDays: MemorizationDay[];
   completedDays: number;
   // completedDays + 1, gated so it only advances once a real calendar day has passed since
   // this path's last completion — see lib/dayRollover.ts's own activeDayNumber. -1 (never a
-  // real dayNumber) whenever today's own lesson is already done: nothing new to offer until
-  // tomorrow. Used ONLY for this component's own "is there something new to start" gating
-  // (the bottom dock's Start Lesson prompt) — everything else it hands further down uses
-  // todaysDayNumber below instead.
+  // real dayNumber) whenever today's own lesson is already done: the bottom dock's primary
+  // action shows a "Completed" state instead of offering to start something new until
+  // tomorrow — everything else it hands further down uses todaysDayNumber below instead.
   activeDayNumber: number;
   // Whichever day counts as TODAY's own lesson (lib/dayRollover.ts's todaysDayNumber) —
   // always a real dayNumber, never gated to -1, so today's own verses/pericope/chapter keep
@@ -65,7 +60,6 @@ export function DayPathDiagram({
   label,
   version,
   days,
-  allDays,
   completedDays,
   activeDayNumber,
   todaysDayNumber,
@@ -87,23 +81,20 @@ export function DayPathDiagram({
   const { bodyTopRef, dockRef, fillHeightPx } = useParchmentFillHeight();
   const pagination = useChapterPagination(days, completedDays, todaysDayNumber, fillHeightPx);
   useTargetVerseOverride(pagination.pages, targetVerse, pagination.goToPage);
-  // Deliberately the real completedDays + 1, never the gated activeDayNumber — this button's
-  // whole purpose is bypassing the normal pace for testing, so it stays available to skip
-  // straight to the next day even while resting until tomorrow (see lib/dayRollover.ts).
-  const nextDay = allDays.find((candidate) => candidate.dayNumber === completedDays + 1);
-  // The one thing still gated on the TRUE activeDayNumber (not todaysDayNumber) — whether the
-  // bottom dock offers to START a new lesson right now. Scoped to the currently-VIEWED days
-  // (unlike nextDay above, which deliberately ignores chapter scoping for the testing
-  // shortcut) — the primary action only ever offers to start today's lesson when today's
-  // lesson actually belongs to the chapter on screen.
-  const startableDay = days.find((day) => day.dayNumber === activeDayNumber);
+  // Today's own day, scoped to the currently-VIEWED days — whether or not it's already done
+  // (unlike the old activeDayNumber-gated lookup, this never disappears once finished, so the
+  // bottom dock can still caption its own "Completed" state below with the right verse range).
+  const todaysDay = days.find((day) => day.dayNumber === todaysDayNumber);
+  // Whether the bottom dock's primary action should read "Completed" instead of offering to
+  // start something — see lib/dayRollover.ts's own activeDayNumber doc comment.
+  const todaysCompleted = activeDayNumber === -1;
   // completedDays is a path-wide counter, but `days` may be a single chapter's subset —
   // scope the visible count to what's actually rendered here.
   const visibleCompletedCount = days.filter((day) => day.dayNumber <= completedDays).length;
   const overallProgress = days.length > 0 ? visibleCompletedCount / days.length : 0;
   const progressFraction = chapterMemorizedFraction ?? overallProgress;
 
-  const todaysVerses = startableDay?.newVerses ?? [];
+  const todaysVerses = todaysDay?.newVerses ?? [];
   const lessonSeconds = estimateLessonSeconds(todaysVerses.length, {
     understandStageEnabled,
     visualizeStageEnabled,
@@ -171,8 +162,6 @@ export function DayPathDiagram({
           pages={pagination.pages}
           pageIndex={pagination.pageIndex}
           goToPage={pagination.goToPage}
-          hasNext={pagination.hasNext}
-          hasPrevious={pagination.hasPrevious}
           dayNumberByVerse={pagination.dayNumberByVerse}
           todaysVerseNumbers={pagination.todaysVerseNumbers}
           completedDays={completedDays}
@@ -184,14 +173,14 @@ export function DayPathDiagram({
 
       <div ref={dockRef}>
         <PathBottomDock
-          pathKey={pathKey}
-          nextDay={nextDay}
           onPreviousChapter={onPreviousChapter}
           onNextChapter={onNextChapter}
-          todaysDay={startableDay}
+          todaysDay={todaysDay}
+          todaysCompleted={todaysCompleted}
           verseLabel={verseLabel}
           lessonSeconds={lessonSeconds}
           onSelectDay={onSelectDay}
+          onPracticeDay={onPracticeDay}
         />
       </div>
     </div>

@@ -1,5 +1,4 @@
 import type { LocationTagLevel } from "@/types";
-import { Header } from "@/components/gamification/Header";
 import { PathOverviewScreen } from "@/components/gamification/PathOverviewScreen";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { resolvePathLabel } from "@/lib/memorizationContent";
@@ -14,7 +13,7 @@ function parseLocationTagLevels(value: string | undefined): LocationTagLevel[] |
 
 export default async function PathOverviewPage({ params, searchParams }: PageProps<"/path/[key]">) {
   const { key } = await params;
-  const { version, versesPerDay, locationTagLevels, sectionEndPeg, today } = await searchParams;
+  const { version, versesPerDay, locationTagLevels, sectionEndPeg, today, priorKnownVerseCount } = await searchParams;
   const decodedKey = decodeURIComponent(key);
   const resolvedVersion = (Array.isArray(version) ? version[0] : version) ?? "KJV";
   const todayParam = Array.isArray(today) ? today[0] : today;
@@ -25,6 +24,8 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
   const resolvedLocationTagLevels = parseLocationTagLevels(locationTagLevelsParam);
   const sectionEndPegParam = Array.isArray(sectionEndPeg) ? sectionEndPeg[0] : sectionEndPeg;
   const resolvedSectionEndPegEnabled = sectionEndPegParam ? sectionEndPegParam === "1" : undefined;
+  const priorKnownVerseCountParam = Array.isArray(priorKnownVerseCount) ? priorKnownVerseCount[0] : priorKnownVerseCount;
+  const resolvedPriorKnownVerseCount = priorKnownVerseCountParam ? Number(priorKnownVerseCountParam) : undefined;
   const label = resolvePathLabel(decodedKey);
 
   if (!label) {
@@ -38,7 +39,6 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
 
   return (
     <div className="flex flex-1 flex-col">
-      <Header />
       <PathOverviewScreen
         pathKey={decodedKey}
         label={label}
@@ -47,6 +47,7 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
         locationTagLevels={resolvedLocationTagLevels}
         sectionEndPegEnabled={resolvedSectionEndPegEnabled}
         jumpToToday={jumpToToday}
+        priorKnownVerseCount={resolvedPriorKnownVerseCount}
       />
     </div>
   );

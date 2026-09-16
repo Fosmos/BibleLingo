@@ -168,6 +168,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
                 finishDay();
               }}
               layout={layout}
+              restartOnMistake={false}
             />
           )}
           {(day.kind === "boss_battle" || day.kind === "section_boss_battle") && (

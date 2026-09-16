@@ -48,6 +48,7 @@ export function ChapterReviewStage({ pathKey, label, verses, onComplete, session
           setAccuracy(wordAccuracy);
           celebrate(() => setPhaseIndex(1), "Previous chapter reviewed");
         }}
+        restartOnMistake={false}
       />
     );
   }

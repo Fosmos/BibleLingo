@@ -9,6 +9,12 @@ interface PathActions {
     versesPerDay?: number,
     locationTagLevels?: LocationTagLevel[],
     sectionEndPegEnabled?: boolean,
+    priorKnownVerseCount?: number,
+    // How many auto-completed days that verse count actually becomes (see lib/dayPlan.ts's own
+    // priorKnownDayCount) — the caller (PathOverviewScreen.tsx) computes this against the
+    // path's real verses, since this store action has no verse data of its own to derive it
+    // from.
+    priorKnownDayCount?: number,
   ) => void;
   resetPathProgress: (pathKey: string) => void;
   setActivePath: (pathKey: string) => void;
@@ -22,7 +28,7 @@ export function createPathActions(
   persist: (progress: UserProgress) => UserProgress,
 ): PathActions {
   return {
-    setPath: (pathKey, version, versesPerDay, locationTagLevels, sectionEndPegEnabled) => {
+    setPath: (pathKey, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, priorKnownDays) => {
       const state = get();
       const existing = state.paths[pathKey];
       // Spreads `existing` FIRST rather than naming every field explicitly — a field this
@@ -31,13 +37,25 @@ export function createPathActions(
       // already-started path (e.g. re-picking the same translation, or a hydration race on a
       // fresh page load re-applying the URL's own version/versesPerDay before the real saved
       // plan has loaded).
+      // `priorKnownVerseCount`/`priorKnownDays` only ever matter for a genuinely fresh path (no
+      // `existing`) — see GuidedPathFlow.tsx's own "I've already learned some of this"
+      // starting-point step, which always calls resetPathProgress right before this. They never
+      // override an already-started path's own real values (set once, at creation, and never
+      // changed again — see PathProgress's own doc comment).
+      const freshPriorKnownVerseCount = existing?.priorKnownVerseCount ?? priorKnownVerseCount;
       const plan: PathProgress = {
         ...existing,
         version,
-        completedDays: existing?.completedDays ?? 0,
+        // A fresh path with a claimed prior-known prefix starts with exactly that many days
+        // (see lib/dayPlan.ts's own priorKnownDayCount — book mode's own prefix can be several
+        // days, one per chapter it spans, not always just one) already marked done, so the
+        // reader lands straight on the first day of real new content instead of being asked to
+        // "do" a lesson that's just the verses they already said they knew.
+        completedDays: existing?.completedDays ?? priorKnownDays ?? 0,
         versesPerDay: versesPerDay ?? existing?.versesPerDay,
         locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,
         sectionEndPegEnabled: sectionEndPegEnabled ?? existing?.sectionEndPegEnabled,
+        priorKnownVerseCount: freshPriorKnownVerseCount,
       };
       set(persist({ ...state, paths: { ...state.paths, [pathKey]: plan } }));
     },

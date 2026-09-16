@@ -7,7 +7,9 @@ import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { WordRevealLine } from "@/components/drills/WordRevealLine";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
+import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 
@@ -43,7 +45,6 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
   const [wordIndex, setWordIndex] = useState(0);
   const [revealedWords, setRevealedWords] = useState<string[]>([]);
   const [value, setValue] = useState("");
-  const [showError, setShowError] = useState(false);
   const [hadMistake, setHadMistake] = useState(false);
 
   const currentWord = words[wordIndex];
@@ -51,7 +52,6 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
 
   function revealCurrentWord(missed: boolean) {
     const stillMissed = hadMistake || missed;
-    setShowError(false);
     setValue("");
     const nextRevealed = [...revealedWords, currentWord];
     setRevealedWords(nextRevealed);
@@ -70,7 +70,6 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
       revealCurrentWord(false);
     } else if (value.trim()) {
       playIncorrectSfx();
-      setShowError(true);
       setValue("");
       setHadMistake(true);
       onMistake?.();
@@ -94,7 +93,6 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
       revealCurrentWord(false);
     } else if (typed) {
       playIncorrectSfx();
-      setShowError(true);
       setValue("");
       setHadMistake(true);
       onMistake?.();
@@ -108,10 +106,13 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
       <LessonPageCard
         layout={layout}
         activeVerse={verse}
-        renderActiveVerse={() => <WordRevealLine words={words} revealedCount={revealedWords.length} />}
+        activeWordIndex={wordIndex}
+        renderActiveVerse={(_: VerseSegment, { startIndex, endIndex }: SenseLineWordRange) => (
+          <WordRevealLine words={words.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={revealedWords.length} />
+        )}
       />
 
-      <LessonControlBar dockRef={layout.dockRef}>
+      <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
         {referenceMatch ? (
           <ReferenceNumberEntry
             key={`${verse.id}-${wordIndex}`}
@@ -124,38 +125,42 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
             }}
           />
         ) : mode === "firstLetter" ? (
-          <input
-            value={value}
-            onChange={(event) => handleLetterChange(event.target.value)}
-            maxLength={1}
-            autoFocus
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            aria-label="Type the first letter of the next word"
-            className={`w-16 rounded-xl border p-3 text-center text-xl focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${
-              showError
-                ? "border-heart-500 focus-visible:ring-heart-500"
-                : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"
-            }`}
-          />
+          <>
+            {/* Visually hidden, not removed — the on-screen keyboard below is the one visible
+                way to type now (no more redundant box to tap into first), but a real physical
+                keyboard and screen readers still need a focusable text input to type into. */}
+            <input
+              value={value}
+              onChange={(event) => handleLetterChange(event.target.value)}
+              maxLength={1}
+              autoFocus
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="Type the first letter of the next word"
+              className="sr-only"
+            />
+            <OnScreenKeyboard onKey={handleLetterChange} />
+          </>
         ) : (
-          <input
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="Type the word, then press space"
-            aria-label="Type the next word"
-            className={`w-full max-w-xs rounded-xl border p-3 text-lg focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${
-              showError
-                ? "border-heart-500 focus-visible:ring-heart-500"
-                : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"
-            }`}
-          />
+          <>
+            <input
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="Type the next word"
+              className="sr-only"
+            />
+            <OnScreenKeyboard
+              onKey={(letter) => setValue((prev) => prev + letter)}
+              onBackspace={() => setValue((prev) => prev.slice(0, -1))}
+              onSubmit={submitWord}
+            />
+          </>
         )}
         <AutoCompleteButton onClick={() => onComplete(hadMistake)} />
       </LessonControlBar>

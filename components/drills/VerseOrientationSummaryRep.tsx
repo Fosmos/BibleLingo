@@ -5,11 +5,9 @@ import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { locationTagKey } from "@/lib/locationTags";
-import { tokenizeVerseWords } from "@/lib/verseWords";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
-import { sliceWordAnnotations } from "@/lib/verseHighlights";
-import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
+import { AnnotatedVerseWordRange } from "@/components/drills/AnnotatedVerseWordRange";
 import { VersePOAInput } from "@/components/drills/VersePOAInput";
 import { SceneGenerator } from "@/components/drills/SceneGenerator";
 import { pegWordFor } from "@/lib/pegSystem";
@@ -45,8 +43,8 @@ interface VerseOrientationSummaryRepProps {
 // lesson has always kept, one shared scene for the whole day rather than one per verse).
 // Those feed Gemini's scene generator (see SceneGenerator.tsx) for the final line, the scene
 // itself — editable, or typeable by hand. Not graded, same "self-checked" precedent as
-// DrawFirstLetterRep. Persisted via setVersePOA so it can resurface later as the gentlest
-// level of VerseRevealHelp's hint sequence.
+// DrawFirstLetterRep. Persisted via setVersePOA so it can resurface later as that verse's own
+// DayCircle icon.
 export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotations, onComplete, layout }: VerseOrientationSummaryRepProps) {
   const anchor = verses[0];
   const setVersePOA = useProgressStore((state) => state.setVersePOA);
@@ -86,22 +84,12 @@ export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotatio
       <LessonWholeDayPageCard
         layout={layout}
         verses={verses}
-        renderActiveVerse={(verse, verseIndex) => {
-          const words = tokenizeVerseWords(verse.text);
-          const sliced = sliceWordAnnotations(wordAnnotations, verseOffsets[verseIndex] ?? 0, words.length);
-          return (
-            <>
-              {words.map((word, index) => (
-                <span key={index}>
-                  <AnnotatedVerseWord word={word} annotation={sliced[index]} />{" "}
-                </span>
-              ))}
-            </>
-          );
-        }}
+        renderActiveVerse={(verse, verseIndex, range) => (
+          <AnnotatedVerseWordRange verse={verse} range={range} wordAnnotations={wordAnnotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
+        )}
       />
 
-      <LessonControlBar dockRef={layout.dockRef}>
+      <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
         <VersePOAInput
           furnitureLabel={locationTag}
           pegWord={pegSystemEnabled ? pegWord : undefined}

@@ -12,6 +12,7 @@ import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
@@ -91,17 +92,50 @@ export function RhythmRep({ verse, verseMarkers, annotations, layout, onComplete
     </Fragment>
   );
 
+  // Same word-by-word state as activeVerseWords above, sliced to just this ONE clause's own
+  // range (see LessonPageCard.tsx's own renderActiveVerse doc comment) — called once per
+  // clause so a multi-clause verse still renders through the same hanging-indent line
+  // structure a non-active verse gets, not one dense merged block. verseMarkers never fires
+  // here in practice (empty for every per-verse phase — see LearnSection.tsx) but the check
+  // stays for parity with activeVerseWords above.
+  function renderActiveVerseRange(_: VerseSegment, range: SenseLineWordRange) {
+    return (
+      <Fragment>
+        {flatWords.slice(range.startIndex, range.endIndex).map((clauseWord, offset) => {
+          const index = range.startIndex + offset;
+          const stateClassName =
+            index === wordIndex
+              ? "text-brand-700 underline decoration-2 underline-offset-4 dark:text-brand-300"
+              : index < wordIndex
+                ? "text-ink-muted dark:text-zinc-600"
+                : "";
+          return (
+            <Fragment key={index}>
+              {verseMarkers[index] && (
+                <>
+                  <span className="basis-full" />
+                  <VerseNumberMarker number={verseMarkers[index]} />
+                </>
+              )}
+              <AnnotatedVerseWord word={clauseWord.word} annotation={annotations[index]} className={stateClassName} />{" "}
+            </Fragment>
+          );
+        })}
+      </Fragment>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {layout ? (
-        <LessonPageCard layout={layout} activeVerse={verse} renderActiveVerse={() => activeVerseWords} />
+        <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={wordIndex} renderActiveVerse={renderActiveVerseRange} />
       ) : (
         <LessonParchmentCard>
           <p className="font-serif text-lg leading-loose">{activeVerseWords}</p>
         </LessonParchmentCard>
       )}
 
-      <LessonControlBar dockRef={layout?.dockRef}>
+      <LessonControlBar dockRef={layout?.dockRef} verseText={verse.text} verseMarkers={verseMarkers}>
         <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
           Learn <InfoTip text={INFO_TIPS.rhythmRep} />
         </p>

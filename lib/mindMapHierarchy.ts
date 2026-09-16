@@ -1,98 +1,183 @@
+import type { PathProgress, BibleBook } from "@/types";
 import type { ChapterNode } from "@/lib/useMindMapData";
-import { computeZoneCardState, type PericopeCardStatus } from "@/lib/pericopeCardState";
-import { fullBookTitle } from "@/lib/bibleBookTitles";
+import { findBook } from "@/lib/bibleBooks";
+import { BOOK_THEMES, type BookTheme } from "@/lib/bookThemes";
+import { computeZoneCardState } from "@/lib/pericopeCardState";
+import {
+  TESTAMENT_LABELS,
+  GENRE_LABELS,
+  SUBGENRE_LABELS,
+  booksByTestament,
+  genresForTestament,
+  subgenresForGenre,
+  bookCompletionPercent,
+  themeCompletionPercent,
+  groupCompletionPercent,
+  completedChaptersForBook,
+  type TestamentId,
+  type GenreId,
+} from "@/lib/canonTree";
+import { buildBrowsedChapters } from "@/lib/mindMapBrowseTree";
+import type {
+  MindMapChapterDatum,
+  MindMapThemeDatum,
+  MindMapBookDatum,
+  MindMapSubgenreDatum,
+  MindMapGenreDatum,
+  MindMapTestamentDatum,
+  MindMapRootDatum,
+} from "@/lib/mindMapTypes";
 
-export interface MindMapPericopeDatum {
-  kind: "pericope";
-  id: string;
-  label: string;
-  // e.g. "v9–11", or "v9" for a single-verse pericope — undefined only alongside the capstone
-  // case dayNumber's own doc comment already describes, or while pericope data itself is still
-  // loading (see PathZone.startVerse/endVerse).
-  verseRange?: string;
-  status: PericopeCardStatus;
-  // The chapter this pericope belongs to — tapping the card opens that chapter's own
-  // parchment view (see BookMindMap.tsx's onSelectChapter) rather than jumping straight into
-  // a lesson; the parchment view is where an individual verse run's own tap opens the actual
-  // Learn/Practice session (see PericopeCard.tsx/ChapterReadingView.tsx).
-  chapter: number;
-  // This pericope's own first verse — carried through to DayPathDiagram.tsx's own
-  // `targetVerse` so the parchment view opens straight to the real page holding THIS
-  // pericope, not wherever the chapter's own "today's lesson" default would otherwise land.
-  // Undefined only alongside verseRange's own doc comment (pericope data still loading).
-  startVerse?: number;
-  // The lesson day this pericope's card represents — computed by lib/pericopeCardState.ts's
-  // computeZoneCardState, the same established logic PericopeCard.tsx/BuildingRoomView
-  // already use, so this reads identically everywhere in the app. That function keys
-  // completion off the zone's LAST day (not its first) — a pericope spanning several lesson
-  // days only turns "completed" once every one of them is done, not just the first (a zone
-  // with no day of its own at all — see PathZone.spilloverVerses — is instead judged by the
-  // last spillover day that touched it).
-  dayNumber?: number;
-  // Mirrors PericopeCardState.actionKind — kept for callers that still want it, though
-  // BookMindMap.tsx's own tap handler no longer needs it now that a tap opens the chapter's
-  // parchment view rather than routing straight to a specific lesson/practice URL.
-  actionKind: "select" | "practice";
-  children?: never;
-}
-
-export interface MindMapChapterDatum {
-  kind: "chapter";
-  id: string;
-  label: string;
-  status: PericopeCardStatus;
-  children: MindMapPericopeDatum[];
-}
-
-export interface MindMapBookDatum {
-  kind: "book";
-  id: string;
-  label: string;
-  children: MindMapChapterDatum[];
-}
-
-export type MindMapDatum = MindMapBookDatum | MindMapChapterDatum | MindMapPericopeDatum;
+export type {
+  MindMapDatum,
+  MindMapPericopeDatum,
+  MindMapChapterDatum,
+  MindMapThemeDatum,
+  MindMapBookDatum,
+  MindMapSubgenreDatum,
+  MindMapGenreDatum,
+  MindMapTestamentDatum,
+  MindMapRootDatum,
+} from "@/lib/mindMapTypes";
 
 function verseRangeLabel(startVerse: number | undefined, endVerse: number | undefined): string | undefined {
   if (startVerse === undefined || endVerse === undefined) return undefined;
   return startVerse === endVerse ? `v${startVerse}` : `v${startVerse}–${endVerse}`;
 }
 
-// Reshapes useMindMapData.ts's own ChapterNode[] into a plain Book -> Chapter -> Pericope
-// tree — the shape lib/mindMapTreeLayout.ts's own explicit placement walks directly.
-// Deliberately stops at the pericope level rather than enumerating individual verses under
-// it: a real book can carry hundreds of verses, and a tree with that many leaves next to only
-// 3 levels of depth stretches its own sibling axis out far more than its depth axis, which is
-// what was crushing the whole canvas into an unreadably flat line (see
-// lib/mindMapTreeLayout.ts's own comment for the other half of that fix). A pericope node
-// carries enough of its own status/dayNumber to be the tree's tap target directly — verse-
-// level detail (now also its own verse REFERENCE, shown right on the card) lives one tap
-// away, on the real Path
-// screen a pericope click opens.
-export function buildMindMapTree(bookLabel: string, chapters: ChapterNode[], completedDays: number, todaysDay: number): MindMapBookDatum {
+function chapterRangeLabel(startChapter: number, endChapter: number): string {
+  return startChapter === endChapter ? `${startChapter}` : `${startChapter}–${endChapter}`;
+}
+
+function buildChapterDatum(bookName: string, chapter: ChapterNode, completedDays: number, todaysDay: number): MindMapChapterDatum {
   return {
-    kind: "book",
-    id: "book",
-    label: fullBookTitle(bookLabel),
-    children: chapters.map((chapter) => ({
-      kind: "chapter",
-      id: `ch-${chapter.chapter}`,
-      label: `${chapter.chapter}`,
-      status: chapter.status,
-      children: chapter.zones.map((zone) => {
-        const cardState = computeZoneCardState(zone, completedDays, todaysDay);
-        return {
-          kind: "pericope",
-          id: `z-${chapter.chapter}-${zone.zoneNumber}`,
-          label: zone.heading || zone.label || `Section ${zone.zoneNumber}`,
-          verseRange: verseRangeLabel(zone.startVerse, zone.endVerse),
-          status: cardState.status,
-          chapter: chapter.chapter,
-          startVerse: zone.startVerse,
-          dayNumber: cardState.actionDay?.dayNumber,
-          actionKind: cardState.actionKind,
-        };
-      }),
-    })),
+    kind: "chapter",
+    id: `chapter:${bookName}:${chapter.chapter}`,
+    label: `${chapter.chapter}`,
+    chapter: chapter.chapter,
+    status: chapter.status,
+    children: chapter.zones.map((zone) => {
+      const cardState = computeZoneCardState(zone, completedDays, todaysDay);
+      // Today's own real lesson can span more than one pericope (a chunk of new verses that
+      // starts in one section and finishes in another) — every zone it touches should read as
+      // "active" on the canvas, not just whichever one owns the actual "Learn" day (see
+      // lib/pericopeCardState.ts's own zoneShowsTodaysVerses, which the Path screen's linear
+      // list already keys off separately). Mind-Map-local rather than folded into
+      // computeZoneCardState itself: that function's own `status` also drives the Path
+      // screen's PericopeCard.tsx, where flipping a spillover zone that already has a
+      // COMPLETED home day of its own to "active" would wrongly relabel it as today's real
+      // lesson there (see that file's own isTodaysLesson) — a risk this canvas-only override
+      // doesn't share, since the Mind Map never reads actionKind/actionDay.kind that way.
+      const spillsToday = zone.spilloverVerses?.some((entry) => entry.dayNumber === todaysDay) ?? false;
+      const status = spillsToday ? "active" : cardState.status;
+      return {
+        kind: "pericope",
+        id: `pericope:${bookName}:${chapter.chapter}:${zone.zoneNumber}`,
+        label: zone.heading || zone.label || `Section ${zone.zoneNumber}`,
+        verseRange: verseRangeLabel(zone.startVerse, zone.endVerse),
+        status,
+        book: bookName,
+        chapter: chapter.chapter,
+        // Tapping this card should open its own action day's real first verse (today's actual
+        // next-lesson verse for an "active" zone, the last-practiced verse for a "completed"
+        // one) — NOT the zone's own structural startVerse, which can sit several verses earlier
+        // than wherever the reader's real progress in this pericope actually is (e.g. a
+        // multi-lesson pericope where only its tail end is still unlearned). Falls back to the
+        // zone's own startVerse only when this zone has no actionDay of its own to point at
+        // (see computeZoneCardState's spillover-only case).
+        startVerse: cardState.actionDay?.newVerses[0]?.verseNumber ?? zone.startVerse,
+        dayNumber: cardState.actionDay?.dayNumber,
+        actionKind: cardState.actionKind,
+      };
+    }),
   };
+}
+
+// Reshapes useMindMapData.ts's own ChapterNode[] (the active book's real, loaded day-plan) plus
+// every OTHER book's own static shell (lib/bibleBooks.ts's chapter counts, lib/canonTree.ts's
+// completion percentages — both cheap, sync, already-in-memory, no fetch) into one
+// Bible -> Testament -> Genre -> (Subgenre ->) Book -> (Theme ->) Chapter -> Pericope tree — the
+// shape lib/mindMapTreeLayout.ts's own top-down placement walks directly. The active book always
+// carries real chapter/pericope children; `browsedBookName`/`browsedChapter` (see
+// BookMindMap.tsx's own useMindMapBrowseChapter call) name the one OTHER book/chapter pair
+// currently open for structural browsing (see lib/mindMapBrowseTree.ts) — CAFD's single-open-
+// branch rule means there's ever at most one. Every book that's neither active nor currently
+// browsed stays a structural dead end with empty `children` — a book nobody's tapped into never
+// costs a network request.
+export function buildMindMapTree(
+  paths: Record<string, PathProgress>,
+  activeBookName: string,
+  activeChapters: ChapterNode[],
+  completedDays: number,
+  todaysDay: number,
+  browsedBookName?: string,
+  browsedChapter?: number,
+): MindMapRootDatum {
+  function buildTheme(theme: BookTheme, book: BibleBook, chapters: MindMapChapterDatum[]): MindMapThemeDatum {
+    const themeChapters = chapters.filter((chapter) => chapter.chapter >= theme.startChapter && chapter.chapter <= theme.endChapter);
+    return {
+      kind: "theme",
+      id: `theme:${book.name}:${theme.id}`,
+      label: theme.label,
+      reference: chapterRangeLabel(theme.startChapter, theme.endChapter),
+      percent: themeCompletionPercent(paths, book, theme),
+      children: themeChapters,
+    };
+  }
+
+  function buildBook(bookName: string): MindMapBookDatum {
+    const active = bookName === activeBookName;
+    const book = findBook(bookName);
+    const browsed = !active && !!book && bookName === browsedBookName;
+    const themes = book ? BOOK_THEMES[bookName] : undefined;
+    const chapters: MindMapChapterDatum[] = active
+      ? activeChapters.map((chapter) => buildChapterDatum(bookName, chapter, completedDays, todaysDay))
+      : browsed && book
+        ? buildBrowsedChapters(bookName, book, completedChaptersForBook(paths, book), browsedChapter)
+        : [];
+    const children: MindMapThemeDatum[] | MindMapChapterDatum[] =
+      (active || browsed) && themes && book ? themes.map((theme) => buildTheme(theme, book, chapters)) : chapters;
+    return {
+      kind: "book",
+      id: `book:${bookName}`,
+      label: bookName,
+      name: bookName,
+      active,
+      percent: book ? bookCompletionPercent(paths, book) : 0,
+      children,
+    };
+  }
+
+  function buildGenreChildren(genreBooks: BibleBook[], testament: TestamentId, genreId: GenreId): MindMapBookDatum[] | MindMapSubgenreDatum[] {
+    const subgenres = subgenresForGenre(genreId, genreBooks);
+    if (!subgenres) return genreBooks.map((book) => buildBook(book.name));
+    return subgenres.map(({ subgenre, books: subBooks }) => ({
+      kind: "subgenre" as const,
+      id: `subgenre:${testament}:${genreId}:${subgenre}`,
+      label: SUBGENRE_LABELS[subgenre],
+      percent: groupCompletionPercent(paths, subBooks),
+      children: subBooks.map((book) => buildBook(book.name)),
+    }));
+  }
+
+  const booksByTestamentGroup = booksByTestament();
+  const testaments: MindMapTestamentDatum[] = (Object.keys(TESTAMENT_LABELS) as TestamentId[]).map((testament) => {
+    const books = booksByTestamentGroup[testament];
+    const genres: MindMapGenreDatum[] = genresForTestament(testament, books).map(({ genre, books: genreBooks }) => ({
+      kind: "genre" as const,
+      id: `genre:${testament}:${genre}`,
+      label: GENRE_LABELS[genre],
+      percent: groupCompletionPercent(paths, genreBooks),
+      children: buildGenreChildren(genreBooks, testament, genre),
+    }));
+    return {
+      kind: "testament",
+      id: `testament:${testament}`,
+      label: TESTAMENT_LABELS[testament],
+      percent: groupCompletionPercent(paths, books),
+      children: genres,
+    };
+  });
+
+  return { kind: "root", id: "root", label: "The Bible", children: testaments };
 }

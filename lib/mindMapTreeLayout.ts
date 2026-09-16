@@ -1,127 +1,198 @@
-import type { MindMapBookDatum, MindMapDatum } from "@/lib/mindMapHierarchy";
+import type { MindMapDatum, MindMapRootDatum } from "@/lib/mindMapHierarchy";
+import type { MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapLayout } from "@/lib/mindMapLayoutTypes";
 
-// Two rings out from the book (Book -> Chapter -> Pericope) — requested range for ring
-// spacing was 120-150px; RADIUS_STEP is the FLOOR each ring sits at, not its fixed distance —
-// see chapterRadius below for why the chapter ring specifically has to grow past it.
-const RADIUS_STEP = 140;
-// Every chapter circle gets at least this many px of arc between it and its neighbor —
-// comfortably bigger than a chapter circle's own ~56px footprint (see MindMapNodeCard.tsx's
-// fixed h-14/w-14) so neighboring circles never physically overlap. A FIXED chapter radius
-// (the original version of this constant) only has enough circumference for this at small
-// chapter counts — 16 equally-spaced chapters at a 140px radius are already tighter than the
-// circles themselves, which is exactly what packed Mark's own chapter ring shoulder to
-// shoulder; see chapterRadius below for the fix.
-const MIN_CHAPTER_ARC = 80;
-// Every pericope on an expanded chapter's own fan gets at least this many px of arc between
-// it and its neighbor — requested range was 60-80px; kept comfortably above a pericope card's
-// own ~80px footprint (see MindMapNodeCard.tsx's fixed w-20) so cards never physically
-// overlap even though their center points are what this constant actually governs.
-const MIN_LEAF_ARC = 130;
-// The widest a single chapter's own pericope fan is ever allowed to spread, centered on that
-// chapter's own angle — MUST stay under π (180°) or a fan could wrap back past its own sides
-// and read as belonging to a neighboring chapter instead. Comfortably under that, not just
-// technically under it, so a fan never reads as pointing back toward the book at center.
-const MAX_FAN_RADIANS = Math.PI * 0.7;
-// Half the book node's own on-screen size (see MindMapNodeCard.tsx's h-20 circle) — every
-// chapter's own connector starts this far out from center, not from the book's exact middle.
-const BOOK_VISUAL_RADIUS = 40;
+export type { LayoutPoint, MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapLayout } from "@/lib/mindMapLayoutTypes";
 
-export interface PolarPoint {
-  angle: number;
-  radius: number;
+// Horizontal room reserved per sibling slot — one flat constant for the whole tree, comfortably
+// covering every FIXED-size node card's own real footprint (pericopes are the one kind that
+// isn't fixed-size and so don't use this — see PERICOPE_STEP_PX/PERICOPE_SIDE_OFFSET_PX below).
+// Every set of siblings gets EQUAL spacing based purely on how many of them there are,
+// regardless of whether one of them happens to be deeply expanded — deliberately NOT
+// proportional to subtree size (an earlier version sized each child's own band by its total
+// descendant leaf count, a classic dendrogram, but that let expanding just ONE branch shove
+// every LATER sibling sideways by its own unrelated width); fixed spacing means expanding a
+// branch only ever affects what's directly under it, every sibling's own position always stays
+// exactly where its plain sibling order puts it. Sized against the LARGEST circle's own
+// diameter at its ACTIVE size (testament, 72px base * ACTIVE_SCALE 1.2 — see
+// lib/useMindMapFocusState.ts) next to an INACTIVE sibling (72px * 0.8), the worst-case adjacent
+// pair once CAFD's own 1.5x active/inactive contrast applies (half-widths sum to ~72px) —
+// trimmed a bit tighter than that full worst case for a denser, more compact tree, still
+// keeping that pair clear.
+const SIBLING_SPACING_PX = 82;
+// Theme siblings render as pills sized to their own label (see MindMapRingNode.tsx's own
+// `pill` prop — up to 118px wide, wider than every other ring/card's own fixed footprint the
+// plain SIBLING_SPACING_PX above was sized for) — plus CAFD's own active-node grow (up to 1.2x)
+// can widen one further still (active max-width pill next to an inactive one sums to ~118px of
+// combined half-widths); tightened the same way as SIBLING_SPACING_PX above.
+const PILL_SIBLING_SPACING_PX = 128;
+// Vertical distance from a node down to its own children's row — Root, Testament, Genre, Book,
+// Chapter, Pericope. Clears any single row's own node height (an active ring at 1.2x, or a
+// realistically-tall first pericope card), tightened the same way as SIBLING_SPACING_PX above.
+const LEVEL_HEIGHT_PX = 100;
+// Once a single sibling row would hold more than this many nodes, it wraps into a roughly
+// square GRID instead (see gridPosition below) — comfortably above a genuinely SHORT book's own
+// chapter count (Mark's own 16, say) so those stay a plain single row, the familiar shape; it's
+// specifically a long book (Genesis' 50, Psalms' 150) this exists for.
+const GRID_WRAP_THRESHOLD = 20;
+// Vertical gap between one wrapped grid row and the next, within the SAME depth level — smaller
+// than LEVEL_HEIGHT_PX since these rows are still conceptually one level (e.g. still "the
+// chapter ring"), just stacked to keep the ring from stretching into one absurdly long line.
+const GRID_ROW_HEIGHT_PX = 70;
+// Padding around the computed bounding box so an edge node's own card never clips against the
+// canvas edge.
+const CANVAS_PADDING_PX = 100;
+// A chapter's own pericopes lay out differently from every other level (see placePericopes
+// below) — a single vertical trunk stepping straight down from the chapter, each pericope
+// alternating left/right off it. PERICOPE_STEP_PX is the vertical distance from one pericope to
+// the next along that trunk; PERICOPE_SIDE_OFFSET_PX is the horizontal reach of each one's own
+// short connector stub off the trunk. Pericope cards are content-sized, not fixed (see
+// MindMapNodeCard.tsx — a real ESV section heading renders in full at an 11px font, never
+// truncated, up to a 150px max-w), so both constants are sized against a generous worst-case
+// footprint instead (a heading wrapping up to ~4 lines at that max-width/font, plus its own
+// verse-range caption, comfortably under 105px tall): STEP clears a same-side neighbor two
+// steps away (2 * 58 = 116px > ~105px) with real margin; OFFSET clears two opposite-side cards
+// at their own worst-case half-width (2 * 80 = 160px > 150px max-w) with real margin too — both
+// trimmed a bit tighter than the full worst case for a more compact tree. A genuinely
+// pathological heading could still overlap its neighbor — an accepted, rare cost against ever
+// silently truncating real content.
+const PERICOPE_STEP_PX = 58;
+const PERICOPE_SIDE_OFFSET_PX = 80;
+
+// A node's own real children per lib/mindMapHierarchy.ts's own union — a pericope never has
+// any; every other kind's `children` array is already the right shape (empty for an
+// unexpanded/inactive branch, same convention as before).
+function childrenOf(datum: MindMapDatum): MindMapDatum[] {
+  return datum.kind === "pericope" ? [] : datum.children;
 }
 
-export interface MindMapLayoutNode {
-  data: MindMapDatum;
-  cx: number;
-  cy: number;
+// A node's own children are only ever WALKED (and so only ever rendered/take up any sibling
+// slots) once its own id is in `expandedIds` — the root is the one implicit exception, always
+// considered expanded, since the canvas has to start somewhere. A node with real children that
+// just hasn't been tapped open yet renders as one plain circle, the same as a true leaf —
+// collapsed is collapsed, regardless of how much it's hiding.
+function visibleChildren(datum: MindMapDatum, expandedIds: ReadonlySet<string>): MindMapDatum[] {
+  if (datum.kind !== "root" && !expandedIds.has(datum.id)) return [];
+  return childrenOf(datum);
 }
 
-export interface MindMapLayoutLink {
-  source: PolarPoint;
-  target: PolarPoint;
+// Where sibling `index` (of `count` total) sits within its own row — a single, ordinary row
+// (col = index, one row) below GRID_WRAP_THRESHOLD, a roughly SQUARE grid above it: a many-
+// chapter book's own chapter ring otherwise stretches into one straight line thousands of
+// pixels wide (150 chapters * SIBLING_SPACING_PX), which reads as "this book expands endlessly
+// sideways" rather than as a contained, ordinary part of the tree. Wrapping into ~sqrt(count)
+// columns keeps the whole ring roughly as wide as it is tall instead, the same "doesn't
+// dominate the canvas in one direction" property every other level already has. Chapters still
+// read in plain numeric order within the grid, left to right then down a row, same as text —
+// the one wrinkle is purely visual (a row break partway through), not a reordering.
+function gridPosition(index: number, count: number): { col: number; row: number; columns: number } {
+  if (count <= GRID_WRAP_THRESHOLD) return { col: index, row: 0, columns: count };
+  const columns = Math.ceil(Math.sqrt(count));
+  return { col: index % columns, row: Math.floor(index / columns), columns };
 }
 
-export interface MindMapLayout {
-  nodes: MindMapLayoutNode[];
-  links: MindMapLayoutLink[];
-  width: number;
-  height: number;
-  centerX: number;
-  centerY: number;
-}
-
-// Explicit, fixed two-ring placement — NOT d3-hierarchy's own automatic proportional-by-leaf-
-// count angle partitioning (an earlier version of this file used d3's tree() layout directly).
-// That automatic approach reads fine with many top-level branches (a 16-chapter book): each
-// chapter's own pericopes stay confined to a small slice, proportional to how few OTHER
-// chapters there are to share the circle with. But it breaks hard for a short book like Jude,
-// which has exactly ONE chapter: with no sibling chapters to share the circle with, a
-// proportional algorithm legitimately hands that one chapter's own pericopes the ENTIRE 2π
-// budget, scattering some of them past the book node's own position — visually "above" or
-// "behind" the very chapter that owns them. Fixed placement sidesteps the whole class of bug:
-// every chapter ALWAYS gets an equal slot (2π / chapter count) purely for its own position,
-// regardless of expansion state or pericope count; an expanded chapter's own pericopes then
-// fan out independently, centered on that chapter's own angle, capped at MAX_FAN_RADIANS so
-// they can never wrap back past their own parent's sides — growing the RING RADIUS instead of
-// the angle when MIN_LEAF_ARC spacing wouldn't otherwise fit that many pericopes inside the
-// cap. d3-shape's linkRadial (see BookMindMap.tsx) still draws the actual connector curves
-// from the (angle, radius) pairs this produces.
-export function computeMindMapLayout(root: MindMapBookDatum, expandedChapters: ReadonlySet<string>): MindMapLayout {
+// Explicit, hand-rolled top-down tree placement — deliberately not d3-hierarchy's own tree()
+// layout (not a dependency this app already carries; d3-shape's linkVertical below still draws
+// the actual connector curves once points are placed). Each node's own children are laid out
+// left-to-right directly beneath it, evenly spaced (see SIBLING_SPACING_PX above) and centered
+// under their parent — a node's own position is always simply "my parent's x, plus my own
+// index among my siblings times the fixed spacing," independent of anything happening
+// elsewhere in the tree. Unlike the old RADIAL version this replaces, there's no "share a fixed
+// circle" pitfall to design around (a lone child under a parent with no siblings just sits
+// directly under that parent, the same as it would with ten siblings) — a top-down tree's
+// sibling axis is already just a straight line, not a shared circumference.
+export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: ReadonlySet<string>): MindMapLayout {
   const nodes: MindMapLayoutNode[] = [];
   const links: MindMapLayoutLink[] = [];
-  let maxRadius = 0;
+  const spines: MindMapSpine[] = [];
+  let minX = 0;
+  let maxX = 0;
+  let maxY = 0;
 
-  function place(data: MindMapDatum, angle: number, radius: number): void {
-    // `angle - π/2` rotates the whole tree so angle 0 points straight up rather than right,
-    // matching a reader's instinct for "the book sits at the top."
-    nodes.push({ data, cx: radius * Math.cos(angle - Math.PI / 2), cy: radius * Math.sin(angle - Math.PI / 2) });
-    maxRadius = Math.max(maxRadius, radius);
-  }
-
-  place(root, 0, 0);
-
-  const chapterCount = Math.max(1, root.children.length);
-  const chapterStep = (2 * Math.PI) / chapterCount;
-  // Same reasoning as the pericope ring below, one level up: `chapterCount` equally-spaced
-  // circles need at least MIN_CHAPTER_ARC px of arc each, which floors how far out the whole
-  // ring has to sit — 16 chapters need roughly 16 * 80 / 2π ≈ 200px, well past the 140px
-  // RADIUS_STEP floor that was fine for a 3-chapter book but packed Mark's own 16 shoulder to
-  // shoulder.
-  const chapterRadius = Math.max(RADIUS_STEP, (chapterCount * MIN_CHAPTER_ARC) / (2 * Math.PI));
-  const pericopeBaseRadius = chapterRadius + RADIUS_STEP;
-
-  root.children.forEach((chapter, chapterIndex) => {
-    const chapterAngle = chapterIndex * chapterStep;
-    place(chapter, chapterAngle, chapterRadius);
-    links.push({ source: { angle: chapterAngle, radius: BOOK_VISUAL_RADIUS }, target: { angle: chapterAngle, radius: chapterRadius } });
-
-    if (!expandedChapters.has(chapter.id) || chapter.children.length === 0) return;
-
-    const pericopes = chapter.children;
-    const count = pericopes.length;
-    // Angular width MIN_LEAF_ARC spacing needs at the base radius, for `count` points spread
-    // across `count - 1` gaps (a lone pericope needs no gap, and no fan width, at all).
-    const neededWidth = count > 1 ? ((count - 1) * MIN_LEAF_ARC) / pericopeBaseRadius : 0;
-    const fanWidth = Math.min(neededWidth, MAX_FAN_RADIANS);
-    // The angular width itself never grows past MAX_FAN_RADIANS — when that many pericopes
-    // wouldn't fit MIN_LEAF_ARC apart within it at the base radius, the ring moves further
-    // out instead until they do.
-    const pericopeRadius = neededWidth > MAX_FAN_RADIANS ? ((count - 1) * MIN_LEAF_ARC) / fanWidth : pericopeBaseRadius;
-
-    pericopes.forEach((pericope, pericopeIndex) => {
-      const pericopeAngle = count === 1 ? chapterAngle : chapterAngle - fanWidth / 2 + (fanWidth * pericopeIndex) / (count - 1);
-      place(pericope, pericopeAngle, pericopeRadius);
-      links.push({ source: { angle: chapterAngle, radius: chapterRadius }, target: { angle: pericopeAngle, radius: pericopeRadius } });
+  // A chapter's own pericopes zig-zag straight down a single trunk directly below it, in order
+  // — pericope 1 on one side, pericope 2 diagonally across from it on the other, pericope 3 back
+  // to the first side, and so on — rather than the ordinary fanned-out sibling row every other
+  // level uses. Pericopes are always leaves (childrenOf never recurses into them), so this never
+  // needs to hand back a "where do MY children start" floor the way `place` does.
+  function placePericopes(chapter: MindMapDatum, x: number, y: number, startY: number, pericopes: MindMapDatum[]): void {
+    pericopes.forEach((pericope, index) => {
+      const side = index % 2 === 0 ? -1 : 1;
+      const childY = startY + index * PERICOPE_STEP_PX;
+      const childX = x + side * PERICOPE_SIDE_OFFSET_PX;
+      nodes.push({ data: pericope, cx: childX, cy: childY });
+      minX = Math.min(minX, childX);
+      maxX = Math.max(maxX, childX);
+      maxY = Math.max(maxY, childY);
+      links.push({ source: { x, y: childY }, target: { x: childX, y: childY }, targetId: pericope.id, straight: true });
     });
-  });
-
-  const size = maxRadius * 2 + 200; // padding so the outermost ring's own card never clips
-  const center = size / 2;
-  for (const node of nodes) {
-    node.cx += center;
-    node.cy += center;
+    if (pericopes.length > 0) {
+      spines.push({ x, y0: y, y1: startY + (pericopes.length - 1) * PERICOPE_STEP_PX, parentId: chapter.id });
+    }
   }
 
-  return { nodes, links, width: size, height: size, centerX: center, centerY: center };
+  // `childrenStartY` is where THIS node's own children begin — passed down by its PARENT
+  // rather than derived from this node's own y, because a wrapped grid's rows are only
+  // GRID_ROW_HEIGHT_PX apart from EACH OTHER (see gridPosition), narrower than the full
+  // LEVEL_HEIGHT_PX a level further down needs to stay clear of every row in that same grid —
+  // a chapter sitting in, say, row 2 of an 8-row grid would otherwise have its own pericopes
+  // land right on top of rows 3 and 4's own circles. Every child of the SAME sibling group
+  // therefore descends from the SAME floor — the bottom of the whole grid, not each child's own
+  // individual row — even though that leaves an intentionally generous gap for a child sitting
+  // in an earlier row. A big gap reads as spacious; overlapping cards read as broken.
+  function place(datum: MindMapDatum, x: number, y: number, childrenStartY: number): void {
+    nodes.push({ data: datum, cx: x, cy: y });
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+
+    // Always this node's own siblings in their PLAIN natural order — chapter 1 stays the
+    // leftmost chapter, "The Beginning" stays the leftmost theme, and so on, whether or not one
+    // of them happens to be expanded. Selecting a node reveals what's under it in place; it
+    // never reshuffles its own row to center itself, so a reader's own spatial memory of where
+    // a given circle sits never gets disturbed by what they tap.
+    const children = visibleChildren(datum, expandedIds);
+    if (children.length === 0) return;
+
+    if (datum.kind === "chapter") {
+      placePericopes(datum, x, y, childrenStartY, children);
+      return;
+    }
+
+    const positions = children.map((_, index) => gridPosition(index, children.length));
+    const rows = Math.max(...positions.map((position) => position.row)) + 1;
+    const gridBottomY = childrenStartY + (rows - 1) * GRID_ROW_HEIGHT_PX;
+    const grandchildrenStartY = gridBottomY + LEVEL_HEIGHT_PX;
+    const siblingSpacing = children[0]?.kind === "theme" ? PILL_SIBLING_SPACING_PX : SIBLING_SPACING_PX;
+
+    children.forEach((child, index) => {
+      const { col, row, columns } = positions[index];
+      const childX = x + (col - (columns - 1) / 2) * siblingSpacing;
+      const childY = childrenStartY + row * GRID_ROW_HEIGHT_PX;
+      links.push({ source: { x, y }, target: { x: childX, y: childY }, targetId: child.id });
+      place(child, childX, childY, grandchildrenStartY);
+    });
+  }
+
+  place(root, 0, 0, LEVEL_HEIGHT_PX);
+
+  const width = maxX - minX + CANVAS_PADDING_PX * 2;
+  const height = maxY + CANVAS_PADDING_PX * 2;
+  const offsetX = -minX + CANVAS_PADDING_PX;
+  const offsetY = CANVAS_PADDING_PX;
+  for (const node of nodes) {
+    node.cx += offsetX;
+    node.cy += offsetY;
+  }
+  for (const link of links) {
+    link.source.x += offsetX;
+    link.source.y += offsetY;
+    link.target.x += offsetX;
+    link.target.y += offsetY;
+  }
+  for (const spine of spines) {
+    spine.x += offsetX;
+    spine.y0 += offsetY;
+    spine.y1 += offsetY;
+  }
+
+  return { nodes, links, spines, width, height };
 }

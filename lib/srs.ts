@@ -123,9 +123,9 @@ export function formatNextReview(nextDueAt: string | null, now: Date = new Date(
   return `Next review in ${days} days`;
 }
 
-export type SrsPhase = "daily" | "weekly" | "biweekly" | "monthly";
+export type SrsPhase = "daily" | "every3days" | "weekly" | "biweekly" | "monthly";
 
-const PHASE_BOX: Record<SrsPhase, SrsBox> = { daily: 1, weekly: 2, biweekly: 3, monthly: 4 };
+const PHASE_BOX: Record<SrsPhase, SrsBox> = { daily: 1, every3days: 5, weekly: 2, biweekly: 3, monthly: 4 };
 
 // Lets a manually-added "I already knew this" entry seed straight into whichever box
 // matches how well the user says they already know it, instead of starting at Box 1.

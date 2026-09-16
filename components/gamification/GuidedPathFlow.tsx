@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { BibleBook, LocationTagLevel } from "@/types";
+import type { BibleBook } from "@/types";
 import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
-import { pathKey } from "@/lib/memorizationContent";
-import { useProgressStore } from "@/store/useProgressStore";
+import { useGoToPath } from "@/lib/useGoToPath";
 import { useLearnIntensityFlow } from "@/lib/useLearnIntensityFlow";
+import { useStartingPointFlow } from "@/lib/useStartingPointFlow";
 import { BookList } from "@/components/gamification/BookList";
 import { ChapterGrid } from "@/components/gamification/ChapterGrid";
 import { VersionPicker } from "@/components/gamification/VersionPicker";
@@ -17,6 +16,7 @@ import { VersePicker } from "@/components/gamification/VersePicker";
 import { VersesPerDayPicker } from "@/components/gamification/VersesPerDayPicker";
 import { LearnIntensityPicker } from "@/components/gamification/LearnIntensityPicker";
 import { LocationTagLevelPicker } from "@/components/gamification/LocationTagLevelPicker";
+import { StartingPointFlow } from "@/components/gamification/StartingPointFlow";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface GuidedPathFlowProps {
@@ -27,8 +27,7 @@ interface GuidedPathFlowProps {
 const CHAPTER_FETCH_CONCURRENCY = 4;
 
 export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
-  const router = useRouter();
-  const resetPathProgress = useProgressStore((state) => state.resetPathProgress);
+  const goToPath = useGoToPath();
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -37,29 +36,26 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const [loadingLabel, setLoadingLabel] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  function goToPath(
-    identifier: string,
-    kind: "book" | "chapter" | "verse",
-    version: string,
-    versesPerDay?: number,
-    locationTagLevels?: LocationTagLevel[],
-    sectionEndPegEnabled?: boolean,
-  ) {
-    const key = pathKey(kind, identifier);
-    // Re-picking a path through this flow (reached via "Switch Path") always starts fresh —
-    // see store/useProgressStore.ts's resetPathProgress. A no-op for a path with no progress
-    // yet, so a brand-new pick is unaffected.
-    resetPathProgress(key);
-    const query = new URLSearchParams({ version: version });
-    if (versesPerDay) query.set("versesPerDay", String(versesPerDay));
-    if (locationTagLevels && locationTagLevels.length > 0) query.set("locationTagLevels", locationTagLevels.join(","));
-    if (sectionEndPegEnabled) query.set("sectionEndPeg", "1");
-    router.push(`/path/${encodeURIComponent(key)}?${query}`);
-  }
+  // Book/chapter mode's own last step before goToPath — "already know some of this?" — see
+  // lib/useStartingPointFlow.ts.
+  const startingPointFlow = useStartingPointFlow({
+    selectedBook,
+    goToPath,
+    onLoading: (label) => {
+      setStatus("loading");
+      setLoadingLabel(label);
+      setErrorMessage("");
+    },
+    onError: (message) => {
+      setStatus("error");
+      setErrorMessage(message);
+    },
+    onIdle: () => setStatus("idle"),
+  });
 
-  // Book/chapter mode's step chain after "how many verses per day": intensity, then optionally
-  // Memory Palace tag levels — see lib/useLearnIntensityFlow.ts.
-  const intensityFlow = useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath });
+  // Book/chapter mode's step chain after "how many verses per day" — see
+  // lib/useLearnIntensityFlow.ts. goToPath here is startingPointFlow.requestFinish, not real navigation.
+  const intensityFlow = useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath: startingPointFlow.requestFinish });
 
   async function handleSelectVersion(version: string) {
     if (!selectedBook) return;
@@ -106,6 +102,22 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
 
   if (status === "error") {
     return <FetchError message={errorMessage} onRetry={() => setStatus("idle")} />;
+  }
+
+  if (startingPointFlow.pendingFinish && selectedBook) {
+    const pendingFinish = startingPointFlow.pendingFinish;
+    return (
+      <StartingPointFlow
+        book={selectedBook}
+        kind={pendingFinish.kind}
+        fixedChapter={pendingFinish.kind === "chapter" ? (selectedChapter ?? undefined) : undefined}
+        fixedChapterVerseCount={pendingFinish.kind === "chapter" ? (verseCount ?? undefined) : undefined}
+        version={pendingFinish.version}
+        onStartFromBeginning={startingPointFlow.finishFromBeginning}
+        onPickStartingPoint={startingPointFlow.handleStartingPointPicked}
+        onBack={startingPointFlow.clearPendingFinish}
+      />
+    );
   }
 
   if (intensityFlow.showLocationTagLevels) {

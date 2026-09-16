@@ -92,7 +92,7 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   }
 
   if (!layout) {
-    return <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} />;
+    return <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} restartOnMistake={false} />;
   }
 
   // A complete, self-chromed screen — same LessonTopBar + fixed reading-view parchment every
@@ -105,9 +105,16 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   // through this app leans on.
   return (
     <>
-      <LessonChrome label={lessonLabel ?? ""} version={version ?? ""} current={stageIndex + 1} total={stages.length} onExit={onExit} layout={layout} />
+      <LessonChrome
+        label={lessonLabel ?? ""}
+        version={version ?? ""}
+        current={stageIndex + 1}
+        total={stages.length}
+        onExit={onExit}
+        layout={layout}
+      />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-        <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} layout={layout} />
+        <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} layout={layout} restartOnMistake={false} />
       </div>
     </>
   );
