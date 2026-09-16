@@ -20,6 +20,10 @@ export const RING_SIZE_PX: Record<"testament" | "genre" | "subgenre" | "book" | 
 };
 
 interface MindMapRingNodeProps {
+  // See MindMapLinks.tsx's own doc comment — only a `pill` node's real rendered size is ever
+  // measured off this (its content-sized width/height has no fixed formula the way a plain
+  // circle's own `size` does), but set on every kind alike since there's no real cost to it.
+  nodeId: string;
   style: { left: number; top: number; transform: string };
   size: number;
   label: string;
@@ -50,10 +54,11 @@ interface MindMapRingNodeProps {
 // one difference between them is the corner badge (see toggleGlyph) and what a tap does, not the
 // shape itself. Split out of MindMapNodeCard.tsx purely to keep that file under this codebase's
 // own 200-line file cap (see CLAUDE.md) — no behavior difference from having it inline there.
-export function MindMapRingNode({ style, size, label, caption, color, expanded, dimmed, toggleGlyph, onClick, pill }: MindMapRingNodeProps) {
+export function MindMapRingNode({ nodeId, style, size, label, caption, color, expanded, dimmed, toggleGlyph, onClick, pill }: MindMapRingNodeProps) {
   return (
     <button
       type="button"
+      data-node-id={nodeId}
       onClick={onClick}
       aria-expanded={toggleGlyph === "expand" ? expanded : undefined}
       style={{ ...(pill ? style : { ...style, height: size, width: size }), ...mindMapNodeColorVars(color) }}
