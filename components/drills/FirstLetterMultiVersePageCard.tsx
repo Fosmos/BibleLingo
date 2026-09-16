@@ -78,6 +78,7 @@ export function FirstLetterMultiVersePageCard({ layout, verses, revealedCount, c
         return <FirstLetterVerseWords words={words} offset={fragmentOffset + range.startIndex} revealedCount={revealedCount} />;
       }}
       allowManualFlip
+      showNextGhost={false}
       isVerseNumberVisible={isVerseNumberVisible}
       // A pericope heading opening somewhere mid-entity stays hidden until recall actually
       // reaches its own first verse — same "don't leak it ahead of actually recalling it"
