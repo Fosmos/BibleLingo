@@ -7,6 +7,7 @@ import { buildMindMapTree } from "@/lib/mindMapHierarchy";
 import { computeMindMapLayout } from "@/lib/mindMapTreeLayout";
 import { buildParentMap, defaultActivePath, toggleActivePath, findBrowsedBook, findBrowsedChapter } from "@/lib/mindMapActivePath";
 import { useMindMapAutoCenter } from "@/lib/useMindMapAutoCenter";
+import { useMindMapNodeWidths } from "@/lib/useMindMapNodeWidths";
 import { useMindMapFocusState, INACTIVE_SCALE } from "@/lib/useMindMapFocusState";
 import { useMindMapGradientRow } from "@/lib/useMindMapGradientRow";
 import { useMindMapBrowseChapter } from "@/lib/useMindMapBrowseChapter";
@@ -126,6 +127,7 @@ export function BookMindMap({ bookLabel, chapters, completedDays, todaysDay, ver
   // lib/useMindMapAutoCenter.ts's own doc comment (moved out of this component to stay under
   // this codebase's own 200-line file cap).
   useMindMapAutoCenter({ focusBookId: `book:${browsedBookName ?? bookLabel}`, layout, activePath, parentMap, wrapperRef, transformRef });
+  const pericopeWidthById = useMindMapNodeWidths(wrapperRef, layout);
 
   return (
     <div ref={wrapperRef} className="relative h-full w-full">
@@ -149,7 +151,7 @@ export function BookMindMap({ bookLabel, chapters, completedDays, todaysDay, ver
             <MindMapZoomControls onZoomIn={() => zoomIn()} onZoomOut={() => zoomOut()} onReset={() => resetTransform()} />
             <TransformComponent wrapperClass={`!h-full !w-full ${CANVAS_BG_CLASS}`} contentClass="!items-start">
               <div className="relative" style={{ width: layout.width, height: layout.height }}>
-                <MindMapLinks layout={layout} isOnFocusedBranch={isOnFocusedBranch} />
+                <MindMapLinks layout={layout} isOnFocusedBranch={isOnFocusedBranch} activePath={activePath} pericopeWidthById={pericopeWidthById} />
                 {layout.nodes.map((node) => (
                   <MindMapNodeCard
                     key={node.data.id}

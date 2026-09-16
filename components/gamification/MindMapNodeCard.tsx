@@ -63,6 +63,7 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, onAc
     return (
       <button
         type="button"
+        data-node-id={datum.id}
         onClick={() => onSelectPericope(datum.chapter, datum.startVerse, datum.book)}
         style={{ ...style, ...mindMapNodeColorVars(color) }}
         // NOT overflow-hidden on the button itself — the badge below is deliberately
