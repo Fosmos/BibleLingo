@@ -96,6 +96,7 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, onAc
   if (datum.kind === "chapter") {
     return (
       <MindMapRingNode
+        nodeId={datum.id}
         style={style}
         size={RING_SIZE_PX.chapter}
         label={`Ch ${datum.label}`}
@@ -111,6 +112,7 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, onAc
   if (datum.kind === "theme") {
     return (
       <MindMapRingNode
+        nodeId={datum.id}
         style={style}
         size={RING_SIZE_PX.theme}
         label={datum.label}
@@ -132,6 +134,7 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, onAc
   if (datum.kind === "book" || datum.kind === "genre" || datum.kind === "subgenre" || datum.kind === "testament") {
     return (
       <MindMapRingNode
+        nodeId={datum.id}
         style={style}
         size={RING_SIZE_PX[datum.kind]}
         label={datum.label}
