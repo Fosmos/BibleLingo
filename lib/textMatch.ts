@@ -97,21 +97,20 @@ export function diffAttempt(input: string, target: string): { spoken: WordDiffTo
   };
 }
 
-export function wordMatchRatio(input: string, target: string): number {
-  // Same tokenize-then-normalize-each-token basis as diffWords/diffAttempt (see
-  // normalizedTokens above) rather than normalizing the whole target string at once, so a
-  // hyphenated word can't quietly change the target's own word count between this ratio and
-  // what the diff display actually shows.
-  const targetWords = normalizedTokens(tokenizeVerseWords(target));
-  if (targetWords.length === 0) return 1;
-  const inputWords = normalizedWords(input);
-  const { matchedA } = lcsAlign(targetWords, inputWords);
-  const correctCount = matchedA.filter(Boolean).length;
-  return correctCount / targetWords.length;
-}
-
-// Speech transcripts are noisier than typed input (recognition errors, dropped words),
-// so spoken checks pass on a high word-match ratio rather than requiring an exact match.
-export function looseMatch(input: string, target: string, threshold = 0.85): boolean {
-  return wordMatchRatio(input, target) >= threshold;
+// How many of targetWords, counting from the very start, have already been recognized in a
+// live (possibly still-interim) speech transcript — used to reveal a verse's words in place as
+// they're spoken (see SpeakRep.tsx) rather than only judging the whole attempt once it ends.
+// LCS-aligns the transcript against the target the same way diffAttempt does (so one misheard
+// word doesn't derail everything after it), then reports the length of the longest unbroken run
+// of matched target words starting at index 0 — a later, isolated match deeper in the verse
+// doesn't count until every word before it has too, since "revealed" means "recited in order
+// from the beginning," not "recognized somewhere in what was heard."
+export function spokenPrefixMatchCount(transcript: string, targetWords: string[]): number {
+  const normalizedTargetWords = normalizedTokens(targetWords);
+  const spokenWords = normalizedWords(transcript);
+  if (spokenWords.length === 0) return 0;
+  const { matchedA } = lcsAlign(normalizedTargetWords, spokenWords);
+  let count = 0;
+  while (count < matchedA.length && matchedA[count]) count++;
+  return count;
 }

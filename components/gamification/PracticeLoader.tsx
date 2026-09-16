@@ -2,16 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { VerseSegment } from "@/types";
+import type { MemorizationDay, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { usePericopesReady } from "@/lib/usePericopesReady";
+import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
+import { todaysDayNumber } from "@/lib/dayRollover";
 import { PracticeChain } from "@/components/drills/PracticeChain";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
+
+// A stable placeholder so useChapterScopedReadingLayout (a hook — can't be called after an
+// early return) always has a real MemorizationDay to key off of, even on a render where
+// `verses`/`plan` aren't loaded yet or `dayNumber` doesn't match any real day — its own
+// resulting layout is simply never used on those renders, since each returns before reaching it.
+const FALLBACK_DAY: MemorizationDay = { dayNumber: -1, kind: "learn", newVerses: [], reviewVerses: [] };
 
 interface PracticeLoaderProps {
   pathKey: string;
@@ -30,6 +38,7 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   const router = useRouter();
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
+  const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   // The version query param is what the path overview page treats as the source of truth
   // (see app/path/[key]/page.tsx) — omitting it would default to KJV and silently overwrite
   // an already-selected translation via PathOverviewScreen's sync effect.
@@ -67,6 +76,13 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   }, [pathKey, plan, label, verses, retryToken]);
 
   const pericopesReady = usePericopesReady(verses);
+  // Speculatively built even before verses/plan are confirmed ready, so
+  // useChapterScopedReadingLayout (a hook — can't be called after the early returns below)
+  // always has something real to key off of; FALLBACK_DAY's own doc comment explains why its
+  // result is simply unused whenever this ends up empty.
+  const days = verses && plan ? buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled) : [];
+  const day = days.find((candidate) => candidate.dayNumber === dayNumber);
+  const layout = useChapterScopedReadingLayout(days, day ?? FALLBACK_DAY, plan?.completedDays ?? 0, plan ? todaysDayNumber(plan, new Date()) : 0);
 
   if (!plan) {
     return (
@@ -92,8 +108,6 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
   if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
 
-  const days = buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan);
-  const day = days.find((candidate) => candidate.dayNumber === dayNumber);
   const practiceVerses = day ? (day.newVerses.length > 0 ? day.newVerses : day.reviewVerses) : [];
   // Matches whichever button got the reader here — DayCircle.tsx's Practice (boss battles)
   // or Review (a completed learn lesson's own verses) — see PracticeChain.tsx's own doc
@@ -118,6 +132,7 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
         mode={isReview ? "firstLetter" : "fullWord"}
         onExit={() => router.push(pathHref)}
         sessionKey={`${pathKey}:${dayNumber}:practice`}
+        layout={layout}
       />
     </div>
   );

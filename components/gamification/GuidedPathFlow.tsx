@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import type { BibleBook, LocationTagLevel } from "@/types";
-import { useProgressStore } from "@/store/useProgressStore";
+import type { BibleBook } from "@/types";
 import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
 import { useGoToPath } from "@/lib/useGoToPath";
+import { useLearnIntensityFlow } from "@/lib/useLearnIntensityFlow";
 import { useStartingPointFlow } from "@/lib/useStartingPointFlow";
 import { BookList } from "@/components/gamification/BookList";
 import { ChapterGrid } from "@/components/gamification/ChapterGrid";
 import { VersionPicker } from "@/components/gamification/VersionPicker";
 import { VersePicker } from "@/components/gamification/VersePicker";
 import { VersesPerDayPicker } from "@/components/gamification/VersesPerDayPicker";
+import { LearnIntensityPicker } from "@/components/gamification/LearnIntensityPicker";
 import { LocationTagLevelPicker } from "@/components/gamification/LocationTagLevelPicker";
 import { StartingPointFlow } from "@/components/gamification/StartingPointFlow";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
@@ -27,7 +28,6 @@ const CHAPTER_FETCH_CONCURRENCY = 4;
 
 export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const goToPath = useGoToPath();
-  const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -35,11 +35,9 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [loadingLabel, setLoadingLabel] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  // Held between the verses-per-day step and the location-tag-levels step (Building view,
-  // book/chapter mode only) so the final requestFinish call below has both.
-  const [pendingVersesPerDay, setPendingVersesPerDay] = useState<number | null>(null);
 
-  // Book/chapter mode's own last step before goToPath — see lib/useStartingPointFlow.ts.
+  // Book/chapter mode's own last step before goToPath — "already know some of this?" — see
+  // lib/useStartingPointFlow.ts.
   const startingPointFlow = useStartingPointFlow({
     selectedBook,
     goToPath,
@@ -55,6 +53,10 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     onIdle: () => setStatus("idle"),
   });
 
+  // Book/chapter mode's step chain after "how many verses per day" — see
+  // lib/useLearnIntensityFlow.ts. goToPath here is startingPointFlow.requestFinish, not real navigation.
+  const intensityFlow = useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath: startingPointFlow.requestFinish });
+
   async function handleSelectVersion(version: string) {
     if (!selectedBook) return;
     setStatus("loading");
@@ -67,6 +69,7 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
           setLoadingLabel(`Loading ${selectedBook.name} ${chapter} of ${selectedBook.chapterCount}…`);
           return ensureChapterLoaded(selectedBook.name, chapter, version);
         });
+        // Stay on this flow to ask how many verses/day now that the total is known.
         setSelectedVersion(version);
         setVerseCount(chapterVerses.reduce((sum, verses) => sum + verses.length, 0));
         setStatus("idle");
@@ -76,6 +79,9 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
       if (!selectedChapter) return;
       setLoadingLabel(`Loading ${formatChapterLabel(selectedBook.name, selectedChapter)}…`);
       const verses = await ensureChapterLoaded(selectedBook.name, selectedChapter, version);
+
+      // Chapter mode stays on this flow to ask how many verses/day (like book mode); verse
+      // mode stays on it to show the verse grid for the now-loaded chapter.
       setSelectedVersion(version);
       setVerseCount(verses.length);
       setStatus("idle");
@@ -88,30 +94,6 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   function handleSelectVerse(verseNumber: number) {
     if (!selectedBook || !selectedChapter || !selectedVersion) return;
     goToPath(`${selectedBook.name}|${selectedChapter}|${verseNumber}`, "verse", selectedVersion);
-  }
-
-  // Every exit below goes through startingPointFlow.requestFinish, not goToPath directly, so
-  // book/chapter mode always gets a chance to ask "already know some of this?" first.
-  function handleSelectVersesPerDay(versesPerDay: number) {
-    if (!selectedBook || !selectedVersion) return;
-    if (buildingViewEnabled) {
-      setPendingVersesPerDay(versesPerDay);
-      return;
-    }
-    if (mode === "chapter" && selectedChapter) {
-      startingPointFlow.requestFinish(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, versesPerDay);
-      return;
-    }
-    startingPointFlow.requestFinish(selectedBook.name, "book", selectedVersion, versesPerDay);
-  }
-
-  function handleSelectLocationTagLevels(levels: LocationTagLevel[]) {
-    if (!selectedBook || !selectedVersion || pendingVersesPerDay === null) return;
-    if (mode === "chapter" && selectedChapter) {
-      startingPointFlow.requestFinish(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, pendingVersesPerDay, levels);
-      return;
-    }
-    startingPointFlow.requestFinish(selectedBook.name, "book", selectedVersion, pendingVersesPerDay, levels);
   }
 
   if (status === "loading") {
@@ -138,8 +120,25 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     );
   }
 
-  if (pendingVersesPerDay !== null) {
-    return <LocationTagLevelPicker onSelect={handleSelectLocationTagLevels} onBack={() => setPendingVersesPerDay(null)} />;
+  if (intensityFlow.showLocationTagLevels) {
+    return (
+      <LocationTagLevelPicker
+        onSelect={intensityFlow.handleSelectLocationTagLevels}
+        onBack={intensityFlow.resetShowLocationTagLevels}
+        initialPegSystemEnabled={intensityFlow.initialPegSystemEnabled}
+      />
+    );
+  }
+
+  if (intensityFlow.pendingVersesPerDay !== null) {
+    return (
+      <LearnIntensityPicker
+        initialStages={intensityFlow.initialStages}
+        initialMemoryPalace={intensityFlow.initialMemoryPalace}
+        onContinue={intensityFlow.handleIntensityContinue}
+        onBack={intensityFlow.resetPendingVersesPerDay}
+      />
+    );
   }
 
   if (selectedBook && verseCount !== null && (mode === "book" || (mode === "chapter" && selectedChapter))) {
@@ -149,7 +148,7 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
       <VersesPerDayPicker
         totalVerses={verseCount}
         description={description}
-        onSelect={handleSelectVersesPerDay}
+        onSelect={intensityFlow.handleSelectVersesPerDay}
         onBack={() => {
           setVerseCount(null);
           setSelectedVersion(null);

@@ -1,4 +1,5 @@
 import type { UserProgress } from "@/types";
+import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 
 const STORAGE_PREFIX = "verses:progress:";
 const SCHEMA_VERSION = 30;
@@ -25,6 +26,8 @@ export function getDefaultProgress(): UserProgress {
     buildingViewEnabled: false,
     versePOA: {},
     locationTags: {},
+    iconTags: {},
+    pegMasterList: {},
     pegSystemEnabled: false,
     buildingViewLastReviewDate: null,
     chapterReviewBestAccuracy: {},
@@ -32,11 +35,19 @@ export function getDefaultProgress(): UserProgress {
     sessionCheckpoints: {},
     masteryLevels: {},
     customClauseRoles: {},
-    pericopeHeadingRecallEnabled: true,
+    srsSpeakModeEnabled: false,
+    srsPromotionThreshold: PROMOTION_ACCURACY_THRESHOLD,
     problemVerses: {},
+    wordStumbleCounts: {},
     understandStageEnabled: true,
     visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: true,
+    fillInTheBlankStageEnabled: true,
+    rhythmStageEnabled: false,
+    kineticTextStageEnabled: true,
+    restDayOfWeek: null,
+    vespersHour: null,
+    vespersPromptDismissedDate: null,
   };
 }
 

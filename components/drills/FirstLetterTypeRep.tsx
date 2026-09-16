@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { VerseSegment } from "@/types";
-import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
-import { useCheckpointField } from "@/lib/useSessionCheckpoint";
-import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
-import { computeVerseAccuracies, type VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
-import { verseNumberAtWordIndex } from "@/lib/verseBatching";
+import type { VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
+import { useFirstLetterTyping } from "@/lib/useFirstLetterTyping";
 import { RevealedWordsList } from "@/components/drills/RevealedWordsList";
-import { MistakeLetterHint } from "@/components/drills/MistakeLetterHint";
-import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
+import { WordRevealLine } from "@/components/drills/WordRevealLine";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
-import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
+import { FirstLetterTypingControls } from "@/components/drills/FirstLetterTypingControls";
 import { VerseContextLine } from "@/components/ui/VerseContextLine";
 import { VerseReferenceHeader } from "@/components/ui/VerseReferenceHeader";
 import { VerseTextLine } from "@/components/ui/VerseTextLine";
+import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
+import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
+import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { LessonPageCard } from "@/components/gamification/LessonPageCard";
+import { FirstLetterMultiVersePageCard } from "@/components/drills/FirstLetterMultiVersePageCard";
 
 interface FirstLetterTypeRepProps {
   verse: VerseSegment;
   reps: number;
+  // Set (alongside `layout`) by Learn only, to pick the "whole verse, blanks fill in place"
+  // reveal style — every other caller leaves this undefined.
+  contextVerses?: VerseSegment[];
   // accuracy is 0-100: share of this verse's own words typed correctly first-try — used by
   // SRS review for box promotion.
   onComplete: (hadMistake: boolean, accuracy: number) => void;
@@ -30,38 +36,50 @@ interface FirstLetterTypeRepProps {
   // The immediately preceding/following verse, shown above/below the revealed-words box.
   previousVerse?: VerseSegment;
   nextVerse?: VerseSegment;
-  // When true, the verse reference is shown inline with the revealed text (matching
-  // RhythmRep.tsx) instead of via VerseReferenceHeader — used by the Learn flow's final stage.
+  // When true, the verse reference is shown inline with the revealed text instead of via
+  // VerseReferenceHeader — used by the Learn flow's final stage.
   inlineReference?: boolean;
   // Highlights from the Learn flow's Orientation stage — undefined for SRS review.
   annotations?: WordAnnotationMap;
   // Which word index each verse after the first starts at — undefined for SRS review.
   verseMarkers?: Record<number, number>;
   // When false, a mistake is recorded toward `accuracy` but doesn't wipe already-revealed
-  // words back to word 1 — the reader just retries the current word. Used by SRS review,
-  // where box promotion already gates on the resulting accuracy percentage (see
-  // lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD) rather than requiring one clean run through.
+  // words back to word 1 — used by SRS review, which gates box promotion on the resulting
+  // accuracy percentage (lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD) instead.
   restartOnMistake?: boolean;
+  // Learn's own gentle mode (see lib/useFirstLetterTyping.ts) — a mistake never sounds, but a
+  // pass with any mistake silently restarts and runs again until one comes back clean.
+  requirePerfectPass?: boolean;
   // Overrides the caption normally shown ("Type it by first letter") — used by the Learn
-  // flow's closing stage, which groups under "Remember" like every other stage past Learn.
-  // Left unset (SRS review) keeps the original, more literal caption.
+  // flow's closing stage. Left unset keeps the original, more literal caption.
   stageLabel?: string;
-  // See MistakeLetterHint.tsx — false hides the letter until "Reveal letter" is tapped.
-  autoRevealLetterOnMistake?: boolean;
-  // See VerseReferenceHeader.tsx — true when a caller already showed this exact pericope
-  // line itself a moment ago (SrsEntityRecall.tsx's CompletedRecallStepView).
-  hidePericopeHeader?: boolean;
-  // See RevealedWordsList.tsx — SRS review only. Keeps the actual verse text off the screen
-  // entirely: a correct guess reveals just that word's own first letter, not the word itself.
+  // See RevealedWordsList.tsx — SRS review only. A correct guess reveals just that word's own
+  // first letter, never the real word.
   lettersOnly?: boolean;
-  // Reports accuracy broken down per individual verse (via verseMarkers) alongside the usual
-  // whole-segment `accuracy` — used by SRS review to flag a weak verse into Problem Verses
-  // even when the group's overall accuracy is fine. Undefined for every other caller.
+  // Reports accuracy broken down per individual verse (via verseMarkers) — used by SRS review
+  // to flag a weak verse into Problem Verses even when overall accuracy is fine.
   onVerseAccuracy?: (results: VerseAccuracy[]) => void;
+  // A low-priority "Peek hint" button revealing the current word's first letter on demand,
+  // same accuracy cost as a mistake but never restarts the rep — an escape valve for review
+  // modes (see Vespers). Left off (Learn) since a new verse hasn't earned the shortcut yet.
+  allowPeekHint?: boolean;
+  // The reading view's own real page layout (see lib/useChapterReadingLayout.ts) — set
+  // alongside `contextVerses` by Learn, or alongside `verses` by SRS review. Undefined only
+  // for a caller with no real-page concept (Vespers). When set, the verse(s) render on the
+  // SAME real reading-view page/size/position as browsing, not a smaller custom window.
+  layout?: ChapterReadingLayout;
+  // SRS review only — every real verse this entity's own `verse` (the combined synthetic
+  // verse typing state is keyed to) was joined from. Set alongside `layout`/`lettersOnly` —
+  // renders via FirstLetterMultiVersePageCard.tsx (the SAME real page Learn/the Path screen's
+  // own reading view use) instead of the single-verse `layout` branch below.
+  verses?: VerseSegment[];
+  // SRS review only — moves Auto-complete beside the View First Letters/View Verse pair (see
+  // LessonControlBar.tsx's own `verseViewExtra`) instead of its usual spot below the keyboard.
+  moveAutoCompleteToVerseView?: boolean;
 }
 
-const REFERENCE_PATTERN = /^(\d+):(\d+)$/;
-
+// Reveal/scoring state itself lives in lib/useFirstLetterTyping.ts — this component is just
+// its render: a native, single-character text input for typing each word's first letter.
 export function FirstLetterTypeRep({
   verse,
   reps,
@@ -69,136 +87,102 @@ export function FirstLetterTypeRep({
   sessionKey,
   previousVerse,
   nextVerse,
+  contextVerses,
   inlineReference,
   annotations,
   verseMarkers,
   restartOnMistake = true,
+  requirePerfectPass,
   stageLabel = "Type it by first letter",
   onVerseAccuracy,
-  autoRevealLetterOnMistake = true,
-  hidePericopeHeader,
   lettersOnly,
+  allowPeekHint,
+  layout,
+  verses,
+  moveAutoCompleteToVerseView,
 }: FirstLetterTypeRepProps) {
-  const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
-  const [completedReps, setCompletedReps] = useState(0);
-  const [wordIndex, setWordIndex] = useCheckpointField(sessionKey, "wordIndex", 0);
-  // "What's been revealed" is always exactly the words before the current one.
-  const revealedWords = words.slice(0, wordIndex);
-  const [letterInput, setLetterInput] = useState("");
-  const [showError, setShowError] = useState(false);
-  const [wrongLetterExpected, setWrongLetterExpected] = useState<string | null>(null);
-  // Read synchronously via ref so the value reported to onComplete is never stale.
-  const hadMistakeRef = useRef(false);
-  // Word positions ever mistyped, across every rep and restart — doesn't reset across reps.
-  const [wrongWordIndices, setWrongWordIndices] = useState<Set<number>>(new Set());
-  const accuracy = words.length > 0 ? Math.round(((words.length - wrongWordIndices.size) / words.length) * 100) : 100;
+  const typing = useFirstLetterTyping({ verse, reps, sessionKey, verseMarkers, restartOnMistake, requirePerfectPass, onComplete, onVerseAccuracy });
   const revealedRef = useRef<HTMLDivElement>(null);
 
-  // Keeps the input pinned near the top instead of drifting behind the on-screen keyboard.
+  // Keeps the revealed-words box pinned near the top instead of drifting out of view as more
+  // words reveal.
   useEffect(() => {
     revealedRef.current?.scrollTo({ top: revealedRef.current.scrollHeight });
-  }, [wordIndex]);
+  }, [typing.revealedWords.length]);
 
-  const currentWord = words[wordIndex];
-  const referenceMatch = currentWord?.match(REFERENCE_PATTERN);
-  function reportComplete() {
-    onVerseAccuracy?.(computeVerseAccuracies(words, verseMarkers, verse.verseNumber, wrongWordIndices));
-    onComplete(hadMistakeRef.current, accuracy);
-  }
-  function revealCurrentWord() {
-    if (!currentWord) return;
-    setShowError(false);
-    setWrongLetterExpected(null);
-    setLetterInput("");
-    const nextWordIndex = wordIndex + 1;
-    if (nextWordIndex >= words.length) {
-      const nextRep = completedReps + 1;
-      if (nextRep >= reps) {
-        reportComplete();
-      } else {
-        setCompletedReps(nextRep);
-        setWordIndex(0);
-      }
-    } else {
-      setWordIndex(nextWordIndex);
-    }
-  }
+  // The Learn flow (contextVerses/layout set) shows the WHOLE verse from the start, each
+  // not-yet-typed word reserved as blank space that fills in place as typed (WordRevealLine)
+  // — every other caller keeps the original "only show what's been revealed" behavior. No
+  // verse-number sup when `layout` is set — ChapterVerseRun.tsx renders the real number.
+  const activeVerseWords = (
+    <>
+      {!layout && <sup className="mr-0.5 text-[0.7em] font-semibold text-ink-muted dark:text-zinc-500">{typing.currentVerseNumber}</sup>}
+      {contextVerses ? (
+        <WordRevealLine words={typing.allWords} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} />
+      ) : (
+        <RevealedWordsList words={typing.revealedWords} annotations={annotations} verseMarkers={verseMarkers} lettersOnly={lettersOnly} />
+      )}
+    </>
+  );
 
-  // A mistake restarts this rep's verse reveal from word 1 rather than just retrying it.
-  function handleLetterChange(value: string) {
-    if (!currentWord) return;
-    const expected = firstWordCharacter(currentWord)?.toLowerCase();
-    const typed = value.toLowerCase();
+  // Same WordRevealLine state as activeVerseWords above, sliced to this ONE clause's own range
+  // (see LessonPageCard.tsx's renderActiveVerse doc) — always pairs with contextVerses (Learn).
+  const renderActiveVerseRange = (_: VerseSegment, { startIndex, endIndex }: SenseLineWordRange) => (
+    <WordRevealLine words={typing.allWords.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} />
+  );
 
-    if (typed && typed === expected) {
-      playCorrectSfx();
-      revealCurrentWord();
-    } else if (typed) {
-      playIncorrectSfx();
-      setShowError(true);
-      setWrongLetterExpected(firstWordCharacter(currentWord) ?? "");
-      setLetterInput("");
-      hadMistakeRef.current = true;
-      setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-      if (restartOnMistake) setWordIndex(0);
-    }
-  }
-
-  // For a multi-verse segment (verseMarkers), the pericope shown should track whichever
-  // verse the reader has actually reached rather than staying fixed on the first.
-  const currentVerseNumber = verseNumberAtWordIndex(verseMarkers, wordIndex, verse.verseNumber);
+  // SRS review only (`verses` set) — the ONE real verse currently being recalled, so View
+  // First Letters/View Verse (see LessonControlBar.tsx's own `verseText`) peek at just that
+  // verse instead of the whole entity's combined range. Every other caller's own `verse` is
+  // already a single real verse, so it's used as-is.
+  const activeRealVerse = verses?.find((candidate) => candidate.verseNumber === typing.currentVerseNumber) ?? verses?.[0];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-          {stageLabel} <InfoTip text={INFO_TIPS.firstLetterTypeRep} />
-        </p>
-        <VerseReferenceHeader
-          book={verse.book}
-          chapter={verse.chapter}
-          verseNumber={currentVerseNumber}
-          reference={inlineReference ? undefined : verse.reference}
-          hidePericope={hidePericopeHeader}
+    <div className="flex flex-col gap-3">
+      {!layout && (
+        <div>
+          <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
+            {stageLabel} <InfoTip text={INFO_TIPS.firstLetterTypeRep} />
+          </p>
+          <VerseReferenceHeader book={verse.book} chapter={verse.chapter} verseNumber={typing.currentVerseNumber} reference={inlineReference ? undefined : verse.reference} />
+        </div>
+      )}
+      {verses && layout ? (
+        <FirstLetterMultiVersePageCard
+          layout={layout}
+          verses={verses}
+          revealedCount={typing.revealedWords.length}
+          currentVerseNumber={typing.currentVerseNumber}
         />
-      </div>
-      <p className="text-sm text-ink-muted">
-        Rep {completedReps + 1} of {reps}
-      </p>
-      {previousVerse && <VerseContextLine verse={previousVerse} />}
-      <div ref={revealedRef} className="max-h-36 min-h-8 overflow-y-auto">
-        <p className="text-lg leading-relaxed">
-          {inlineReference && <VerseTextLine chapter={verse.chapter} verseNumber={verse.verseNumber} />}
-          <RevealedWordsList words={revealedWords} annotations={annotations} verseMarkers={verseMarkers} lettersOnly={lettersOnly} />
-        </p>
-      </div>
-      {nextVerse && <VerseContextLine verse={nextVerse} />}
-      {referenceMatch ? (
-        <ReferenceNumberEntry
-          key={currentWord}
-          chapter={referenceMatch[1]}
-          verse={referenceMatch[2]}
-          onDone={revealCurrentWord}
-          onMistake={() => {
-            hadMistakeRef.current = true;
-            setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-            if (restartOnMistake) setWordIndex(0);
-          }}
-        />
+      ) : layout ? (
+        <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={typing.revealedWords.length} renderActiveVerse={renderActiveVerseRange} />
       ) : (
-        <input
-          value={letterInput}
-          onChange={(event) => handleLetterChange(event.target.value)}
-          maxLength={1}
-          autoFocus
-          aria-label="Type the first letter of the next word"
-          className={`w-16 rounded-xl border p-3 text-center text-xl focus:outline-none focus-visible:ring-2 dark:bg-zinc-900 ${showError ? "border-heart-500 focus-visible:ring-heart-500" : "border-line focus-visible:ring-brand-500 dark:border-zinc-700"}`}
+        <LessonParchmentCard>
+          <p className="mb-1 text-sm text-ink-muted">Rep {typing.completedReps + 1} of {reps}</p>
+          {previousVerse && <VerseContextLine verse={previousVerse} />}
+          <div ref={revealedRef} className="max-h-36 min-h-8 overflow-y-auto">
+            <p className="text-lg leading-relaxed">
+              {inlineReference && <VerseTextLine chapter={verse.chapter} verseNumber={verse.verseNumber} />}
+              {activeVerseWords}
+            </p>
+          </div>
+          {nextVerse && <VerseContextLine verse={nextVerse} />}
+        </LessonParchmentCard>
+      )}
+
+      <LessonControlBar
+        dockRef={layout?.dockRef}
+        verseText={activeRealVerse?.text ?? verse.text}
+        verseMarkers={activeRealVerse ? undefined : verseMarkers}
+        verseViewExtra={moveAutoCompleteToVerseView ? <AutoCompleteButton onClick={typing.reportComplete} /> : undefined}
+      >
+        <FirstLetterTypingControls
+          typing={typing}
+          showLabel={layout ? stageLabel : undefined}
+          allowPeekHint={allowPeekHint}
+          hideAutoComplete={moveAutoCompleteToVerseView}
         />
-      )}
-      {!referenceMatch && showError && wrongLetterExpected && (
-        <MistakeLetterHint key={wordIndex} expectedLetter={wrongLetterExpected} autoReveal={autoRevealLetterOnMistake} />
-      )}
-      <AutoCompleteButton onClick={reportComplete} />
+      </LessonControlBar>
     </div>
   );
 }

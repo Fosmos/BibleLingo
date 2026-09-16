@@ -6,6 +6,7 @@ import { AUTH_REQUIRED } from "@/lib/authConfig";
 import { ProgressInitializer } from "@/components/gamification/ProgressInitializer";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { AuthScreen } from "@/components/auth/AuthScreen";
+import { useIsLessonSessionActive } from "@/store/useLessonSessionStore";
 
 interface AuthGateProps {
   children: ReactNode;
@@ -19,6 +20,11 @@ let hasHydrated = false;
 
 export function AuthGate({ children }: AuthGateProps) {
   const status = useAuthStore((state) => state.status);
+  // A LessonControlBar.tsx mounted in its docked/fill mode (Learn, SRS Review, Relearn,
+  // Practice — see its own doc comment) already docks its own controls at the true screen
+  // bottom, so the tab bar underneath would just sit in the way of / behind it — hidden for
+  // the duration of that one session rather than always present.
+  const lessonSessionActive = useIsLessonSessionActive();
 
   useEffect(() => {
     if (hasHydrated) return;
@@ -38,8 +44,8 @@ export function AuthGate({ children }: AuthGateProps) {
   return (
     <>
       <ProgressInitializer />
-      <main className="flex flex-1 flex-col pb-20">{children}</main>
-      <BottomTabBar />
+      <main className={`flex flex-1 flex-col ${lessonSessionActive ? "" : "pb-20"}`}>{children}</main>
+      {!lessonSessionActive && <BottomTabBar />}
     </>
   );
 }

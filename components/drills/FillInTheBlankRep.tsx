@@ -6,22 +6,29 @@ import type { VerseSegment } from "@/types";
 import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import { tokenizeVerseWords, stripPunctuation } from "@/lib/verseWords";
+import { blankIndicesImportantFirst } from "@/lib/wordImportance";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
+import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 
 interface FillInTheBlankRepProps {
   verse: VerseSegment;
+  // The reading view's own real page layout (see lib/useChapterReadingLayout.ts) — Learn flow
+  // only caller, so always set; the verse renders on the SAME real reading-view page/size/
+  // position as browsing, via LessonPageCard.tsx.
+  layout: ChapterReadingLayout;
   onComplete: () => void;
 }
 
-// Blanks every other word — enough of the verse still visible to anchor the reader, enough
-// missing to actually require recall rather than just reading it back.
-function blankIndicesFor(wordCount: number): number[] {
-  const indices: number[] = [];
-  for (let index = 1; index < wordCount; index += 2) indices.push(index);
-  return indices;
-}
+// Two passes: the first blanks about half the verse's own words (content/meaning-bearing ones
+// prioritized — see lib/wordImportance.ts), leaving enough visible to anchor the reader; the
+// second blanks every word, the full recall check. Same "progressively less scaffolding" shape
+// this app's other 2-rep drills already follow.
+const REP_COUNT = 2;
 
 // A mistake reverts to the last checkpoint rather than the very first blank — same
 // "restart the section, not the whole thing" leniency this app already extends elsewhere
@@ -32,9 +39,16 @@ const CHECKPOINT_SIZE = 4;
 // Tap the missing words, in order, from a bank below — tiles are alphabetized (punctuation
 // stripped) rather than shuffled, so their position never hints at the answer. A wrong tap
 // flashes red and reverts to the last checkpoint instead of the very first blank.
-export function FillInTheBlankRep({ verse, onComplete }: FillInTheBlankRepProps) {
+export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
-  const blankIndices = useMemo(() => blankIndicesFor(words.length), [words.length]);
+  const [repIndex, setRepIndex] = useState(0);
+  const blankIndices = useMemo(
+    () => blankIndicesImportantFirst(words, repIndex === 0 ? Math.ceil(words.length / 2) : words.length),
+    // Re-derived only on a real verse/rep change, not on every placement — a re-shuffle mid-round
+    // would shuffle tiles the reader hasn't tapped yet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [verse.id, repIndex],
+  );
   const [usedTileIds, setUsedTileIds] = useState<Set<number>>(new Set());
   const [wrongTileId, setWrongTileId] = useState<number | null>(null);
 
@@ -43,10 +57,10 @@ export function FillInTheBlankRep({ verse, onComplete }: FillInTheBlankRepProps)
       blankIndices
         .map((index) => ({ tileId: index, word: words[index] }))
         .sort((a, b) => stripPunctuation(a.word).localeCompare(stripPunctuation(b.word))),
-    // Re-derived only when the verse changes, not on every placement — a re-sort mid-round
+    // Re-derived only when the verse or rep changes, not on every placement — a re-sort mid-round
     // would shuffle tiles the reader hasn't tapped yet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [verse.id],
+    [verse.id, repIndex],
   );
 
   const placedCount = usedTileIds.size;
@@ -61,7 +75,14 @@ export function FillInTheBlankRep({ verse, onComplete }: FillInTheBlankRepProps)
       setWrongTileId(null);
       const next = placedCount + 1;
       setUsedTileIds((prev) => new Set(prev).add(tileId));
-      if (next >= blankIndices.length) onComplete();
+      if (next >= blankIndices.length) {
+        if (repIndex + 1 >= REP_COUNT) {
+          onComplete();
+        } else {
+          setRepIndex((prev) => prev + 1);
+          setUsedTileIds(new Set());
+        }
+      }
     } else {
       playIncorrectSfx();
       setWrongTileId(tileId);
@@ -70,17 +91,17 @@ export function FillInTheBlankRep({ verse, onComplete }: FillInTheBlankRepProps)
     }
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-          Fill in the blanks <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
-        </p>
-        <p className="text-title">{verse.reference}</p>
-      </div>
-      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-lg leading-relaxed">
-        {words.map((word, index) => {
-          if (!blankIndices.includes(index)) return <span key={index}>{word}</span>;
+  // No verse-number sup here — ChapterVerseRun.tsx already renders that verse's own real
+  // number unconditionally (see LessonPageCard.tsx's own doc comment). Called once per clause
+  // (see LessonPageCard.tsx's own renderActiveVerse doc comment) — slices `words` down to just
+  // this clause's own range so a multi-clause verse still renders through the same hanging-
+  // indent line structure a non-active verse gets.
+  function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
+    return (
+      <>
+        {words.slice(range.startIndex, range.endIndex).map((word, offset) => {
+          const index = range.startIndex + offset;
+          if (!blankIndices.includes(index)) return <span key={index}>{word} </span>;
           const slotPosition = blankIndices.indexOf(index);
           const isFilled = slotPosition < placedCount;
           return (
@@ -96,23 +117,38 @@ export function FillInTheBlankRep({ verse, onComplete }: FillInTheBlankRepProps)
             </span>
           );
         })}
-      </p>
-      <div className="flex flex-wrap gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900">
-        {tray.map((entry) => (
-          <motion.button
-            key={entry.tileId}
-            type="button"
-            whileTap={TAP_SCALE}
-            onClick={() => handleTileClick(entry.tileId, entry.word)}
-            className={`rounded-lg px-3 py-2 text-base font-medium text-white ${
-              wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500"
-            } ${usedTileIds.has(entry.tileId) ? "invisible" : ""}`}
-          >
-            {stripPunctuation(entry.word)}
-          </motion.button>
-        ))}
-      </div>
-      <AutoCompleteButton onClick={onComplete} />
+      </>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={targetIndex ?? words.length} renderActiveVerse={renderActiveVerse} />
+
+      <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
+        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
+          Fill in the blanks <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
+        </p>
+        <p className="self-center text-xs text-ink-muted">
+          Rep {repIndex + 1} of {REP_COUNT}
+        </p>
+        <div className="flex w-full flex-wrap gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900">
+          {tray.map((entry) => (
+            <motion.button
+              key={entry.tileId}
+              type="button"
+              whileTap={TAP_SCALE}
+              onClick={() => handleTileClick(entry.tileId, entry.word)}
+              className={`rounded-lg px-3 py-2 text-base font-medium text-white ${
+                wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500"
+              } ${usedTileIds.has(entry.tileId) ? "invisible" : ""}`}
+            >
+              {stripPunctuation(entry.word)}
+            </motion.button>
+          ))}
+        </div>
+        <AutoCompleteButton onClick={onComplete} />
+      </LessonControlBar>
     </div>
   );
 }

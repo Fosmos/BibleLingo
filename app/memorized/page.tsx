@@ -3,6 +3,7 @@ import { MemorizedStats } from "@/components/gamification/MemorizedStats";
 import { SrsOverview } from "@/components/gamification/SrsOverview";
 import { SwordOfTheSpirit } from "@/components/gamification/SwordOfTheSpirit";
 import { ProblemVersesBin } from "@/components/gamification/ProblemVersesBin";
+import { StumbleMapsSection } from "@/components/gamification/StumbleMapsSection";
 import { AddMemorizedVerseFlow } from "@/components/gamification/AddMemorizedVerseFlow";
 import { Button } from "@/components/ui/Button";
 import { PageHeading } from "@/components/ui/PageHeading";
@@ -20,6 +21,7 @@ export default function MemorizedPage() {
       <SrsOverview />
       <SwordOfTheSpirit />
       <ProblemVersesBin />
+      <StumbleMapsSection />
       <AddMemorizedVerseFlow />
     </div>
   );

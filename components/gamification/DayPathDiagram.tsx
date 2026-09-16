@@ -1,50 +1,64 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Map, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, Layers } from "lucide-react";
 import type { MemorizationDay } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { MOTION_DURATION } from "@/lib/motionTokens";
-import { PathDayList } from "@/components/gamification/PathDayList";
+import { estimateLessonSeconds } from "@/lib/learnIntensity";
+import { useChapterPagination } from "@/lib/useChapterPagination";
+import { useTargetVerseOverride } from "@/lib/useTargetVerseOverride";
+import { useParchmentFillHeight } from "@/lib/useParchmentFillHeight";
+import { ChapterReadingView } from "@/components/gamification/ChapterReadingView";
 import { BuildingRoomView } from "@/components/gamification/BuildingRoomView";
-import { InfoTip } from "@/components/ui/InfoTip";
-import { INFO_TIPS } from "@/lib/infoTipCopy";
+import { PathBottomDock } from "@/components/gamification/PathBottomDock";
 
 interface DayPathDiagramProps {
   label: string;
+  version: string;
   days: MemorizationDay[];
   completedDays: number;
   // completedDays + 1, gated so it only advances once a real calendar day has passed since
   // this path's last completion — see lib/dayRollover.ts's own activeDayNumber. -1 (never a
-  // real dayNumber) whenever today's own lesson is already done.
+  // real dayNumber) whenever today's own lesson is already done: the bottom dock's primary
+  // action shows a "Completed" state instead of offering to start something new until
+  // tomorrow — everything else it hands further down uses todaysDayNumber below instead.
   activeDayNumber: number;
   // Whichever day counts as TODAY's own lesson (lib/dayRollover.ts's todaysDayNumber) —
-  // always a real dayNumber, never gated to -1, so today's own verses/pericope keep reading
-  // as "today" (highlighted card, amber circle) even once that lesson is done.
+  // always a real dayNumber, never gated to -1, so today's own verses/pericope/chapter keep
+  // reading as "today" (gold highlight, amber Mind Map ring) even once that lesson is done.
   todaysDayNumber: number;
   pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
   // Book mode only: fraction (0-1) of the current chapter's own verses memorized so far —
-  // shown as a "N% Memorized" bar instead of the plain lessons-complete count/bar every
-  // other path kind gets, and folded together with the chapter number into `label` itself
-  // (e.g. "Mark 14") rather than a separate "Chapter 14 of 16" line — see
-  // PathOverviewScreen.tsx.
+  // drives the "N% Memorized" progress bar instead of the plain lessons-complete fraction
+  // every other path kind gets.
   chapterMemorizedFraction?: number;
   onNextChapter?: () => void;
   onPreviousChapter?: () => void;
+  // Book mode only: returns to that path's own Mind Map (see PathOverviewScreen.tsx) — when
+  // set, the top bar's "Back" button goes there instead of leaving the Path screen entirely,
+  // since the Mind Map is this path's own landing view, one level up from a chapter's
+  // parchment view. Undefined for every other path kind, which has no Mind Map to return to.
+  onShowMindMap?: () => void;
+  // Book mode's own Mind Map (see MindMapScreen.tsx) — a pericope tap sets this to its own
+  // first verse, opening the real page holding it instead of the "today's lesson" default
+  // (see useTargetVerseOverride.ts). Undefined leaves that default untouched.
+  targetVerse?: number;
 }
 
-const navPillClass =
-  "flex items-center gap-1 rounded-full bg-mist px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-line dark:bg-zinc-800 dark:text-zinc-300";
-
-// The path view's header (progress + nav) plus its body — either a plain lesson-circle list
-// grouped into memory-loci "rooms" (see components/gamification/PathDayList.tsx), or, when
-// the "Building path view" setting is on, BuildingRoomView's one-room-per-screen chapter ->
-// building, pericope -> room, verse -> item hierarchy.
+// The Path view's chrome around whichever body is showing (the parchment ChapterReadingView,
+// or BuildingRoomView's card-per-section layout when the Building setting is on): a slim top
+// bar (back, book/chapter + translation, page count), an edge-to-edge progress bar, then the
+// body, then PathBottomDock.tsx's own sticky bottom dock (secondary nav + the one primary
+// action). Pagination state itself lives in lib/useChapterPagination.ts, called once here
+// (this is the nearest common parent of the top bar's own page count and ChapterReadingView's
+// page body) and handed down as controlled props rather than let each place keep its own copy.
 export function DayPathDiagram({
   label,
+  version,
   days,
   completedDays,
   activeDayNumber,
@@ -55,59 +69,120 @@ export function DayPathDiagram({
   chapterMemorizedFraction,
   onNextChapter,
   onPreviousChapter,
+  onShowMindMap,
+  targetVerse,
 }: DayPathDiagramProps) {
+  const router = useRouter();
   const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
+  const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
+  const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
+  const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
+  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
+  const { bodyTopRef, dockRef, fillHeightPx } = useParchmentFillHeight();
+  const pagination = useChapterPagination(days, completedDays, todaysDayNumber, fillHeightPx);
+  useTargetVerseOverride(pagination.pages, targetVerse, pagination.goToPage);
+  // Today's own day, scoped to the currently-VIEWED days — whether or not it's already done
+  // (unlike the old activeDayNumber-gated lookup, this never disappears once finished, so the
+  // bottom dock can still caption its own "Completed" state below with the right verse range).
+  const todaysDay = days.find((day) => day.dayNumber === todaysDayNumber);
+  // Whether the bottom dock's primary action should read "Completed" instead of offering to
+  // start something — see lib/dayRollover.ts's own activeDayNumber doc comment.
+  const todaysCompleted = activeDayNumber === -1;
   // completedDays is a path-wide counter, but `days` may be a single chapter's subset —
   // scope the visible count to what's actually rendered here.
   const visibleCompletedCount = days.filter((day) => day.dayNumber <= completedDays).length;
   const overallProgress = days.length > 0 ? visibleCompletedCount / days.length : 0;
   const progressFraction = chapterMemorizedFraction ?? overallProgress;
-  const progressLabel =
-    chapterMemorizedFraction !== undefined ? `${Math.round(chapterMemorizedFraction * 100)}% Memorized` : `${visibleCompletedCount} of ${days.length} lessons complete`;
+
+  const todaysVerses = todaysDay?.newVerses ?? [];
+  const lessonSeconds = estimateLessonSeconds(todaysVerses.length, {
+    understandStageEnabled,
+    visualizeStageEnabled,
+    writeFirstLetterStageEnabled,
+    fillInTheBlankStageEnabled,
+  });
+  const verseLabel =
+    todaysVerses.length === 0
+      ? null
+      : todaysVerses.length === 1
+        ? `v${todaysVerses[0].verseNumber}`
+        : `v${todaysVerses[0].verseNumber}–${todaysVerses[todaysVerses.length - 1].verseNumber}`;
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="z-20 flex w-full flex-col items-center gap-2 px-8 pb-3 pt-4">
-        <h1 className="flex items-center gap-1.5 text-title">
-          {label} <InfoTip text={INFO_TIPS.dayPathDiagram} />
-        </h1>
-        <p className="text-sm text-ink-muted">{progressLabel}</p>
-        <div className="h-1.5 w-full max-w-[14rem] overflow-hidden rounded-full bg-mist dark:bg-zinc-700">
-          <motion.div
-            className="h-full rounded-full bg-brand-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${progressFraction * 100}%` }}
-            transition={{ duration: MOTION_DURATION.base }}
-          />
-        </div>
-        <div className="mt-1 flex items-center gap-2">
-          <Link href="/begin" className={navPillClass}>
-            <Map size={13} /> Switch Path
-          </Link>
-          {onPreviousChapter && (
-            <button type="button" onClick={onPreviousChapter} className={navPillClass}>
-              <ChevronLeft size={13} /> Previous
-            </button>
-          )}
-          {onNextChapter && (
-            <button type="button" onClick={onNextChapter} className={navPillClass}>
-              Next <ChevronRight size={13} />
-            </button>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-2 px-4 pb-1 pt-4">
+        <button
+          type="button"
+          onClick={onShowMindMap ?? (() => router.back())}
+          className="flex shrink-0 items-center gap-1 text-sm font-medium text-ink-muted hover:text-brand-600"
+        >
+          <ChevronLeft size={16} /> Back
+        </button>
+        <p className="flex-1 truncate text-center text-sm font-semibold uppercase tracking-wide text-ink-soft dark:text-zinc-300">
+          {label} <span className="text-ink-muted">• {version}</span>
+        </p>
+        {!buildingViewEnabled && pagination.pages.length > 1 ? (
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-ink-muted">
+            <Layers size={13} /> Page {pagination.pageIndex + 1} of {pagination.pages.length}
+          </span>
+        ) : (
+          <span className="w-11 shrink-0" />
+        )}
       </div>
+      <div
+        className="h-1.5 w-full bg-mist dark:bg-zinc-800"
+        role="progressbar"
+        aria-valuenow={Math.round(progressFraction * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <motion.div
+          className="h-full bg-brand-500"
+          initial={{ width: 0 }}
+          animate={{ width: `${progressFraction * 100}%` }}
+          transition={{ duration: MOTION_DURATION.base }}
+        />
+      </div>
+
+      {/* useParchmentFillHeight.ts's own top marker — its top edge is where the parchment
+          card's available space starts measuring from; zero height, purely a position probe. */}
+      <div ref={bodyTopRef} />
+
       {buildingViewEnabled ? (
         <BuildingRoomView
           days={days}
           completedDays={completedDays}
-          activeDayNumber={activeDayNumber}
+          todaysDayNumber={todaysDayNumber}
           pathKey={pathKey}
           onSelectDay={onSelectDay}
           onPracticeDay={onPracticeDay}
         />
       ) : (
-        <PathDayList days={days} completedDays={completedDays} todaysDayNumber={todaysDayNumber} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
+        <ChapterReadingView
+          pages={pagination.pages}
+          pageIndex={pagination.pageIndex}
+          goToPage={pagination.goToPage}
+          dayNumberByVerse={pagination.dayNumberByVerse}
+          todaysVerseNumbers={pagination.todaysVerseNumbers}
+          completedDays={completedDays}
+          onSelectDay={onSelectDay}
+          onPracticeDay={onPracticeDay}
+          fillHeightPx={fillHeightPx}
+        />
       )}
+
+      <div ref={dockRef}>
+        <PathBottomDock
+          onPreviousChapter={onPreviousChapter}
+          onNextChapter={onNextChapter}
+          todaysDay={todaysDay}
+          todaysCompleted={todaysCompleted}
+          verseLabel={verseLabel}
+          lessonSeconds={lessonSeconds}
+          onSelectDay={onSelectDay}
+          onPracticeDay={onPracticeDay}
+        />
+      </div>
     </div>
   );
 }

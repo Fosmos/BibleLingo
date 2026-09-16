@@ -4,22 +4,6 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
 import { tokenizeVerseWords } from "@/lib/verseWords";
-import { todaysDayNumber } from "@/lib/dayRollover";
-
-// Takes `verses` explicitly rather than re-resolving them from the client-side content
-// cache itself — callers that already fetched their own copy (e.g. TodayVersesCard, which
-// has to fall back to ensurePathVerses()'s direct return value for ESV book-mode paths
-// whose storage cap means the persistent cache can never hold every chapter at once — see
-// ensureChapterLoaded) would otherwise silently lose that content on a second, cache-only
-// lookup here.
-// Uses todaysDayNumber (lib/dayRollover.ts), not completedDays + 1 — Today's Verses should
-// keep showing what was just accomplished today even once that lesson is done, only moving
-// on once a real calendar day passes, same as everywhere else "today" is displayed.
-export function getCurrentDay(key: string, verses: VerseSegment[], plan: PathProgress): MemorizationDay | undefined {
-  const days = buildPathDayPlan(key, verses, plan);
-  const dayNumber = Math.min(todaysDayNumber(plan, new Date()), days.length);
-  return days.find((day) => day.dayNumber === dayNumber);
-}
 
 function tokenCount(text: string): number {
   return tokenizeVerseWords(text).length;
@@ -117,12 +101,52 @@ export interface MemorizedStats {
 // ranges, so they're accurate even for content the ESV storage cap has since evicted from
 // cache — word count is the one figure that genuinely needs the verse text, so it alone can
 // undercount an evicted chapter until it's fetched again.
+//
+// The raw range arithmetic (endVerse - startVerse + 1) would also count a translation's own
+// gap verse as one "memorized" — e.g. Mark 11:26, which the ESV omits entirely (see
+// lib/bibleProviders/esv.ts) and which lib/chapterChunking.ts already excludes from ever
+// filling a lesson's own verse quota. Subtracted back out here whenever the chapter's real
+// text is cached (getMemorizedEntityVerses, same call word count already needs) — when it
+// isn't, this undercounts by however many gap verses fall in that range until it's fetched
+// again, the exact same accepted tradeoff word count already makes.
+//
+// A "chapter," to the reader, means the WHOLE chapter is memorized — the stat's own icon and
+// label promise that, not "touches this chapter at all." A single manually-added verse (or
+// any partial range) used to inflate this the same as a genuinely complete chapter; now each
+// chapter's own entities are unioned and checked against that chapter's real verse count
+// (skipping any translation gap verse, the same as the word/verse counts above) before it
+// counts. A chapter whose content isn't cached is left out entirely (undercounts rather than
+// guesses) — the same tradeoff every other figure here already makes.
+function isChapterFullyCovered(entities: MemorizedEntity[]): boolean {
+  const { book, chapter } = entities[0];
+  const chapterVerses = getChapterVerses(book, chapter);
+  if (!chapterVerses || chapterVerses.length === 0) return false;
+  const covered = new Set<number>();
+  for (const entity of entities) {
+    if (getCachedChapterVersion(entity.book, entity.chapter) !== entity.version) continue;
+    for (let verseNumber = entity.startVerse; verseNumber <= entity.endVerse; verseNumber++) covered.add(verseNumber);
+  }
+  return chapterVerses.every((verse) => verse.text.trim().length === 0 || covered.has(verse.verseNumber));
+}
+
 export function computeMemorizedStats(memorizedEntities: MemorizedEntity[]): MemorizedStats {
-  const chapterKeys = new Set<string>();
-  for (const entity of memorizedEntities) chapterKeys.add(`${entity.book}|${entity.chapter}`);
+  const entitiesByChapter = new Map<string, MemorizedEntity[]>();
+  for (const entity of memorizedEntities) {
+    const key = `${entity.book}|${entity.chapter}`;
+    const group = entitiesByChapter.get(key);
+    if (group) group.push(entity);
+    else entitiesByChapter.set(key, [entity]);
+  }
+  let chapters = 0;
+  for (const entities of entitiesByChapter.values()) {
+    if (isChapterFullyCovered(entities)) chapters++;
+  }
 
-  const verses = memorizedEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
-  const words = getMemorizedEntityVerses(memorizedEntities).reduce((sum, verse) => sum + tokenCount(verse.text), 0);
+  const cachedVerses = getMemorizedEntityVerses(memorizedEntities);
+  const cachedEmptyCount = cachedVerses.filter((verse) => verse.text.trim().length === 0).length;
+  const rawVerseCount = memorizedEntities.reduce((sum, entity) => sum + (entity.endVerse - entity.startVerse + 1), 0);
+  const verses = Math.max(rawVerseCount - cachedEmptyCount, 0);
+  const words = cachedVerses.reduce((sum, verse) => sum + tokenCount(verse.text), 0);
 
-  return { chapters: chapterKeys.size, verses, words };
+  return { chapters, verses, words };
 }

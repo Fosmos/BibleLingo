@@ -1,6 +1,7 @@
 import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
 import { computeBucketStatesPerLesson } from "@/lib/bookReviewSchedule";
 import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
+import { pericopeAnchoredPreviousVerses } from "@/lib/previousVerseReview";
 
 export const DEFAULT_VERSES_PER_DAY = 5;
 
@@ -34,9 +35,9 @@ function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSeg
 // 8 chapters newly completes (not on a fixed lesson-count cadence), tagged into whichever
 // chapter's group they formed during — those stay in the path. The whole book ends with the
 // same Full Review + Boss Battle capstone every other path kind uses.
-export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): MemorizationDay[] {
+export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number, usePericopeAnchor = false, priorKnownVerseCount = 0): MemorizationDay[] {
   const effectiveVersesPerDay = Math.max(1, versesPerDay);
-  const chunks = chunkVersesRespectingChapters(verses, effectiveVersesPerDay);
+  const chunks = chunkVersesRespectingChapters(verses.slice(priorKnownVerseCount), effectiveVersesPerDay);
   const bucketStates = computeBucketStatesPerLesson(chunks);
 
   const days: MemorizationDay[] = [];
@@ -45,8 +46,42 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
   let previousMonthlyBucketKey = "";
   // Just yesterday's lesson — the immediately preceding learn day's own new verses (skipping
   // over any weekly/monthly review or boss-battle days in between, which aren't "a lesson").
-  // Empty on the book's very first lesson.
+  // Empty on the book's very first lesson. Extended back to its own pericope's start verse
+  // when usePericopeAnchor is on — see lib/previousVerseReview.ts.
   let previousChunk: VerseSegment[] = [];
+
+  // The already-known prefix (see PathProgress.priorKnownVerseCount) becomes one auto-completed
+  // day PER CHAPTER it spans — book mode's own chapter-at-a-time view (lib/bookChapterView.ts)
+  // and reading-page pagination both filter/group days by `chapterGroup` assuming every single
+  // day belongs to exactly one chapter (the same guarantee chunkVersesRespectingChapters gives
+  // every OTHER day below); one giant multi-chapter prefix day would violate that and scramble
+  // both. Chunked the same way (chapter-boundary-respecting) but with no versesPerDay cap, since
+  // a prior-known chapter's own real size doesn't need to match the pacing every other lesson
+  // uses. Not left out of `days` either: lib/useChapterPagination.ts's own `verses` (what the
+  // reading view actually renders) is built ENTIRELY from `learnDays.flatMap(day =>
+  // day.newVerses)`, so a verse that never appears in any day's own newVerses would silently
+  // vanish from the reading view, not just skip being re-taught. store/pathActions.ts marks
+  // exactly this many days complete immediately (see lib/dayPlan.ts's priorKnownDayCount, which
+  // must count these the SAME way), so the reader never actually sees or does any of them. The
+  // weekly/monthly review batching below still runs only over the REMAINDER's own chunks — a
+  // chapter that falls entirely inside this prefix never counts toward a batch threshold, a
+  // minor, accepted imprecision in exchange for not teaching content twice.
+  const knownPrefixChunks = chunkVersesRespectingChapters(verses.slice(0, priorKnownVerseCount), Number.POSITIVE_INFINITY);
+  for (const chunk of knownPrefixChunks) {
+    days.push({
+      dayNumber: dayNumber++,
+      kind: "learn",
+      newVerses: chunk,
+      reviewVerses: [],
+      previousVerses: [],
+      chapterGroup: chunk[0].chapter,
+    });
+    // previousChunk deliberately NOT set to this known-prefix chunk (contrast the real loop
+    // below, which always sets it) — the prefix was never actually lessoned, the reader never
+    // sees these auto-completed days, so it isn't a real "previous lesson" to quiz on. The
+    // first REAL learn day below should open straight into new content, no "review the whole
+    // known prefix" check first; real previous-lesson review starts from the SECOND real chunk.
+  }
 
   chunks.forEach((chunk, index) => {
     const state = bucketStates[index];
@@ -54,10 +89,16 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
     // Today's own newly-learned chunk is appended last — the post-learn recap should cover
     // everything memorized in-window, including what was JUST learned this lesson, not only
     // what came before it.
-    const windowReview = [...currentChapterReview(verses, chunk), ...chunk];
+    const priorChapterVerses = currentChapterReview(verses, chunk);
+    const windowReview = [...priorChapterVerses, ...chunk];
 
+    // Only when there's real PRIOR content in this chapter to review alongside today's new
+    // chunk — a lesson whose own chunk starts at the chapter's own verse 1 (priorChapterVerses
+    // empty) has nothing to recap beyond what it just taught a moment ago; "review the chapter
+    // so far" would just silently re-run the exact same verses a second time in the same
+    // lesson.
     const postLearnReviewStages: ReviewStage[] = [];
-    if (windowReview.length > 0) postLearnReviewStages.push({ label: "Chapter Review", verses: windowReview });
+    if (priorChapterVerses.length > 0) postLearnReviewStages.push({ label: "Chapter Review", verses: windowReview });
 
     days.push({
       dayNumber: dayNumber++,
@@ -69,7 +110,7 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
       // reviewStages is absent (as it now always is for book-mode learn days).
       reviewVerses: [],
       postLearnReviewStages,
-      previousVerses: previousChunk,
+      previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
       chapterGroup,
     });
     previousChunk = chunk;
@@ -119,7 +160,7 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number): 
     kind: "chapter_review",
     newVerses: [],
     reviewVerses: verses,
-    previousVerses: previousChunk,
+    previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
   });
   days.push({ dayNumber: dayNumber++, kind: "boss_battle", newVerses: [], reviewVerses: verses });
 

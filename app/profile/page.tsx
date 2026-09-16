@@ -7,6 +7,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LOCAL_USER_ID } from "@/lib/authConfig";
 import { ProfileStatsCard } from "@/components/gamification/ProfileStatsCard";
+import { ProfileAdvancedSettings } from "@/components/gamification/ProfileAdvancedSettings";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { PageHeading } from "@/components/ui/PageHeading";
@@ -17,18 +18,6 @@ export default function ProfilePage() {
   const resetProgress = useProgressStore((state) => state.resetProgress);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const setIncludeVerseReferences = useProgressStore((state) => state.setIncludeVerseReferences);
-  const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
-  const setBuildingViewEnabled = useProgressStore((state) => state.setBuildingViewEnabled);
-  const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
-  const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
-  const pericopeHeadingRecallEnabled = useProgressStore((state) => state.pericopeHeadingRecallEnabled);
-  const setPericopeHeadingRecallEnabled = useProgressStore((state) => state.setPericopeHeadingRecallEnabled);
-  const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
-  const setUnderstandStageEnabled = useProgressStore((state) => state.setUnderstandStageEnabled);
-  const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
-  const setVisualizeStageEnabled = useProgressStore((state) => state.setVisualizeStageEnabled);
-  const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
-  const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
   const currentUserId = useAuthStore((state) => state.currentUserId);
   const username = useAuthStore((state) => state.currentUsername);
   const signOut = useAuthStore((state) => state.signOut);
@@ -66,66 +55,9 @@ export default function ProfilePage() {
           />
           <InfoTip text={INFO_TIPS.includeVerseReferencesToggle} />
         </div>
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={buildingViewEnabled}
-            onChange={setBuildingViewEnabled}
-            label="Building path view"
-            description="Add free-text location tags at whichever scopes you pick (book, chapter, section, or verse) — no suggestions, just your own words"
-          />
-          <InfoTip text={INFO_TIPS.buildingViewToggle} />
-        </div>
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={understandStageEnabled}
-            onChange={setUnderstandStageEnabled}
-            label="Understand stage"
-            description="A clause-tagging step at the start of each Learn day — tap words apart into clauses and color-tag their role before drilling into them"
-          />
-          <InfoTip text={INFO_TIPS.understandStageToggle} />
-        </div>
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={visualizeStageEnabled}
-            onChange={setVisualizeStageEnabled}
-            label="Visualize stage"
-            description="A Loci/Peg + Who/Action/scene step at the start of each Learn day — build a vivid mental picture before drilling into the verse"
-          />
-          <InfoTip text={INFO_TIPS.visualizeStageToggle} />
-        </div>
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={writeFirstLetterStageEnabled}
-            onChange={setWriteFirstLetterStageEnabled}
-            label="Write First Letter stage"
-            description="A handwriting-recognition canvas during each verse's Learn stages — draw each word's first letter, punctuation mark, or verse number"
-          />
-          <InfoTip text={INFO_TIPS.writeFirstLetterStageToggle} />
-        </div>
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={pegSystemEnabled}
-            onChange={setPegSystemEnabled}
-            label="Peg system"
-            description="Recommended for memorizing books — suggests a peg-system word for each verse number in the Visualize stage"
-          />
-          <InfoTip text={INFO_TIPS.pegSystemToggle} />
-        </div>
-        {pegSystemEnabled && (
-          <Link href="/profile/peg-system" className="mt-2 self-start text-sm font-medium text-brand-600 hover:underline">
-            Learn the system →
-          </Link>
-        )}
-        <div className="mt-3 flex items-start gap-1.5">
-          <ToggleSwitch
-            checked={pericopeHeadingRecallEnabled}
-            onChange={setPericopeHeadingRecallEnabled}
-            label="Recite section headings in review"
-            description="When reviewing a verse group that opens a new section, type its heading by first letter before the verse — doesn't count against accuracy"
-          />
-          <InfoTip text={INFO_TIPS.pericopeHeadingRecallToggle} />
-        </div>
       </div>
+
+      <ProfileAdvancedSettings />
 
       <div className="rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
         <div className="flex items-center gap-2">

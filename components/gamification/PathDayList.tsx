@@ -9,9 +9,6 @@ import { PericopeCard } from "@/components/gamification/PericopeCard";
 interface PathDayListProps {
   days: MemorizationDay[];
   completedDays: number;
-  // Whichever day counts as TODAY's own lesson — see lib/dayRollover.ts's todaysDayNumber.
-  // Always a real dayNumber, never gated, so a just-finished lesson's own card keeps reading
-  // as "today" until a real calendar day passes.
   todaysDayNumber: number;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;

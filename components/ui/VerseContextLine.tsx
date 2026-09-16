@@ -1,21 +1,18 @@
 import type { VerseSegment } from "@/types";
+import { PlainVerseWords } from "@/components/ui/PlainVerseWords";
 
 interface VerseContextLineProps {
   verse: VerseSegment;
 }
 
-// A single previous/next-verse context line shown directly around a drill's own verse
-// text — the reference is bolded so it's identifiable at a glance without competing with
-// the verse actually being worked on, which stays the only full-size text on screen.
-// Chapter:verse only (not verse.reference's full "Book Chapter:Verse") since the book is
-// already established by the verse currently being worked on.
+// A single previous/next-verse context line on its own — same superscript-number treatment
+// as a plain verse on the reading page (see PlainVerseWords.tsx), just wrapped as its own
+// paragraph rather than flowing inline. Used wherever only one neighboring verse needs
+// showing on its own, outside a full LessonVerseContext run.
 export function VerseContextLine({ verse }: VerseContextLineProps) {
   return (
-    <p className="text-lg leading-relaxed text-ink-muted dark:text-zinc-600">
-      <span className="font-semibold">
-        {verse.chapter}:{verse.verseNumber}
-      </span>{" "}
-      {verse.text}
+    <p className="font-serif text-lg leading-loose text-ink-muted dark:text-zinc-500">
+      <PlainVerseWords verse={verse} />
     </p>
   );
 }

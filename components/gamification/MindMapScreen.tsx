@@ -1,19 +1,27 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useMindMapData } from "@/lib/useMindMapData";
-import { MindMapCanvas } from "@/components/gamification/MindMapCanvas";
+import { useSwitchBookPath } from "@/lib/useSwitchBookPath";
+import { BookMindMap } from "@/components/gamification/BookMindMap";
 import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
-// Testing-tab entry point (see components/ui/BottomTabBar.tsx) for the Mind Map — a free
-// pan/zoom view of the currently active BOOK path's own chapter/pericope tree. All the real
-// data work (loading verses, building the day plan, shaping it into per-chapter pericope
-// zones/states) lives in lib/useMindMapData.ts; this component only picks which state to
-// show and wires the ready case's navigation callbacks through to the canvas.
-export function MindMapScreen() {
-  const router = useRouter();
+interface MindMapScreenProps {
+  onSelectChapter: (chapter: number, startVerse?: number) => void;
+}
+
+// The Book path's own landing screen: a free pan/zoom view of the WHOLE canon's own
+// Bible -> Testament -> Genre -> Book -> Chapter -> Pericope tree, opening centered on the
+// active book (see PathOverviewScreen.tsx, which renders this whenever no chapter has been
+// opened yet). Tapping a pericope opens that chapter's own parchment view; tapping a different
+// book switches the active path to it (see BookMindMap.tsx's own doc comment) — this screen
+// itself never navigates on its own beyond wiring those two actions through. All the real data
+// work for the ACTIVE book (loading verses, building the day plan, slicing it per chapter)
+// lives in lib/useMindMapData.ts; every other book's own shell (label, chapter count,
+// completion badge) is cheap, static data lib/mindMapHierarchy.ts pulls in directly.
+export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
   const data = useMindMapData();
+  const switchBook = useSwitchBookPath(data.status === "ready" ? data.version : "");
 
   if (data.status === "loading") {
     return <FetchLoading label="Loading mind map…" />;
@@ -33,28 +41,31 @@ export function MindMapScreen() {
     );
   }
 
-  const basePath = `/path/${encodeURIComponent(data.pathKey)}`;
-
   return (
     // AuthGate.tsx's <main> wraps every page in flex-1 inside a body that's only min-h-full
     // (a floor, not a ceiling) — so a plain flex-1 chain here has no definite height to fill
     // and the SVG below falls back to its own intrinsic (viewBox aspect-ratio) size instead,
-    // growing the whole page taller than the viewport. Sizing directly off 100dvh minus
-    // that <main>'s own pb-20 (5rem) sidesteps the broken chain with a height that's
-    // definite from the very first div, so the canvas below can actually fill it.
-    <div className="flex h-[calc(100dvh-5rem)] w-full flex-col">
-      <div className="flex items-center justify-between border-b border-line px-4 py-2 dark:border-zinc-800">
-        <p className="font-serif text-lg font-semibold text-ink dark:text-zinc-100">{data.label} — Mind Map</p>
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Testing</p>
-      </div>
-      <div className="min-h-0 flex-1">
-        <MindMapCanvas
-          bookLabel={data.label}
-          chapters={data.chapters}
-          onSelectDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}`)}
-          onPracticeDay={(dayNumber) => router.push(`${basePath}/day/${dayNumber}/practice`)}
-        />
-      </div>
+    // growing the whole page taller than the viewport. Sizing directly off 100dvh instead
+    // gives a height that's definite from the very first div, so the canvas below can
+    // actually fill it — minus BottomTabBar.tsx's own REAL rendered height (63px measured,
+    // not the `pb-20`/5rem <main> reserves below it, which runs taller than the bar actually
+    // is and left a visible strip of plain page background between this screen's own solid
+    // `mist` canvas and the bar above it) plus its own safe-area inset, so this box's bottom
+    // edge lines up exactly with the bar's own top edge on every device. If BottomTabBar.tsx's
+    // own height ever changes, update the 63px here to match.
+    // No explanation bar above this, no wrapper padding/border below whatever sits above this
+    // screen — the canvas fills this entire box itself, edge to edge, with nothing between it
+    // and the top of the box to read as a gap.
+    <div className="h-[calc(100dvh-63px-env(safe-area-inset-bottom))] w-full">
+      <BookMindMap
+        bookLabel={data.label}
+        chapters={data.chapters}
+        completedDays={data.completedDays}
+        todaysDay={data.todaysDay}
+        version={data.version}
+        onSelectChapter={onSelectChapter}
+        onSwitchBook={switchBook}
+      />
     </div>
   );
 }

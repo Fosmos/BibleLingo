@@ -4,8 +4,7 @@ import { useState } from "react";
 import type { BibleBook, LocationTagLevel } from "@/types";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
-import { pathKey } from "@/lib/memorizationContent";
-import { buildPathDayPlan, completedDaysThroughVerse } from "@/lib/dayPlan";
+import { priorKnownVerseCountThrough } from "@/lib/dayPlan";
 
 // Held between "how far along are you" (see StartingPointFlow.tsx) and the actual navigation
 // — every argument goToPath would otherwise have received right away, now deferred until that
@@ -17,6 +16,7 @@ interface PendingFinish {
   version: string;
   versesPerDay?: number;
   locationTagLevels?: LocationTagLevel[];
+  sectionEndPegEnabled?: boolean;
 }
 
 type GoToPath = (
@@ -25,7 +25,8 @@ type GoToPath = (
   version: string,
   versesPerDay?: number,
   locationTagLevels?: LocationTagLevel[],
-  startAtCompletedDays?: number,
+  sectionEndPegEnabled?: boolean,
+  priorKnownVerseCount?: number,
 ) => void;
 
 interface UseStartingPointFlowArgs {
@@ -40,36 +41,46 @@ const CHAPTER_FETCH_CONCURRENCY = 4;
 
 // GuidedPathFlow.tsx's own last step for book/chapter mode, split out purely to keep that
 // file under this codebase's 200-line cap — see StartingPointFlow.tsx for the UI this drives,
-// and lib/dayPlan.ts's completedDaysThroughVerse for how a picked (chapter, verseNumber) turns
-// into an actual starting day. Async status is reported back through the three callbacks
+// and lib/dayPlan.ts's priorKnownVerseCountThrough for how a picked (chapter, verseNumber)
+// turns into an actual starting point. Async status is reported back through the three callbacks
 // rather than owned here, so GuidedPathFlow.tsx's existing status/loadingLabel/errorMessage
 // state stays the single source of truth every OTHER step in that flow already uses.
 export function useStartingPointFlow({ selectedBook, goToPath, onLoading, onError, onIdle }: UseStartingPointFlowArgs) {
   const [pendingFinish, setPendingFinish] = useState<PendingFinish | null>(null);
 
-  // Passed in place of goToPath wherever GuidedPathFlow.tsx would otherwise finish a book/
-  // chapter pick right away — that finish now waits for StartingPointFlow.tsx to ask "already
-  // know some of this?" first. Verse mode's own handleSelectVerse calls goToPath directly
-  // instead — a single verse has nothing to "already know part of."
+  // Passed to useLearnIntensityFlow in place of goToPath — book/chapter mode's own chain ends
+  // here instead of navigating right away, so StartingPointFlow.tsx gets a chance to ask
+  // "already know some of this?" first. Matches goToPath's own (pre-priorKnownVerseCount)
+  // signature exactly, since intensityFlow never knows a starting point itself. Verse mode's own
+  // handleSelectVerse (GuidedPathFlow.tsx) calls goToPath directly instead — a single verse
+  // has nothing to "already know part of."
   function requestFinish(
     identifier: string,
     kind: "book" | "chapter" | "verse",
     version: string,
     versesPerDay?: number,
     locationTagLevels?: LocationTagLevel[],
+    sectionEndPegEnabled?: boolean,
   ) {
-    setPendingFinish({ identifier, kind: kind as "book" | "chapter", version, versesPerDay, locationTagLevels });
+    setPendingFinish({ identifier, kind: kind as "book" | "chapter", version, versesPerDay, locationTagLevels, sectionEndPegEnabled });
   }
 
   function finishFromBeginning() {
     if (!pendingFinish) return;
-    goToPath(pendingFinish.identifier, pendingFinish.kind, pendingFinish.version, pendingFinish.versesPerDay, pendingFinish.locationTagLevels);
+    goToPath(
+      pendingFinish.identifier,
+      pendingFinish.kind,
+      pendingFinish.version,
+      pendingFinish.versesPerDay,
+      pendingFinish.locationTagLevels,
+      pendingFinish.sectionEndPegEnabled,
+    );
   }
 
-  // Turns "I've memorized through book X, chapter/verse Y" into an actual starting day —
-  // needs this path's own real verses and day-plan shape (versesPerDay, chunking), the exact
-  // same inputs PathOverviewScreen.tsx would use once the path actually exists, just computed
-  // a step early.
+  // Turns "I've memorized through book X, chapter/verse Y" into an exact prior-known-verse
+  // count — needs this path's own real verses (the same flat array lib/dayPlan.ts's
+  // buildDayPlan/buildBookDayPlan will later chunk against) to find that verse's own array
+  // position.
   async function handleStartingPointPicked(chapter: number, verseNumber: number) {
     if (!pendingFinish || !selectedBook) return;
     onLoading("Finding where to start…");
@@ -84,14 +95,7 @@ export function useStartingPointFlow({ selectedBook, goToPath, onLoading, onErro
               )
             ).flat()
           : await ensureChapterLoaded(selectedBook.name, chapter, pendingFinish.version);
-      const key = pathKey(pendingFinish.kind, pendingFinish.identifier);
-      const days = buildPathDayPlan(key, verses, {
-        version: pendingFinish.version,
-        completedDays: 0,
-        lastCompletedAt: null,
-        versesPerDay: pendingFinish.versesPerDay,
-      });
-      const startAtCompletedDays = completedDaysThroughVerse(days, chapter, verseNumber);
+      const priorKnownVerseCount = priorKnownVerseCountThrough(verses, chapter, verseNumber);
       onIdle();
       goToPath(
         pendingFinish.identifier,
@@ -99,7 +103,8 @@ export function useStartingPointFlow({ selectedBook, goToPath, onLoading, onErro
         pendingFinish.version,
         pendingFinish.versesPerDay,
         pendingFinish.locationTagLevels,
-        startAtCompletedDays,
+        pendingFinish.sectionEndPegEnabled,
+        priorKnownVerseCount,
       );
     } catch (error) {
       onError(error instanceof BibleFetchError ? error.message : "Something went wrong figuring out where to start.");

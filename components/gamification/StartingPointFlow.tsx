@@ -28,8 +28,8 @@ type Step = "prompt" | "chapter" | "verse";
 // GuidedPathFlow.tsx's own last step for book/chapter mode, split out purely to keep that
 // file under this codebase's 200-line cap — asks whether the reader's already memorized part
 // of what they just picked and, if so, which chapter/verse they've gotten through, then hands
-// that back so the caller can turn it into an actual starting day (see lib/dayPlan.ts's
-// completedDaysThroughVerse).
+// that back so the caller can turn it into an actual starting point (see lib/dayPlan.ts's
+// priorKnownVerseCountThrough).
 export function StartingPointFlow({
   book,
   kind,

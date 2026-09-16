@@ -11,6 +11,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-jakarta);
   --font-serif: var(--font-playfair);
+  --font-reading: var(--font-source-serif);
 }
 
 @media (prefers-color-scheme: dark) {

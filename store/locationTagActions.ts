@@ -5,6 +5,8 @@ import type { ProgressStore } from "@/store/useProgressStore";
 interface LocationTagActions {
   setLocationTag: (key: string, value: string) => void;
   clearLocationTag: (key: string) => void;
+  setIconTag: (key: string, iconId: string) => void;
+  clearIconTag: (key: string) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -29,6 +31,22 @@ export function createLocationTagActions(
       const locationTags = { ...state.locationTags };
       delete locationTags[key];
       set(persist({ ...state, locationTags }));
+    },
+
+    // Same key scheme as locationTags above (lib/locationTags.ts's locationTagKey) but its
+    // own separate map — a verse can carry a free-text location tag AND an icon tag at once,
+    // see components/gamification/IconTagField.tsx.
+    setIconTag: (key, iconId) => {
+      const state = get();
+      set(persist({ ...state, iconTags: { ...state.iconTags, [key]: iconId } }));
+    },
+
+    clearIconTag: (key) => {
+      const state = get();
+      if (!(key in state.iconTags)) return;
+      const iconTags = { ...state.iconTags };
+      delete iconTags[key];
+      set(persist({ ...state, iconTags }));
     },
   };
 }

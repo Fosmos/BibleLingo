@@ -109,6 +109,12 @@ const config: Config = {
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],
         sans: ["var(--font-sans)", "Arial", "sans-serif"],
+        // The Bible verse text's own reading serif (see ChapterPageContent.tsx) — a plain,
+        // quiet OLD-STYLE text serif (Source Serif 4, the closest free match to YouVersion's
+        // own paid Untitled Serif), distinct from `serif` above (Playfair Display), which is a
+        // high-contrast DISPLAY face this app's headings/titles keep using — long-form verse
+        // reading wants the workhorse, not the headline face.
+        reading: ["var(--font-reading)", "Georgia", "serif"],
       },
       spacing: {
         18: "4.5rem",

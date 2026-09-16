@@ -1,4 +1,5 @@
 import { tokenizeVerseWords } from "@/lib/verseWords";
+import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 
 export type DrawTokenKind = "word" | "punctuation" | "verseNumber";
 
@@ -54,4 +55,26 @@ export function buildDrawTokens(verseText: string, verseMarkers: Record<number, 
   });
 
   return tokens;
+}
+
+// Groups `tokens`' own INDICES (not the tokens themselves — a caller still needs each token's
+// original position in `tokens` for its own revealed/current-token comparisons) by which sense-
+// line clause each one falls in, in their own natural verse-text order — see
+// DrawFirstLetterRep.tsx's own use, rendering the active verse through the SAME multi-line
+// clause structure a non-active verse gets (see lib/senseLines.ts's own senseLineWordRanges)
+// instead of one dense merged block. A non-word token (punctuation, a verse number) always
+// joins whatever clause the WORD token immediately before it belongs to, since punctuation
+// always trails the word it punctuates. Only "word" tokens carry a real `wordIndex` to check
+// against a clause's own [startIndex, endIndex) range; everything else just rides along with
+// the clause the walk is currently inside.
+export function bucketTokenIndicesByClause(tokens: DrawToken[], ranges: SenseLineWordRange[]): number[][] {
+  const buckets: number[][] = ranges.map(() => []);
+  let rangeIndex = 0;
+  tokens.forEach((token, index) => {
+    while (rangeIndex < ranges.length - 1 && token.kind === "word" && token.wordIndex !== undefined && token.wordIndex >= ranges[rangeIndex].endIndex) {
+      rangeIndex++;
+    }
+    buckets[rangeIndex]?.push(index);
+  });
+  return buckets;
 }

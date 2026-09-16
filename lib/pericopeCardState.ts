@@ -17,10 +17,10 @@ export interface PericopeCardState {
 }
 
 // A pericope zone's days are always contiguous in dayNumber (see lib/pathZones.ts), and a
-// path's days unlock strictly in dayNumber order — so a zone can only ever be entirely
-// before, straddling, or entirely after `todaysDay`. This never needs to represent a zone as
-// "partially done but not the currently active one," which is why one card only ever needs
-// one action.
+// path's days unlock strictly in dayNumber order (see DayPathDiagram.tsx's isUnlocked
+// pattern) — so a zone can only ever be entirely before, straddling, or entirely after
+// `todaysDay`. This never needs to represent a zone as "partially done but not the currently
+// active one," which is why one card only ever needs one action.
 //
 // `completedDays` and `todaysDay` are deliberately two separate numbers, not one — see
 // lib/dayRollover.ts's own todaysDayNumber. completedDays (real, permanent progress) decides
@@ -28,9 +28,7 @@ export interface PericopeCardState {
 // lesson, whether it's already done, in progress, or not started — a zone containing it
 // always reads "active" (amber), even once it's also fully completed, so today's own work
 // keeps standing out from the rest of an otherwise-green path until a real calendar day
-// boundary moves todaysDay on to something else. Only `actionKind` flips (select -> practice)
-// once that day is actually done — so the button can't be used to start a NEW lesson again
-// before tomorrow, even while the card stays visually "today's."
+// boundary moves todaysDay on to something else.
 export function computeZoneCardState(zone: PathZone, completedDays: number, todaysDay: number): PericopeCardState {
   const todaysDayInZone = zone.days.find((day) => day.dayNumber === todaysDay);
   if (todaysDayInZone) {
@@ -46,6 +44,21 @@ export function computeZoneCardState(zone: PathZone, completedDays: number, toda
     const learnDays = zone.days.filter((day) => day.kind === "learn");
     const reviewTarget = learnDays[learnDays.length - 1] ?? lastDay;
     return { status: "completed", actionDay: reviewTarget, actionKind: "practice" };
+  }
+
+  // A pericope short enough that no lesson ever ends exactly on it never gets a "home" day
+  // above — every lesson that touches it only ever passes through on the way to a later
+  // section (see PathZone.spilloverVerses). Its own completion still has to be judged from
+  // that spillover history, or it stays stuck showing "Locked" forever even once every lesson
+  // that ever touched it has long since finished. No actionDay here (there's no single lesson
+  // of its own to replay — reviewing would mean replaying a whole later lesson's verses,
+  // which reach beyond this pericope) — PericopeCard.tsx renders no action button for it,
+  // same as any other spillover-only card.
+  if (zone.days.length === 0 && zone.spilloverVerses && zone.spilloverVerses.length > 0) {
+    const lastSpilloverDay = Math.max(...zone.spilloverVerses.map((entry) => entry.dayNumber));
+    if (lastSpilloverDay <= completedDays) {
+      return { status: "completed", actionKind: "practice" };
+    }
   }
 
   // Not reached yet — still previewable via its own first lesson, same as any other day.

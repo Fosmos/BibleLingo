@@ -33,7 +33,7 @@ export function activeDayNumber(plan: PathProgress, now: Date): number {
 // to -1 once today's lesson is done, so nothing NEW gets offered), this never hides what was
 // already accomplished today — it's for every "still show today's own thing" display: the
 // Mind Map's amber ring on a just-finished pericope/chapter, the parchment view's gold
-// highlight on today's verses, Home's Today's Verses card content.  Use activeDayNumber for
+// highlight on today's verses, Home's Today's Verses card content. Use activeDayNumber for
 // gating what's offerable to START; use this for everything that should keep reading as
 // "today" regardless of whether today's lesson happened yet.
 export function todaysDayNumber(plan: PathProgress, now: Date): number {
