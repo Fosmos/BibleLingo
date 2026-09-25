@@ -1,4 +1,4 @@
-import type { MemorizationDay, PathKind, PathProgress, ReviewStage, VerseSegment } from "@/types";
+import type { LocationTagLevel, MemorizationDay, PathKind, PathProgress, ReviewStage, VerseSegment } from "@/types";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { buildBookDayPlan, DEFAULT_VERSES_PER_DAY } from "@/lib/bookDayPlan";
 import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
@@ -105,11 +105,19 @@ export function buildDayPlan(
 // shape, no sliding window. `pegSystemEnabled` (the global Major-System toggle — undefined/
 // false-safe for every caller that never renders a day's own previousVerses, like
 // lib/progressSummary.ts and the Mind Map view, which can skip passing it entirely) combines
-// with this path's own pericope-level Memory Palace tag choice to decide whether each learn
-// day's "yesterday's verses" review gets pericope-anchored — see lib/previousVerseReview.ts.
-export function buildPathDayPlan(key: string, verses: VerseSegment[], plan: PathProgress, pegSystemEnabled = false): MemorizationDay[] {
+// with the global Memory Palace pericope tag choice (`locationTagLevels` — see
+// UserProgress.locationTagLevels, also caller-supplied/defaulted the same way) to decide
+// whether each learn day's "yesterday's verses" review gets pericope-anchored — see
+// lib/previousVerseReview.ts.
+export function buildPathDayPlan(
+  key: string,
+  verses: VerseSegment[],
+  plan: PathProgress,
+  pegSystemEnabled = false,
+  locationTagLevels: LocationTagLevel[] = [],
+): MemorizationDay[] {
   const { kind } = parsePathKey(key);
-  const usePericopeAnchor = pegSystemEnabled && (plan.locationTagLevels?.includes("pericope") ?? false);
+  const usePericopeAnchor = pegSystemEnabled && locationTagLevels.includes("pericope");
   const priorKnownVerseCount = plan.priorKnownVerseCount ?? 0;
   if (kind === "book") {
     return buildBookDayPlan(verses, plan.versesPerDay ?? DEFAULT_VERSES_PER_DAY, usePericopeAnchor, priorKnownVerseCount);

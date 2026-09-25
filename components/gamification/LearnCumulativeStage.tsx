@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { MemorizationDay } from "@/types";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
+import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
 import { ReviewChain } from "@/components/drills/ReviewChain";
 
 interface LearnCumulativeStageProps {
@@ -13,19 +14,21 @@ interface LearnCumulativeStageProps {
   cumulativeVerseIndices: number[];
   layout: ChapterReadingLayout;
   topBar: ReactNode;
+  embeddedInMindMap?: boolean;
   onAdvance: () => void;
 }
 
 // LearnSection.tsx's own "type everything learned today so far" step — split out purely to
 // keep that file under this codebase's own 200-line cap (see CLAUDE.md), no behavior
 // difference from having it inline there.
-export function LearnCumulativeStage({ day, cumulativeVerseIndices, layout, topBar, onAdvance }: LearnCumulativeStageProps) {
+export function LearnCumulativeStage({ day, cumulativeVerseIndices, layout, topBar, embeddedInMindMap, onAdvance }: LearnCumulativeStageProps) {
+  const reportVerse = useReportFocusVerse(embeddedInMindMap);
   const versesLearnedSoFar = cumulativeVerseIndices.map((index) => day.newVerses[index]);
   return (
     <>
       {topBar}
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-        <ReviewChain verses={versesLearnedSoFar} label="Remember" layout={layout} requirePerfectPass onComplete={onAdvance} />
+        <ReviewChain verses={versesLearnedSoFar} label="Remember" layout={layout} onComplete={onAdvance} onVerseChange={reportVerse} />
       </div>
     </>
   );

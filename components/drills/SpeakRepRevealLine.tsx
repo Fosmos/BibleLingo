@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { buildDrawTokens } from "@/lib/verseDrawTokens";
-import { wordLetterPlaceholder, wordOrBlank } from "@/lib/verseWords";
+import { firstWordCharacter, hiddenWordBlank } from "@/lib/verseWords";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
 interface SpeakRepRevealLineProps {
   text: string;
@@ -10,9 +11,9 @@ interface SpeakRepRevealLineProps {
   // once revealed never goes back to hidden, even if a later interim transcript update briefly
   // stops matching it.
   revealedCount: number;
-  // A not-yet-spoken word shows its first letter (the Speak flow's hint mode) or nothing at all
-  // (blind recitation) — either way padded to the word's own real length (see
-  // lib/verseWords.ts), never a dash/underscore.
+  // A not-yet-spoken word shows its bare first letter (the Speak flow's hint mode — a compact
+  // prompt, not a same-width stand-in) or nothing at all (blind recitation, still padded to the
+  // word's own real length, its punctuation hidden too — see lib/verseWords.ts's hiddenWordBlank).
   mode: "hint" | "blind";
 }
 
@@ -29,19 +30,28 @@ export function SpeakRepRevealLine({ text, revealedCount, mode }: SpeakRepReveal
       {tokens.map((token, index) => {
         const isWord = token.kind === "word" && !token.isReference;
         let display = token.text;
+        // Whether this token ends a first-letter unit (a hint letter, plus its punctuation) —
+        // where the extra first-letter gap goes (see lib/firstLetterGap.ts). Never after a word
+        // already spoken in full, which reads as ordinary text.
+        let endsLetterUnit = false;
         if (isWord) {
           const isRevealed = wordIndex < revealedCount;
-          // wordLetterPlaceholder's own `revealed` flag means something different from this
-          // component's own `isRevealed` — it controls whether the FIRST LETTER itself shows,
-          // which is exactly what "hint" mode wants for a not-yet-spoken word (the whole point
-          // of a hint); passing `false` here left every not-yet-spoken word fully blank instead,
-          // reading as an empty line with nothing to go on.
-          display = isRevealed ? token.text : mode === "blind" ? wordOrBlank(token.text, false) : wordLetterPlaceholder(token.text, true);
+          display = isRevealed ? token.text : mode === "blind" ? hiddenWordBlank(token.text) : (firstWordCharacter(token.text) ?? token.text);
+          endsLetterUnit = mode === "hint" && !isRevealed;
           wordIndex++;
+        } else if (token.kind === "punctuation") {
+          // Punctuation only appears once the word it belongs to has been said — never as part
+          // of the hint, never ahead of the reader. A mark belongs to the word it touches:
+          // leading punctuation (no space after it) to the NEXT word, trailing punctuation to the
+          // one just before it. Hidden, it takes no room in hint mode (letters stay one space
+          // apart) and blank room in blind mode (matching the blank words around it).
+          const ownerIndex = token.spaceAfter ? wordIndex - 1 : wordIndex;
+          if (ownerIndex >= revealedCount) display = mode === "blind" ? hiddenWordBlank(token.text) : "";
+          endsLetterUnit = mode === "hint" && ownerIndex >= revealedCount;
         }
         return (
           <Fragment key={index}>
-            {display}
+            {endsLetterUnit && token.spaceAfter ? <span className={FIRST_LETTER_GAP_CLASS}>{display}</span> : display}
             {token.spaceAfter && " "}
           </Fragment>
         );

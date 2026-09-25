@@ -1,8 +1,11 @@
 "use client";
 
+import { useCallback } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
+import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { resolveCompletingChapterVerses } from "@/lib/completingChapterVerses";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
+import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { DaySessionController } from "@/components/gamification/DaySessionController";
 import { PracticeChain } from "@/components/drills/PracticeChain";
 import { EsvAttribution } from "@/components/ui/EsvAttribution";
@@ -27,6 +30,12 @@ interface InPlaceLessonSessionProps {
   todaysDay: number;
   dayNumber: number;
   mode: "select" | "practice";
+  // Set only by BookMindMapWithLessonSheet.tsx's own bottom-sheet trigger — threaded straight
+  // through to LearnSection.tsx's own per-verse chrome (see LearnVerseSpotlightChrome.tsx),
+  // which uses it to skip its own small embedded Mind Map preview (the REAL canvas already
+  // shows behind/above this sheet) and instead report the live drilled verse back up via
+  // store/useLessonSessionStore.ts's `focusVerse`, so the real canvas can zoom to it.
+  embeddedInMindMap?: boolean;
   onExit: () => void;
 }
 
@@ -36,11 +45,23 @@ interface InPlaceLessonSessionProps {
 // still serve as a fallback (a bookmarked or shared link, say). `onExit` is the one way back:
 // it just clears PathOverviewScreen's own lessonDay state, so the exact same parchment view
 // reappears underneath rather than a browser-history "back" landing somewhere else entirely.
-export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, onExit }: InPlaceLessonSessionProps) {
+export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
   const day = days.find((candidate) => candidate.dayNumber === dayNumber);
+  const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
+  const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
+  // Review in the Mind Map sheet: same progress bar and canvas-follows-the-verse behavior a Learn
+  // lesson gets from LearnTopBar.tsx/LearnVerseSpotlightChrome.tsx.
+  const reportPracticeVerse = useCallback(
+    (verse: VerseSegment, fraction: number) => {
+      setFocusVerse({ book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber });
+      setLessonProgress(fraction);
+    },
+    [setFocusVerse, setLessonProgress],
+  );
   // Called unconditionally, alongside every other hook here, since hooks can't be called
   // after an early return — see FALLBACK_DAY's own doc comment.
-  const layout = useChapterScopedReadingLayout(days, day ?? FALLBACK_DAY, completedDays, todaysDay);
+  const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
+  const layout = useChapterScopedReadingLayout(days, day ?? FALLBACK_DAY, completedDays, todaysDay, senseCardFillHeightPx, senseCardColumnWidthPx);
   if (!day) return null;
 
   if (mode === "practice") {
@@ -62,6 +83,8 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
           onExit={onExit}
           sessionKey={`${pathKey}:${dayNumber}:practice`}
           layout={layout}
+          exitWhenDone={embeddedInMindMap}
+          onVerseChange={embeddedInMindMap ? reportPracticeVerse : undefined}
         />
       </div>
     );
@@ -78,6 +101,7 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
         todaysDay={todaysDay}
         totalDays={days.length}
         completingChapterVerses={resolveCompletingChapterVerses(day, days, verses)}
+        embeddedInMindMap={embeddedInMindMap}
         onExit={onExit}
       />
       <EsvAttribution visible={version === "ESV"} />

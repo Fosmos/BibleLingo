@@ -78,3 +78,27 @@ export function bucketTokenIndicesByClause(tokens: DrawToken[], ranges: SenseLin
   });
   return buckets;
 }
+
+// The first "word" token at or after `from`, or -1 if none is left — the draw stage's turns
+// only ever land on words (a word's own punctuation is revealed along with it, see below).
+export function nextWordTokenIndex(tokens: DrawToken[], from: number): number {
+  for (let index = from; index < tokens.length; index++) {
+    if (tokens[index].kind === "word") return index;
+  }
+  return -1;
+}
+
+// The word token at `wordTokenIndex` plus the punctuation that belongs to it — any leading
+// punctuation right before it (e.g. an opening quote; always `spaceAfter: false`, see
+// buildDrawTokens) and its trailing punctuation right after (always `spaceAfter: true`) — so a
+// mark only ever appears together with the word it's attached to, never ahead of it.
+export function withOwnPunctuation(tokens: DrawToken[], wordTokenIndex: number): number[] {
+  const indices = [wordTokenIndex];
+  for (let index = wordTokenIndex - 1; index >= 0 && tokens[index].kind === "punctuation" && !tokens[index].spaceAfter; index--) {
+    indices.push(index);
+  }
+  for (let index = wordTokenIndex + 1; index < tokens.length && tokens[index].kind === "punctuation" && tokens[index].spaceAfter; index++) {
+    indices.push(index);
+  }
+  return indices;
+}

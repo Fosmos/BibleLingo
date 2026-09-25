@@ -1,5 +1,6 @@
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { parseSenseLines, type SenseLineClause } from "@/lib/senseLines";
+import { measureTextWidth } from "@/lib/textMeasurement";
 
 export interface SenseLineWordRange {
   clause: SenseLineClause;
@@ -30,4 +31,32 @@ export function senseLineWordRanges(text: string): SenseLineWordRange[] {
     cursor += wordCount;
     return range;
   });
+}
+
+// Share of the column a merged line may fill, measured against plain text. Drills swap words for
+// slightly wider spans (a boxed blank, a tinted role wash) and verse text itself renders a touch
+// lighter than the bold measurement below, so this headroom keeps a merged line from wrapping.
+const MERGE_FILL_RATIO = 0.94;
+
+// Greedily joins consecutive clauses onto ONE line whenever the joined text still fits the
+// column — two short clauses ("and peace," "and love,") read as one line rather than two
+// half-empty ones, while a clause that's already long keeps its own line. Measured with real
+// font metrics (lib/textMeasurement.ts), bold for a conservative width. A merged range spans its
+// clauses' combined word range, so every drill's per-range rendering (which slices by
+// startIndex/endIndex) needs no change. The first line of a clause starts flush left (see
+// SenseLineRow.tsx's hanging indent), so the full column width is what a merged line gets.
+export function mergeRangesToFit(ranges: SenseLineWordRange[], columnWidthPx: number, fontSizePx: number): SenseLineWordRange[] {
+  if (columnWidthPx <= 0 || ranges.length < 2) return ranges;
+  const limit = columnWidthPx * MERGE_FILL_RATIO;
+  const merged: SenseLineWordRange[] = [];
+  for (const range of ranges) {
+    const previous = merged[merged.length - 1];
+    const joinedText = previous ? `${previous.clause.text} ${range.clause.text}` : "";
+    if (previous && measureTextWidth(joinedText, fontSizePx, "600") <= limit) {
+      merged[merged.length - 1] = { clause: { text: joinedText }, startIndex: previous.startIndex, endIndex: range.endIndex };
+    } else {
+      merged.push(range);
+    }
+  }
+  return merged;
 }

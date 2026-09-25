@@ -31,20 +31,19 @@ interface ProgressActions {
   consumeStreakFreeze: () => boolean;
   addStreakFreeze: (amount: number) => void;
   evaluateStreakOnLoad: () => { status: StreakLoadStatus; previousStreak: number };
-  setPath: (
-    pathKey: string,
-    version: string,
-    versesPerDay?: number,
-    locationTagLevels?: LocationTagLevel[],
-    sectionEndPegEnabled?: boolean,
-    priorKnownVerseCount?: number,
-    priorKnownDayCount?: number,
-  ) => void;
+  setPath: (pathKey: string, version: string, versesPerDay?: number, priorKnownVerseCount?: number, priorKnownDayCount?: number) => void;
   resetPathProgress: (pathKey: string) => void;
   setActivePath: (pathKey: string) => void;
+  removeActivePath: (pathKey: string) => void;
+  retireLearnedPath: (pathKey: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;
+  // Dedup marker for a Mind Map chapter's own one-time completion celebration — see
+  // types/index.ts's celebratedMindMapChapters and lib/useMindMapChapterCelebration.ts.
+  markMindMapChapterCelebrated: (chapterId: string) => void;
+  // Same, scoped to a whole book finishing — see types/index.ts's celebratedMindMapBooks.
+  markMindMapBookCelebrated: (bookId: string) => void;
   recordSrsReview: (entityId: string, accuracy: number) => void;
   earnShekels: (amount: number) => void;
   recordChapterReviewAccuracy: (pathKey: string, accuracy: number) => void;
@@ -63,6 +62,8 @@ interface ProgressActions {
   setVersePOA: (book: string, chapter: number, verseNumber: number, poa: VersePOA) => void;
   setPegSystemEnabled: (value: boolean) => void;
   markBuildingViewReviewedToday: () => void;
+  toggleLocationTagLevel: (level: LocationTagLevel) => void;
+  setSectionEndPegEnabled: (value: boolean) => void;
   setLocationTag: (key: string, value: string) => void;
   clearLocationTag: (key: string) => void;
   setIconTag: (key: string, iconId: string) => void;
@@ -155,6 +156,18 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const state = get();
     if (state.stickers.includes(pathKey)) return;
     set(persist({ ...state, stickers: [...state.stickers, pathKey] }));
+  },
+
+  markMindMapChapterCelebrated: (chapterId) => {
+    const state = get();
+    if (state.celebratedMindMapChapters.includes(chapterId)) return;
+    set(persist({ ...state, celebratedMindMapChapters: [...state.celebratedMindMapChapters, chapterId] }));
+  },
+
+  markMindMapBookCelebrated: (bookId) => {
+    const state = get();
+    if (state.celebratedMindMapBooks.includes(bookId)) return;
+    set(persist({ ...state, celebratedMindMapBooks: [...state.celebratedMindMapBooks, bookId] }));
   },
 
   setIncludeVerseReferences: (value) => {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { StreakLossModal } from "@/components/gamification/StreakLossModal";
+import { useRetireLearnedPaths } from "@/lib/useRetireLearnedPaths";
 
 interface StreakLossState {
   open: boolean;
@@ -19,6 +20,7 @@ export function ProgressInitializer() {
   // which user id was last checked, so switching accounts within one session still runs the
   // check again for the newly signed-in account, but re-renders for the same account don't.
   const checkedUserIdRef = useRef<string | null>(null);
+  useRetireLearnedPaths();
 
   useEffect(() => {
     if (!currentUserId || checkedUserIdRef.current === currentUserId) return;

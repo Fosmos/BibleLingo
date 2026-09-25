@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { playSectionCompleteSfx } from "@/lib/audio";
 import { Confetti } from "@/components/ui/Confetti";
+import { BodyPortal } from "@/components/ui/BodyPortal";
 
 interface SectionCompleteOverlayProps {
   // Omitted for "smaller" sub-section completions (e.g. a single Learn stage) — those still
@@ -29,20 +30,22 @@ export function SectionCompleteOverlay({ text, onDone }: SectionCompleteOverlayP
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-[1px]"
-      aria-live="polite"
-    >
-      <Confetti />
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="relative flex flex-col items-center gap-2 rounded-3xl border border-line bg-white px-8 py-6 dark:border-zinc-700 dark:bg-zinc-900"
+    <BodyPortal>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-[1px]"
+        aria-live="polite"
       >
-        <Sparkles size={40} className="text-gold-500" />
-        {text && <p className="text-title text-center text-brand-600">{text}</p>}
-      </motion.div>
-    </div>
+        <Confetti />
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="relative flex flex-col items-center gap-2 rounded-3xl border border-line bg-white px-8 py-6 dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <Sparkles size={40} className="text-gold-500" />
+          {text && <p className="text-title text-center text-brand-600">{text}</p>}
+        </motion.div>
+      </div>
+    </BodyPortal>
   );
 }

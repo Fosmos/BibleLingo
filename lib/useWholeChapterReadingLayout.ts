@@ -16,10 +16,15 @@ import { useChapterReadingLayout, type ChapterReadingLayout } from "@/lib/useCha
 // `completedDays` is fixed at 1 and `todaysDay` at 0 (never a real day number) so every verse
 // renders in its "completed" (orange-underlined, already-memorized) state — never today's gold
 // highlight, which belongs to the Learn flow, not review.
-export function useWholeChapterReadingLayout(chapterVerses: VerseSegment[]): ChapterReadingLayout {
+export function useWholeChapterReadingLayout(
+  chapterVerses: VerseSegment[],
+  // See useChapterReadingLayout.ts's own doc comment — the Mind Map sheet's fixed verse zone.
+  fixedFillHeightPx?: number | null,
+  fixedColumnWidthPx?: number | null,
+): ChapterReadingLayout {
   const days = useMemo<MemorizationDay[]>(
     () => (chapterVerses.length > 0 ? [{ dayNumber: 1, kind: "learn", newVerses: chapterVerses, reviewVerses: [] }] : []),
     [chapterVerses],
   );
-  return useChapterReadingLayout(days, 1, 0);
+  return useChapterReadingLayout(days, 1, 0, fixedFillHeightPx, fixedColumnWidthPx);
 }

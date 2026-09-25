@@ -47,9 +47,6 @@ interface FirstLetterTypeRepProps {
   // words back to word 1 — used by SRS review, which gates box promotion on the resulting
   // accuracy percentage (lib/srs.ts's PROMOTION_ACCURACY_THRESHOLD) instead.
   restartOnMistake?: boolean;
-  // Learn's own gentle mode (see lib/useFirstLetterTyping.ts) — a mistake never sounds, but a
-  // pass with any mistake silently restarts and runs again until one comes back clean.
-  requirePerfectPass?: boolean;
   // Overrides the caption normally shown ("Type it by first letter") — used by the Learn
   // flow's closing stage. Left unset keeps the original, more literal caption.
   stageLabel?: string;
@@ -92,7 +89,6 @@ export function FirstLetterTypeRep({
   annotations,
   verseMarkers,
   restartOnMistake = true,
-  requirePerfectPass,
   stageLabel = "Type it by first letter",
   onVerseAccuracy,
   lettersOnly,
@@ -101,7 +97,7 @@ export function FirstLetterTypeRep({
   verses,
   moveAutoCompleteToVerseView,
 }: FirstLetterTypeRepProps) {
-  const typing = useFirstLetterTyping({ verse, reps, sessionKey, verseMarkers, restartOnMistake, requirePerfectPass, onComplete, onVerseAccuracy });
+  const typing = useFirstLetterTyping({ verse, reps, sessionKey, verseMarkers, restartOnMistake, onComplete, onVerseAccuracy });
   const revealedRef = useRef<HTMLDivElement>(null);
 
   // Keeps the revealed-words box pinned near the top instead of drifting out of view as more
@@ -118,7 +114,7 @@ export function FirstLetterTypeRep({
     <>
       {!layout && <sup className="mr-0.5 text-[0.7em] font-semibold text-ink-muted dark:text-zinc-500">{typing.currentVerseNumber}</sup>}
       {contextVerses ? (
-        <WordRevealLine words={typing.allWords} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} />
+        <WordRevealLine words={typing.allWords} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} firstLettersOnly />
       ) : (
         <RevealedWordsList words={typing.revealedWords} annotations={annotations} verseMarkers={verseMarkers} lettersOnly={lettersOnly} />
       )}
@@ -128,7 +124,7 @@ export function FirstLetterTypeRep({
   // Same WordRevealLine state as activeVerseWords above, sliced to this ONE clause's own range
   // (see LessonPageCard.tsx's renderActiveVerse doc) — always pairs with contextVerses (Learn).
   const renderActiveVerseRange = (_: VerseSegment, { startIndex, endIndex }: SenseLineWordRange) => (
-    <WordRevealLine words={typing.allWords.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} />
+    <WordRevealLine words={typing.allWords.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={typing.revealedWords.length} annotations={annotations} verseMarkers={verseMarkers} firstLettersOnly />
   );
 
   // SRS review only (`verses` set) — the ONE real verse currently being recalled, so View
@@ -173,7 +169,6 @@ export function FirstLetterTypeRep({
       <LessonControlBar
         dockRef={layout?.dockRef}
         verseText={activeRealVerse?.text ?? verse.text}
-        verseMarkers={activeRealVerse ? undefined : verseMarkers}
         verseViewExtra={moveAutoCompleteToVerseView ? <AutoCompleteButton onClick={typing.reportComplete} /> : undefined}
       >
         <FirstLetterTypingControls

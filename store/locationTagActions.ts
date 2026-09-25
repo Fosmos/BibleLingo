@@ -1,8 +1,10 @@
 import type { StoreApi } from "zustand";
-import type { UserProgress } from "@/types";
+import type { LocationTagLevel, UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 interface LocationTagActions {
+  toggleLocationTagLevel: (level: LocationTagLevel) => void;
+  setSectionEndPegEnabled: (value: boolean) => void;
   setLocationTag: (key: string, value: string) => void;
   clearLocationTag: (key: string) => void;
   setIconTag: (key: string, iconId: string) => void;
@@ -17,6 +19,20 @@ export function createLocationTagActions(
   persist: (progress: UserProgress) => UserProgress,
 ): LocationTagActions {
   return {
+    // Turns one scope's "add location tag" option on/off globally (Settings > Advanced >
+    // Memory Palace Tags) — see UserProgress.locationTagLevels.
+    toggleLocationTagLevel: (level) => {
+      const state = get();
+      const current = state.locationTagLevels ?? [];
+      const locationTagLevels = current.includes(level) ? current.filter((existing) => existing !== level) : [...current, level];
+      set(persist({ ...state, locationTagLevels }));
+    },
+
+    setSectionEndPegEnabled: (value) => {
+      const state = get();
+      set(persist({ ...state, sectionEndPegEnabled: value }));
+    },
+
     // Sets (or overwrites) one scope's free-text location tag — see lib/locationTags.ts's
     // locationTagKey. No suggestions, no validation: whatever the reader typed is saved as-is.
     setLocationTag: (key, value) => {

@@ -2,6 +2,7 @@ import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import { firstWordCharacter, isReferenceToken } from "@/lib/verseWords";
 import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
 import { VerseNumberMarker } from "@/components/drills/VerseNumberMarker";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
 interface RevealedWordsListProps {
   words: string[];
@@ -29,7 +30,7 @@ export function RevealedWordsList({ words, annotations, verseMarkers, lettersOnl
               <VerseNumberMarker number={verseMarkers[index]} />{" "}
             </>
           )}
-          {lettersOnly ? <span>{isReferenceToken(word) ? word : (firstWordCharacter(word) ?? "")}</span> : <AnnotatedVerseWord word={word} annotation={annotations?.[index]} />}{" "}
+          {lettersOnly ? <span className={FIRST_LETTER_GAP_CLASS}>{isReferenceToken(word) ? word : (firstWordCharacter(word) ?? "")}</span> : <AnnotatedVerseWord word={word} annotation={annotations?.[index]} />}{" "}
         </span>
       ))}
     </>

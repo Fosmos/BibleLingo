@@ -67,7 +67,10 @@ export function SpeakRep({
   firstLettersOnMistake,
 }: SpeakRepProps) {
   const [openWordIndex, setOpenWordIndex] = useState<number | null>(null); // tapped-open hint word
-  const mic = useSpeakRepMic({ targetText, reps, onComplete, onMistake });
+  // Graded by first letter exactly when the hint itself is showing first letters (see
+  // useSpeakRepMic.ts's own doc comment on why) — hintTokens is only ever set for that one
+  // stage (LearnPhaseContent.tsx's speak_hint), never for blind recitation.
+  const mic = useSpeakRepMic({ targetText, reps, gradeByFirstLetter: Boolean(hintTokens), onComplete, onMistake });
   const { completedReps, isListening, liveTranscript, revealedCount, mistake, permissionDenied, hadMistakeRef, supported, isSecure, handleStart, handleStop } =
     mic;
   const toggleWord = (index: number) => setOpenWordIndex((prev) => (prev === index ? null : index));
@@ -121,8 +124,8 @@ export function SpeakRep({
       )}
 
       <LessonControlBar dockRef={layout?.dockRef} verseText={targetText}>
-        {hasContext && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{label}</p>}
-        {reps > 1 && <p className="text-xs text-ink-muted">Rep {completedReps + 1} of {reps}</p>}
+        {hasContext && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>}
+        {reps > 1 && <p className="text-xs text-ink-muted [.lesson-sheet-controls_&]:hidden">Rep {completedReps + 1} of {reps}</p>}
         {hasContext && isListening && !showFallback && (
           <p className="min-h-5 text-center text-sm text-ink-soft dark:text-zinc-300">
             {liveTranscript || <span className="text-ink-muted">Listening — recite at your own pace...</span>}

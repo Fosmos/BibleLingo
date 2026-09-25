@@ -22,17 +22,14 @@ export const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 // verse (no repeated rounds). Listen (see ListenVerseRep.tsx — this ONE verse narrated aloud)
 // always opens the sequence when its setting (kineticTextEnabled) is on. Rhythm, Write First
 // Letter (the handwriting canvas),
-// and the Fill In The Blank pair each drop out entirely when their own setting is off — Rhythm
+// and the word-bank Fill In The Blank each drop out entirely when their own setting is off — Rhythm
 // defaults off now that Listen is the default introduction to a fresh verse; a reader who wants
-// that per-verse tap-through pacing too opts back into it. The Fill In The Blank pair, when on,
-// sits BEFORE the Speak hint and before the fully-blind Type stage — one more rung on the same
-// "progressively less scaffolding" ladder: hear it (Listen) → read it (Rhythm, if on) → recall
-// whole words with a word bank to lean on (Fill In The Blank) → recall words by typing just
-// their first letter, still with most of the verse visible (Fill In The Blank, first letter) →
-// hear a first-letter hint while speaking it (Speak hint) → recall it with no help at all (Type
-// it by first letter). Both Fill In The Blank stages run their own two internal reps (about half
-// the verse blanked, then all of it — see FillInTheBlankRep.tsx/FirstLetterBlankRep.tsx), so
-// together they're four total passes over the verse before Speak even starts.
+// that per-verse tap-through pacing too opts back into it. The ladder runs from most scaffolding
+// to least: hear it (Listen) → read it (Rhythm, if on) → recall whole words with a word bank to
+// lean on (Fill In The Blank) → speak it with a first-letter hint (Speak hint) → recall words by
+// typing just their first letter (Fill In The Blank, first letter). That last one always runs —
+// it replaced the old separate "type it by first letter" stage, whose recall its own second rep
+// (every word blanked) already covers.
 function versePhases(
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
@@ -43,16 +40,13 @@ function versePhases(
   if (kineticTextEnabled) phases.push("listen_verse");
   if (rhythmEnabled) phases.push("rhythm");
   if (writeFirstLetterEnabled) phases.push("draw_first_letters");
-  if (fillInTheBlankEnabled) {
-    phases.push("fill_in_the_blank");
-    phases.push("fill_in_the_blank_letters");
-  }
+  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
   phases.push("speak_hint");
-  phases.push("type_first_letters");
+  phases.push("fill_in_the_blank_letters");
   return phases;
 }
 
-// Every verse's own type_first_letters — the last of its own sub-stages — is followed right
+// Every verse's own last sub-stage is followed right
 // away by speak_verse: that one verse, just learned, spoken aloud from memory on its own.
 // From the SECOND real verse of its own group on, speak_verse is followed by one more check —
 // type_cumulative_today: every real verse learned TODAY so far IN THIS GROUP, this one

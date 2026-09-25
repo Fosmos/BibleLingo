@@ -64,7 +64,7 @@ const NBSP = " ";
 // simply narrower than a letter glyph in any proportional font. Repeating NBSP once per
 // character therefore reserves only about half the real word's width, letting roughly twice as
 // many blank "words" crowd onto one line as would ever fit once revealed as real text — the
-// whole point of reserving width in the first place (see wordLetterPlaceholder/wordOrBlank
+// whole point of reserving width in the first place (see wordLetterPlaceholder/hiddenWordBlank
 // below) silently fails for any long run of consecutive blank words: it collapses onto far
 // fewer visual lines than the same text takes once typed/spoken, instead of holding the same
 // place. Repeating NBSP this many times per character closes that gap back to roughly 1:1.
@@ -72,7 +72,7 @@ const BLANK_WIDTH_MULTIPLIER = 2;
 
 // One-past-the-index of the last word character in `word` — everything from there on is
 // trailing punctuation (e.g. the `,` closing "sins," or the `,'"` closing a quoted clause).
-// Mirrors the leading-punctuation scan wordLetterPlaceholder/wordOrBlank below already did,
+// Mirrors the leading-punctuation scan wordLetterPlaceholder below already does,
 // just from the other end, so TRAILING punctuation gets the exact same "always shown, never
 // blanked" treatment leading punctuation already had — a verse's own commas/periods/quote
 // marks stay visible and legible even while every letter around them is still hidden, matching
@@ -111,22 +111,22 @@ export function wordLetterPlaceholder(word: string, revealed: boolean, alwaysSho
   return prefix + letter + NBSP.repeat(blankCount * BLANK_WIDTH_MULTIPLIER) + suffix;
 }
 
-// The whole-word counterpart to wordLetterPlaceholder above — used wherever a stage reveals
-// entire words one at a time (Type First Letters, the cumulative type-check) rather than just
-// first letters: the word itself once typed/spoken, or the same reserved blank space
-// (no dashes/underscores, leading/trailing punctuation still shown as-is) beforehand — so
-// typing or speaking a word fills it into the exact spot it was always going to sit in, rather
-// than the line only growing longer at the end as each word comes in.
-export function wordOrBlank(word: string, revealed: boolean): string {
-  if (revealed) return word;
+// A word (or a bare punctuation token) not yet reached on a stage that shows nothing of the
+// verse ahead of the reader — reserved blank space (see BLANK_WIDTH_MULTIPLIER) with its own
+// punctuation hidden too, so a blind recall screen isn't left with commas floating in place of
+// the words around them.
+export function hiddenWordBlank(word: string): string {
+  return NBSP.repeat(Math.max(1, word.length) * BLANK_WIDTH_MULTIPLIER);
+}
+
+// A word already typed on a first-letter stage — just its first letter, with the word's own
+// leading/trailing punctuation kept (`Jude,` → `J,`), and no width padding: filled-in letters
+// read one space apart, "J, t s o J C,". A token with no letter at all comes back unchanged.
+export function firstLetterWithPunctuation(word: string): string {
   let index = 0;
   while (index < word.length && !HAS_WORD_CHARACTER.test(word[index])) index++;
   if (index >= word.length) return word;
-  const trailingStart = trailingPunctuationStart(word);
-  const prefix = word.slice(0, index);
-  const suffix = word.slice(trailingStart);
-  const coreLength = trailingStart - index;
-  return prefix + NBSP.repeat(coreLength * BLANK_WIDTH_MULTIPLIER) + suffix;
+  return word.slice(0, index) + word[index] + word.slice(trailingPunctuationStart(word));
 }
 
 // Strips everything but letters/digits/internal apostrophes — used wherever a word needs to

@@ -1,27 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import type { PathKind } from "@/types";
-import { PathKindPicker } from "@/components/gamification/PathKindPicker";
-import { GuidedPathFlow } from "@/components/gamification/GuidedPathFlow";
+import { Header } from "@/components/gamification/Header";
+import { MindMapPathPicker } from "@/components/gamification/MindMapPathPicker";
 import { TopicPicker } from "@/components/gamification/TopicPicker";
-import { InfoTip } from "@/components/ui/InfoTip";
-import { INFO_TIPS } from "@/lib/infoTipCopy";
 
+// "Choose your path": a book, chapter or verse is picked by navigating the Mind Map itself (see
+// MindMapPathPicker.tsx); a topic — verses from all over Scripture, with no one place on the
+// map — from its own list.
 export function BeginFlow() {
-  const [kind, setKind] = useState<PathKind | null>(null);
+  const [choosingTopic, setChoosingTopic] = useState(false);
+
+  if (!choosingTopic) return <MindMapPathPicker onChooseTopic={() => setChoosingTopic(true)} />;
 
   return (
-    <div className="mx-auto w-full max-w-3xl rounded-2xl border border-line p-6 text-left dark:border-zinc-800">
-      <h2 className="mb-1 flex items-center gap-1.5 text-title">
-        Choose your path {kind === null && <InfoTip text={INFO_TIPS.pathKindPicker} />}
-      </h2>
-      <p className="mb-6 text-sm text-ink-muted">How would you like to memorize Scripture?</p>
-      {kind === null && <PathKindPicker onSelectKind={setKind} />}
-      {(kind === "book" || kind === "chapter" || kind === "verse") && (
-        <GuidedPathFlow mode={kind} onBack={() => setKind(null)} />
-      )}
-      {kind === "topic" && <TopicPicker onBack={() => setKind(null)} />}
+    <div className="flex flex-1 flex-col">
+      <Header />
+      <div className="flex flex-1 flex-col items-center p-8">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-line p-6 text-left dark:border-zinc-800">
+          <h2 className="mb-1 text-title">Choose a topic</h2>
+          <p className="mb-6 text-sm text-ink-muted">Verses gathered from across Scripture around one theme.</p>
+          <TopicPicker onBack={() => setChoosingTopic(false)} />
+        </div>
+      </div>
     </div>
   );
 }

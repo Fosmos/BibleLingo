@@ -22,12 +22,6 @@ interface UseReviewChainOptions {
   // and just retries the SAME word. True (default) for LearnSection.tsx's own
   // type_cumulative_today check.
   restartOnMistake: boolean;
-  // The Learn flow's own gentle mode (see lib/useFirstLetterTyping.ts's own identical idea) —
-  // a mistake never sounds and never restarts anything mid-pass (just retries the same word,
-  // overriding restartOnMistake), but a full pass that picked up any mistake along the way
-  // doesn't count — it silently resets to the very first word and runs again until one comes
-  // back clean.
-  requirePerfectPass?: boolean;
 }
 
 export interface ReviewChainTyping {
@@ -46,8 +40,8 @@ export interface ReviewChainTyping {
   revealCurrentWord: () => void;
   recordMistake: (notice?: string) => void;
   handleLetterChange: (value: string) => void;
-  // "Reveal word" hint's own non-restart path (restartOnMistake off, or requirePerfectPass on)
-  // — the word's already shown, so just move on instead of retrying it.
+  // "Reveal word" hint's own non-restart path (restartOnMistake off) — the word's already
+  // shown, so just move on instead of retrying it.
   markWrongAndAdvance: () => void;
 }
 
@@ -55,7 +49,7 @@ export interface ReviewChainTyping {
 // stays render-only — the same "component receives data, hook owns behavior" split
 // lib/useFirstLetterTyping.ts already follows for FirstLetterTypeRep — and the only practical
 // way to keep ReviewChain.tsx itself under this codebase's own 200-line cap (see CLAUDE.md).
-export function useReviewChain({ verses, restartOnMistake, requirePerfectPass }: UseReviewChainOptions): ReviewChainTyping {
+export function useReviewChain({ verses, restartOnMistake }: UseReviewChainOptions): ReviewChainTyping {
   const combinedWords = useMemo(() => buildCombinedWords(verses), [verses]);
 
   const [wordIndex, setWordIndex] = useState(0);
@@ -75,15 +69,6 @@ export function useReviewChain({ verses, restartOnMistake, requirePerfectPass }:
     setLetterInput("");
     const next = wordIndex + 1;
     if (next >= combinedWords.length) {
-      // requirePerfectPass: a pass that picked up any mistake doesn't count — silently back to
-      // the very first word, mistakes cleared, try the whole chain again (see
-      // lib/useFirstLetterTyping.ts's own identical idea for why).
-      if (requirePerfectPass && wrongWordIndices.size > 0) {
-        setWrongWordIndices(new Set());
-        setRevealedWords([]);
-        setWordIndex(0);
-        return;
-      }
       setRevealedWords((prev) => [...prev, currentWord.word]);
       setFinished(true);
     } else {
@@ -92,16 +77,14 @@ export function useReviewChain({ verses, restartOnMistake, requirePerfectPass }:
     }
   }
 
-  // restartOnMistake on (and requirePerfectPass off): restarts THIS verse's reveal from its
-  // own first word.
-  const mistakeNotice = restartOnMistake && !requirePerfectPass ? "Not quite — restarting this verse from the beginning." : "Not quite — try again.";
+  // restartOnMistake on: restarts THIS verse's reveal from its own first word.
+  const mistakeNotice = restartOnMistake ? "Not quite — restarting this verse from the beginning." : "Not quite — try again.";
 
-  // restartOnMistake on (and requirePerfectPass off): restarts THIS verse's reveal from its
-  // own first word. Otherwise: just retries the SAME word — nothing already revealed is lost
-  // either way beyond that. requirePerfectPass never sounds on a miss.
+  // restartOnMistake on: restarts THIS verse's reveal from its own first word. Otherwise: just
+  // retries the SAME word — nothing already revealed is lost either way beyond that.
   function recordMistake(notice = mistakeNotice) {
     setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-    if (restartOnMistake && !requirePerfectPass && currentWord) {
+    if (restartOnMistake && currentWord) {
       const verseStart = combinedWords.findIndex((word) => word.verseIndex === currentWord.verseIndex);
       setRevealedWords((prev) => prev.slice(0, verseStart));
       setWordIndex(verseStart);
@@ -119,7 +102,7 @@ export function useReviewChain({ verses, restartOnMistake, requirePerfectPass }:
       playCorrectSfx();
       revealCurrentWord();
     } else if (typed) {
-      if (!requirePerfectPass) playIncorrectSfx();
+      playIncorrectSfx();
       recordMistake();
     }
   }

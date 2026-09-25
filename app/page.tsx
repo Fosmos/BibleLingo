@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProgressStore } from "@/store/useProgressStore";
+import { useActivePathKeys } from "@/lib/useActivePathKeys";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { TodayVersesCard } from "@/components/gamification/TodayVersesCard";
 import { VespersPromptCard } from "@/components/gamification/VespersPromptCard";
@@ -19,6 +20,8 @@ export default function Home() {
   // with its own copy).
   const activePathKey = useProgressStore((state) => state.activePathKey);
   const isFirstVisit = activePathKey === null;
+  // One "today's verses" card per active path — each keeps its own day count and lesson.
+  const activePathKeys = useActivePathKeys();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
@@ -37,7 +40,7 @@ export default function Home() {
           duplicate Spaced Review's own due-entities list right here, competing with the one
           thing Home should actually be pushing the reader toward. */}
       <div className="flex flex-1 flex-col gap-5">
-        <TodayVersesCard />
+        {activePathKeys.length === 0 ? <TodayVersesCard /> : activePathKeys.map((key) => <TodayVersesCard key={key} pathKey={key} />)}
         <VespersPromptCard />
         <SleepTimerCard />
       </div>

@@ -23,7 +23,7 @@ export function createSrsReviewActions(
       const state = get();
       const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
       if (!entity) return;
-      const srs = scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold, state.restDayOfWeek ?? null);
+      const srs = { ...scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold, state.restDayOfWeek ?? null), lastAccuracy: accuracy };
       const memorizedEntities = state.memorizedEntities.map((candidate) => (candidate.id === entityId ? { ...candidate, srs } : candidate));
       const best = Math.max(state.srsBestAccuracy[entityId] ?? 0, accuracy);
       set(persist({ ...state, memorizedEntities, srsBestAccuracy: { ...state.srsBestAccuracy, [entityId]: best } }));

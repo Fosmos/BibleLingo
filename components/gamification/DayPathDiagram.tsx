@@ -29,7 +29,6 @@ interface DayPathDiagramProps {
   // always a real dayNumber, never gated to -1, so today's own verses/pericope/chapter keep
   // reading as "today" (gold highlight, amber Mind Map ring) even once that lesson is done.
   todaysDayNumber: number;
-  pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
   // Book mode only: fraction (0-1) of the current chapter's own verses memorized so far —
@@ -63,7 +62,6 @@ export function DayPathDiagram({
   completedDays,
   activeDayNumber,
   todaysDayNumber,
-  pathKey,
   onSelectDay,
   onPracticeDay,
   chapterMemorizedFraction,
@@ -149,14 +147,7 @@ export function DayPathDiagram({
       <div ref={bodyTopRef} />
 
       {buildingViewEnabled ? (
-        <BuildingRoomView
-          days={days}
-          completedDays={completedDays}
-          todaysDayNumber={todaysDayNumber}
-          pathKey={pathKey}
-          onSelectDay={onSelectDay}
-          onPracticeDay={onPracticeDay}
-        />
+        <BuildingRoomView days={days} completedDays={completedDays} todaysDayNumber={todaysDayNumber} onSelectDay={onSelectDay} onPracticeDay={onPracticeDay} />
       ) : (
         <ChapterReadingView
           pages={pagination.pages}

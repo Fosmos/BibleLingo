@@ -22,7 +22,7 @@ interface FirstLetterTypingControlsProps {
 export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hideAutoComplete }: FirstLetterTypingControlsProps) {
   return (
     <>
-      {showLabel && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{showLabel}</p>}
+      {showLabel && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{showLabel}</p>}
       {typing.referenceMatch ? (
         <ReferenceNumberEntry
           key={typing.currentWord}
@@ -32,7 +32,7 @@ export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hi
           onMistake={typing.recordMistake}
         />
       ) : (
-        <div className="flex w-full flex-col items-center gap-2">
+        <div className="flex w-full flex-col items-center gap-2 [.lesson-sheet-controls_&]:flex-1">
           {/* Visually hidden, not removed — the on-screen keyboard below is the one visible way
               to type now (no more redundant box to tap into first), but a real physical
               keyboard and screen readers still need a focusable text input to type into. */}
@@ -41,6 +41,8 @@ export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hi
             onChange={(event) => typing.handleLetterChange(event.target.value)}
             maxLength={1}
             autoFocus
+            // The on-screen keyboard is the way to type here — never pop the phone's own over it.
+            inputMode="none"
             aria-label="Type the first letter of the next word"
             className="sr-only"
           />

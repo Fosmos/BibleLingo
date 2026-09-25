@@ -9,6 +9,12 @@ interface LessonChromeProps {
   total: number;
   onExit?: () => void;
   layout: ChapterReadingLayout;
+  // See LearnVerseSpotlightChrome.tsx's own doc comment — MindMapSheetBreadcrumb.tsx already
+  // renders this same "Back" chrome fixed at the true top of the page while the in-place
+  // lesson sheet is open, so this component's own LessonTopBar (Orientation/Pray/review stages
+  // — every non-per-verse phase) would just double it up. Undefined/false renders exactly as
+  // before.
+  embeddedInMindMap?: boolean;
 }
 
 // LessonTopBar plus the two pieces of plumbing lib/useChapterReadingLayout.ts needs from
@@ -18,7 +24,7 @@ interface LessonChromeProps {
 // of LearnSection.tsx purely to keep that file under this codebase's 200-line cap. Rendered
 // once per lesson (not once per stage) so the SAME probe set/font-size search lives for the
 // whole session, not remounted fresh on every stage change.
-export function LessonChrome({ label, version, current, total, onExit, layout }: LessonChromeProps) {
+export function LessonChrome({ label, version, current, total, onExit, layout, embeddedInMindMap }: LessonChromeProps) {
   // Destructured into plain local bindings before the JSX below, rather than read inline as
   // `layout.xxx` — this codebase's react-hooks/refs lint rule flags EVERY prop expression on a
   // custom component (never a plain DOM element) built by reading a property straight off an
@@ -30,7 +36,7 @@ export function LessonChrome({ label, version, current, total, onExit, layout }:
     layout;
   return (
     <>
-      <LessonTopBar label={label} version={version} current={current} total={total} onExit={onExit} />
+      {!embeddedInMindMap && <LessonTopBar label={label} version={version} current={current} total={total} onExit={onExit} />}
       <div ref={bodyTopRef} />
       <div className="mx-auto w-full max-w-2xl px-4">
         <ChapterFitProbes

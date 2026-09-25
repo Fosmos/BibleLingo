@@ -25,7 +25,11 @@ const WIDE_INNER_PADDING_PX = 96; // ParchmentCard.tsx's `sm:px-12`, both sides
 const NARROW_VERTICAL_PADDING_PX = 20 + 32; // pt-5 + pb-8
 const WIDE_VERTICAL_PADDING_PX = 24 + 40; // sm:pt-6 + sm:pb-10
 
-function textColumnWidthPx(viewportWidthPx: number): number {
+// Exported for lib/senseLineSplitting.ts's own SAFE_COLUMN_WIDTH_PX — pure arithmetic, no
+// `window`/`document` involved, so calling it there with a hardcoded calibration width (rather
+// than a real, runtime `window.innerWidth`) is exactly as SSR-safe as calling it with 0 already
+// was right here.
+export function textColumnWidthPx(viewportWidthPx: number): number {
   const outerWidth = Math.min(viewportWidthPx, MAX_OUTER_WIDTH_PX) - OUTER_WRAPPER_PADDING_PX;
   const innerPadding = viewportWidthPx >= NARROW_BREAKPOINT_PX ? WIDE_INNER_PADDING_PX : NARROW_INNER_PADDING_PX;
   return Math.max(outerWidth - innerPadding, 0);
@@ -41,6 +45,13 @@ function cardVerticalPaddingPx(viewportWidthPx: number): number {
 const MIN_COLUMN_WIDTH_PX = 200;
 const MIN_LINES_PER_PAGE = 3;
 
+// SheetVerseZone.tsx's own padding — the in-place Mind Map lesson sheet's verse zone, which
+// fills its box instead of the standalone route's generous reading gutter. Exported so
+// lib/useChapterPagination.ts's own fixed-column override and that component can never drift
+// out of sync on what "compact" actually measures.
+export const COMPACT_HORIZONTAL_PADDING_PX = 48; // SheetVerseZone.tsx `pl-8 pr-4`
+export const COMPACT_VERTICAL_PADDING_PX = 20; // SheetVerseZone.tsx `pt-3 pb-2`
+
 export interface PageBudget {
   // How many lines of verse text fit in the available height, at the fixed font size.
   linesPerPage: number;
@@ -48,12 +59,22 @@ export interface PageBudget {
   columnWidthPx: number;
 }
 
+// The pure "given a real column width and a real text-area height, how much fits" arithmetic —
+// no padding subtraction, no viewport-width derivation, just the line-height division every
+// caller ultimately needs. `resolvePageBudget` below is the standalone route's own version of
+// "derive a column width and text-area height from a viewport width first, then call this";
+// lib/useChapterPagination.ts's own fixed-column override (the embedded sense-line card, whose
+// real column width/height come from a direct DOM measurement instead) calls this directly.
+export function resolvePageBudgetForColumn(columnWidthPx: number, textAreaHeightPx: number, fontSizePx: number = FIXED_PARCHMENT_FONT_PX): PageBudget {
+  const lineHeightPx = fontSizePx * PARCHMENT_LINE_HEIGHT_MULTIPLIER; // ChapterPageContent.tsx's own `leading-[2.3]`
+  const linesPerPage = Math.max(MIN_LINES_PER_PAGE, Math.floor(textAreaHeightPx / lineHeightPx));
+  return { linesPerPage, columnWidthPx: Math.max(columnWidthPx, MIN_COLUMN_WIDTH_PX) };
+}
+
 // `fontSizePx` defaults to the one fixed size every parchment renders at (see
 // lib/parchmentFontRange.ts) — every real caller packs for exactly the size it's about to show.
 export function resolvePageBudget(viewportWidthPx: number, availableHeightPx: number, fontSizePx: number = FIXED_PARCHMENT_FONT_PX): PageBudget {
-  const lineHeightPx = fontSizePx * PARCHMENT_LINE_HEIGHT_MULTIPLIER; // ChapterPageContent.tsx's own `leading-[2.3]`
-  const columnWidthPx = Math.max(textColumnWidthPx(viewportWidthPx), MIN_COLUMN_WIDTH_PX);
+  const columnWidthPx = textColumnWidthPx(viewportWidthPx);
   const textAreaHeightPx = Math.max(availableHeightPx - cardVerticalPaddingPx(viewportWidthPx), 0);
-  const linesPerPage = Math.max(MIN_LINES_PER_PAGE, Math.floor(textAreaHeightPx / lineHeightPx));
-  return { linesPerPage, columnWidthPx };
+  return resolvePageBudgetForColumn(columnWidthPx, textAreaHeightPx, fontSizePx);
 }

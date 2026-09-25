@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import type { FirstLetterHintToken } from "@/lib/verseFirstLetters";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
 interface SpeakRepHintTokensProps {
   tokens: FirstLetterHintToken[];
@@ -22,7 +23,7 @@ export function SpeakRepHintTokens({ tokens, openWordIndex, onToggleWord }: Spea
       {tokens.map((token, index) => (
         <Fragment key={index}>
           {token.fullWord ? (
-            <span className="group relative inline-block">
+            <span className={`group relative inline-block ${token.spaceAfter ? FIRST_LETTER_GAP_CLASS : ""}`}>
               <button
                 type="button"
                 onClick={() => onToggleWord(index)}
@@ -39,7 +40,7 @@ export function SpeakRepHintTokens({ tokens, openWordIndex, onToggleWord }: Spea
               </span>
             </span>
           ) : (
-            token.display
+            <span className={token.spaceAfter ? FIRST_LETTER_GAP_CLASS : undefined}>{token.display}</span>
           )}
           {token.spaceAfter && " "}
         </Fragment>

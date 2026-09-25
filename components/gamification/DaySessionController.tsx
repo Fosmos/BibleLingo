@@ -11,11 +11,14 @@ import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { ReviewChain } from "@/components/drills/ReviewChain";
 import { BossBattleStage } from "@/components/drills/BossBattleStage";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
+import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
+import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
 import { VictoryScreen } from "@/components/gamification/VictoryScreen";
 import { StreakMilestoneModal } from "@/components/gamification/StreakMilestoneModal";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 import { formatChapterLabel } from "@/lib/chapterContent";
-import { FlaskConical } from "lucide-react";
+import { SkipLessonButton } from "@/components/gamification/SkipLessonButton";
+import { EmbeddedLessonAutoExit } from "@/components/gamification/EmbeddedLessonAutoExit";
 
 interface DaySessionControllerProps {
   pathKey: string;
@@ -33,22 +36,25 @@ interface DaySessionControllerProps {
   // that chapter's own verses, graduated straight into SRS the moment this lesson finishes.
   completingChapterVerses?: VerseSegment[];
   // Set only by PathOverviewScreen's own in-place lesson flow (the parchment view stays
-  // mounted underneath — no route ever changes for "Start Lesson" anymore) — calling this
-  // instead of navigating anywhere is what lets both the mid-lesson "Back" and the finished-
-  // lesson screen return to that exact same parchment view rather than a different page.
-  // Undefined for the standalone `/day/[dayNumber]` route (DayLoader.tsx), which still
-  // navigates via pathHref below, unchanged.
+  // mounted underneath — no route ever changes for "Start Lesson" anymore) — calling this lets
+  // both the mid-lesson "Back" and the finished-lesson screen return to that exact same
+  // parchment view. Undefined for the standalone `/day/[dayNumber]` route (DayLoader.tsx).
   onExit?: () => void;
+  // See LessonChrome.tsx's own doc comment — threaded through to every branch below with a
+  // LessonChrome/LessonTopBar of its own to suppress (VerseLessonFlow, ReviewSection).
+  embeddedInMindMap?: boolean;
 }
 
-export function DaySessionController({ pathKey, label, day, allDays, completedDays, todaysDay, totalDays, completingChapterVerses, onExit }: DaySessionControllerProps) {
+export function DaySessionController({ pathKey, label, day, allDays, completedDays, todaysDay, totalDays, completingChapterVerses, embeddedInMindMap, onExit }: DaySessionControllerProps) {
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const recordChapterReviewAccuracy = useProgressStore((state) => state.recordChapterReviewAccuracy);
   // Only actually used by the chapter_review/boss_battle/section_boss_battle branches below
-  // (VerseLessonFlow computes its own for "learn" days) — called unconditionally regardless,
-  // same as every other hook here, since hooks can't be called after an early return.
-  const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay);
+  // (VerseLessonFlow computes its own for "learn" days) — called unconditionally, same as every
+  // other hook here, since hooks can't be called after an early return.
+  const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
+  const reportVerse = useReportFocusVerse(embeddedInMindMap);
+  const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay, senseCardFillHeightPx, senseCardColumnWidthPx);
 
   const [dayComplete, setDayComplete] = useState(false);
   const [milestoneStreak, setMilestoneStreak] = useState<number | null>(null);
@@ -62,7 +68,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
 
   function finishDay() {
     clearSessionCheckpoint(sessionKey);
-    const milestone = applyDayCompletion(pathKey, day, completingChapterVerses);
+    const milestone = applyDayCompletion(pathKey, day, completingChapterVerses, allDays);
     if (milestone !== null) setMilestoneStreak(milestone);
     if (day.kind === "learn") {
       celebrate(() => setDayComplete(true), "Todays lesson complete");
@@ -83,6 +89,10 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
 
   if (pending) {
     return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
+  }
+
+  if (dayComplete && embeddedInMindMap && onExit) {
+    return <EmbeddedLessonAutoExit milestoneStreak={milestoneStreak} onExit={onExit} />;
   }
 
   if (dayComplete) {
@@ -125,18 +135,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
 
   return (
     <>
-      {/* Fixed, off to the side — never part of the normal document flow, so this testing
-          shortcut can never be what's pushing a lesson's own parchment further down the
-          screen (see LessonTopBar.tsx's own doc comment on that exact failure mode). */}
-      <button
-        type="button"
-        onClick={finishDay}
-        aria-label="Auto-complete lesson (testing)"
-        title="Auto-complete lesson (testing)"
-        className="fixed right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-line bg-white/90 text-ink-muted shadow-sm hover:bg-mist dark:border-zinc-600 dark:bg-zinc-900/90 dark:text-zinc-400 dark:hover:bg-zinc-800"
-      >
-        <FlaskConical size={14} />
-      </button>
+      <SkipLessonButton onClick={finishDay} />
       {day.kind === "learn" ? (
         <VerseLessonFlow
           day={day}
@@ -148,13 +147,22 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
           onComplete={finishDay}
           onExit={onExit}
           sessionKey={sessionKey}
+          embeddedInMindMap={embeddedInMindMap}
         />
       ) : day.kind === "weekly_review" || day.kind === "monthly_review" ? (
         // ReviewSection renders its own complete chrome (LessonTopBar + width-capped wrapper)
-        // whenever `layout` is set — see its own doc comment — so this branch, unlike the
-        // ones below, is NOT nested inside the shared "tight column" wrapper; nesting it would
-        // just double up the top label.
-        <ReviewSection day={day} onComplete={finishDay} sessionKey={sessionKey} layout={layout} lessonLabel={learnLabel} version={plan?.version ?? ""} onExit={onExit} />
+        // whenever `layout` is set — so this branch, unlike the ones below, is NOT nested
+        // inside the shared "tight column" wrapper; nesting it would just double up the label.
+        <ReviewSection
+          day={day}
+          onComplete={finishDay}
+          sessionKey={sessionKey}
+          layout={layout}
+          lessonLabel={learnLabel}
+          version={plan?.version ?? ""}
+          onExit={onExit}
+          embeddedInMindMap={embeddedInMindMap}
+        />
       ) : (
         // Tight column matching the Learn flow's own (see LearnSection.tsx) so the review page
         // fills exactly between this label and the drill's sticky dock with no document scroll.
@@ -169,6 +177,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
               }}
               layout={layout}
               restartOnMistake={false}
+              onVerseChange={reportVerse}
             />
           )}
           {(day.kind === "boss_battle" || day.kind === "section_boss_battle") && (

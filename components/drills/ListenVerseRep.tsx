@@ -114,7 +114,11 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
           <motion.button type="button" whileTap={TAP_SCALE} onClick={onComplete} className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white">
             Continue
           </motion.button>
-          {layout && <InfoTip text={INFO_TIPS.listenVerseRep} />}
+          {layout && (
+            <span className="[.lesson-sheet-controls_&]:hidden">
+              <InfoTip text={INFO_TIPS.listenVerseRep} />
+            </span>
+          )}
         </div>
         <AutoCompleteButton onClick={onComplete} />
       </LessonControlBar>

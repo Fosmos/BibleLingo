@@ -13,7 +13,6 @@ import { RhythmRep } from "@/components/drills/RhythmRep";
 import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
 import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
 import { FirstLetterBlankRep } from "@/components/drills/FirstLetterBlankRep";
-import { FirstLetterTypeRep } from "@/components/drills/FirstLetterTypeRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
 import { LearnWholeDayPhaseContent } from "@/components/gamification/LearnWholeDayPhaseContent";
 import { VerseVisualBadge } from "@/components/ui/VerseVisualBadge";
@@ -27,7 +26,6 @@ export type Phase =
   | "speak_hint"
   | "fill_in_the_blank"
   | "fill_in_the_blank_letters"
-  | "type_first_letters"
   | "pray"
   | "speak_verse"
   | "type_cumulative_today";
@@ -56,11 +54,8 @@ interface LearnPhaseContentProps {
   // other phase, since they show wordAnnotations read-only.
   onWordAnnotationsChange: (updater: (prev: WordAnnotationMap) => WordAnnotationMap) => void;
   // The fixed "page" of surrounding verses `verse` renders inside of when SpeakRep has no
-  // `layout` (see SpeakRep.tsx's own `hasContext`) — undefined for whole-day phases, which use
-  // previousVerse/nextVerse instead.
+  // `layout` (see SpeakRep.tsx's own `hasContext`) — undefined for whole-day phases.
   contextVerses?: VerseSegment[];
-  previousVerse?: VerseSegment;
-  nextVerse?: VerseSegment;
   // Only read by the "pray" phase — see PrayRep.tsx and LearnSection.tsx's buildSteps.
   prayDurationSeconds?: number;
   // The reading view's own real page layout (see lib/useChapterReadingLayout.ts) — passed
@@ -84,8 +79,6 @@ export function LearnPhaseContent({
   wordAnnotations,
   onWordAnnotationsChange,
   contextVerses,
-  previousVerse,
-  nextVerse,
   prayDurationSeconds,
   layout,
   onAdvance,
@@ -157,22 +150,6 @@ export function LearnPhaseContent({
     content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else if (phase === "fill_in_the_blank_letters") {
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
-  } else if (phase === "type_first_letters") {
-    content = (
-      <FirstLetterTypeRep
-        key={stageKey}
-        verse={verse}
-        reps={1}
-        requirePerfectPass
-        verseMarkers={verseMarkers}
-        annotations={wordAnnotations}
-        previousVerse={previousVerse}
-        nextVerse={nextVerse}
-        contextVerses={contextVerses}
-        layout={layout}
-        onComplete={() => onAdvance()}
-      />
-    );
   } else {
     // speak_verse/type_cumulative_today never reach here — LearnSection.tsx intercepts both
     // itself before rendering this component at all (see its own SpeakRep/ReviewChain use).

@@ -9,7 +9,7 @@
 // KJV by a verse or two in a handful of books (footnote/versification choices) — these
 // counts are a good-faith approximation, not a certified figure from Crossway, so the
 // cap below is computed conservatively (floored, never rounded up).
-const BOOK_VERSE_COUNTS: Record<string, number> = {
+export const BOOK_VERSE_COUNTS: Record<string, number> = {
   Genesis: 1533,
   Exodus: 1213,
   Leviticus: 859,

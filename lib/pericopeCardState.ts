@@ -66,6 +66,26 @@ export function computeZoneCardState(zone: PathZone, completedDays: number, toda
   return { status: "locked", actionDay: firstLearnDay ?? zone.days[0], actionKind: "select" };
 }
 
+// The highest verse number within this zone the reader has actually already learned, or
+// undefined if none yet — walks every day (and spillover entry, see PathZone.spilloverVerses)
+// already counted as done (`dayNumber <= completedDays`) and takes the max verseNumber among
+// their own newVerses. Finer-grained than `status` above (which only knows LOCKED/ACTIVE/
+// COMPLETED for the whole zone) — this is what lets the Mind Map's own spine (see
+// lib/mindMapPericopeSpine.ts) switch from a dashed to a solid line exactly at the verse the
+// reader has actually reached, not just at the zone's own all-or-nothing boundary.
+export function learnedVerseNumbers(zone: PathZone, completedDays: number): number[] {
+  const learned = new Set<number>();
+  for (const day of zone.days) {
+    if (day.dayNumber > completedDays) continue;
+    for (const verse of day.newVerses) learned.add(verse.verseNumber);
+  }
+  for (const entry of zone.spilloverVerses ?? []) {
+    if (entry.dayNumber > completedDays) continue;
+    for (const verse of entry.verses) learned.add(verse.verseNumber);
+  }
+  return [...learned].sort((a, b) => a - b);
+}
+
 // True for every zone actually displaying today's active lesson's own verses — the home
 // zone (which also owns the one "Learn" button for the whole lesson) and any earlier
 // zone(s) that lesson merely spills through on its way there (see PathZone.spilloverVerses).

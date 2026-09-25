@@ -1,23 +1,17 @@
 import type { MindMapDatum, MindMapRootDatum } from "@/lib/mindMapHierarchy";
-import type { MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapLayout } from "@/lib/mindMapLayoutTypes";
+import type { MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapVerseChip, MindMapLayout } from "@/lib/mindMapLayoutTypes";
+import { placePericopes, type PericopeSpineBounds } from "@/lib/mindMapPericopeSpine";
 
-export type { LayoutPoint, MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapLayout } from "@/lib/mindMapLayoutTypes";
+export type { LayoutPoint, MindMapLayoutNode, MindMapLayoutLink, MindMapSpine, MindMapVerseChip, MindMapLayout } from "@/lib/mindMapLayoutTypes";
 
-// Horizontal room reserved per sibling slot — one flat constant for the whole tree, comfortably
-// covering every FIXED-size node card's own real footprint (pericopes are the one kind that
-// isn't fixed-size and so don't use this — see PERICOPE_STEP_PX/PERICOPE_SIDE_OFFSET_PX below).
-// Every set of siblings gets EQUAL spacing based purely on how many of them there are,
-// regardless of whether one of them happens to be deeply expanded — deliberately NOT
-// proportional to subtree size (an earlier version sized each child's own band by its total
-// descendant leaf count, a classic dendrogram, but that let expanding just ONE branch shove
-// every LATER sibling sideways by its own unrelated width); fixed spacing means expanding a
-// branch only ever affects what's directly under it, every sibling's own position always stays
-// exactly where its plain sibling order puts it. Sized against the LARGEST circle's own
-// diameter at its ACTIVE size (testament, 72px base * ACTIVE_SCALE 1.2 — see
-// lib/useMindMapFocusState.ts) next to an INACTIVE sibling (72px * 0.8), the worst-case adjacent
-// pair once CAFD's own 1.5x active/inactive contrast applies (half-widths sum to ~72px) —
-// trimmed a bit tighter than that full worst case for a denser, more compact tree, still
-// keeping that pair clear.
+// Horizontal room reserved per sibling slot — covers every FIXED-size node card's own real
+// footprint (pericopes are content-sized and don't use this — see PERICOPE_STEP_PX below).
+// Every set of siblings gets EQUAL spacing regardless of whether one happens to be deeply
+// expanded — deliberately NOT proportional to subtree size (an earlier dendrogram version let
+// expanding one branch shove later siblings sideways); fixed spacing keeps a sibling's own
+// position tied purely to its plain order. Sized against the worst-case adjacent pair (an
+// ACTIVE 72px ring at 1.2x next to an INACTIVE one at 0.8x — see lib/useMindMapFocusState.ts),
+// trimmed a bit tighter than that full worst case for a denser tree.
 const SIBLING_SPACING_PX = 82;
 // Theme siblings render as pills sized to their own label (see MindMapRingNode.tsx's own
 // `pill` prop — up to 118px wide, wider than every other ring/card's own fixed footprint the
@@ -41,22 +35,11 @@ const GRID_ROW_HEIGHT_PX = 70;
 // Padding around the computed bounding box so an edge node's own card never clips against the
 // canvas edge.
 const CANVAS_PADDING_PX = 100;
-// A chapter's own pericopes lay out differently from every other level (see placePericopes
-// below) — a single vertical trunk stepping straight down from the chapter, each pericope
-// alternating left/right off it. PERICOPE_STEP_PX is the vertical distance from one pericope to
-// the next along that trunk; PERICOPE_SIDE_OFFSET_PX is the horizontal reach of each one's own
-// short connector stub off the trunk. Pericope cards are content-sized, not fixed (see
-// MindMapNodeCard.tsx — a real ESV section heading renders in full at an 11px font, never
-// truncated, up to a 150px max-w), so both constants are sized against a generous worst-case
-// footprint instead (a heading wrapping up to ~4 lines at that max-width/font, plus its own
-// verse-range caption, comfortably under 105px tall): STEP clears a same-side neighbor two
-// steps away (2 * 58 = 116px > ~105px) with real margin; OFFSET clears two opposite-side cards
-// at their own worst-case half-width (2 * 80 = 160px > 150px max-w) with real margin too — both
-// trimmed a bit tighter than the full worst case for a more compact tree. A genuinely
-// pathological heading could still overlap its neighbor — an accepted, rare cost against ever
-// silently truncating real content.
-const PERICOPE_STEP_PX = 58;
-const PERICOPE_SIDE_OFFSET_PX = 80;
+// The root's fixed x on the canvas. Every node's place is fixed for good — the map is a memory
+// palace, and a place that moves can't be remembered — so the canvas is anchored here, not to
+// whatever happens to be leftmost right now (which shifted the whole map whenever a branch far to
+// the left opened or closed). Comfortably wider than the whole canon ever spreads to either side.
+const ORIGIN_X_PX = 3000;
 
 // A node's own real children per lib/mindMapHierarchy.ts's own union — a pericope never has
 // any; every other kind's `children` array is already the right shape (empty for an
@@ -100,34 +83,16 @@ function gridPosition(index: number, count: number): { col: number; row: number;
 // circle" pitfall to design around (a lone child under a parent with no siblings just sits
 // directly under that parent, the same as it would with ten siblings) — a top-down tree's
 // sibling axis is already just a straight line, not a shared circumference.
+// A chapter's own pericopes ALWAYS unroll every one of their own verse streams together, the
+// instant that chapter itself is the open/selected one (see lib/mindMapPericopeSpine.ts's own
+// placePericopes) — each one's required push-down height is a plain formula
+// (lib/mindMapVerseStream.ts's verseStreamHeightPx), not a measured value, so no second pass.
 export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: ReadonlySet<string>): MindMapLayout {
   const nodes: MindMapLayoutNode[] = [];
   const links: MindMapLayoutLink[] = [];
   const spines: MindMapSpine[] = [];
-  let minX = 0;
-  let maxX = 0;
-  let maxY = 0;
-
-  // A chapter's own pericopes zig-zag straight down a single trunk directly below it, in order
-  // — pericope 1 on one side, pericope 2 diagonally across from it on the other, pericope 3 back
-  // to the first side, and so on — rather than the ordinary fanned-out sibling row every other
-  // level uses. Pericopes are always leaves (childrenOf never recurses into them), so this never
-  // needs to hand back a "where do MY children start" floor the way `place` does.
-  function placePericopes(chapter: MindMapDatum, x: number, y: number, startY: number, pericopes: MindMapDatum[]): void {
-    pericopes.forEach((pericope, index) => {
-      const side = index % 2 === 0 ? -1 : 1;
-      const childY = startY + index * PERICOPE_STEP_PX;
-      const childX = x + side * PERICOPE_SIDE_OFFSET_PX;
-      nodes.push({ data: pericope, cx: childX, cy: childY });
-      minX = Math.min(minX, childX);
-      maxX = Math.max(maxX, childX);
-      maxY = Math.max(maxY, childY);
-      links.push({ source: { x, y: childY }, target: { x: childX, y: childY }, targetId: pericope.id, straight: true });
-    });
-    if (pericopes.length > 0) {
-      spines.push({ x, y0: y, y1: startY + (pericopes.length - 1) * PERICOPE_STEP_PX, parentId: chapter.id });
-    }
-  }
+  const verseChips: MindMapVerseChip[] = [];
+  const bounds: PericopeSpineBounds = { minX: 0, maxX: 0, maxY: 0 };
 
   // `childrenStartY` is where THIS node's own children begin — passed down by its PARENT
   // rather than derived from this node's own y, because a wrapped grid's rows are only
@@ -140,9 +105,9 @@ export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: Readon
   // in an earlier row. A big gap reads as spacious; overlapping cards read as broken.
   function place(datum: MindMapDatum, x: number, y: number, childrenStartY: number): void {
     nodes.push({ data: datum, cx: x, cy: y });
-    minX = Math.min(minX, x);
-    maxX = Math.max(maxX, x);
-    maxY = Math.max(maxY, y);
+    bounds.minX = Math.min(bounds.minX, x);
+    bounds.maxX = Math.max(bounds.maxX, x);
+    bounds.maxY = Math.max(bounds.maxY, y);
 
     // Always this node's own siblings in their PLAIN natural order — chapter 1 stays the
     // leftmost chapter, "The Beginning" stays the leftmost theme, and so on, whether or not one
@@ -153,7 +118,7 @@ export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: Readon
     if (children.length === 0) return;
 
     if (datum.kind === "chapter") {
-      placePericopes(datum, x, y, childrenStartY, children);
+      placePericopes(datum, x, y, childrenStartY, children, nodes, spines, verseChips, bounds);
       return;
     }
 
@@ -174,13 +139,14 @@ export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: Readon
 
   place(root, 0, 0, LEVEL_HEIGHT_PX);
 
-  const width = maxX - minX + CANVAS_PADDING_PX * 2;
-  const height = maxY + CANVAS_PADDING_PX * 2;
-  const offsetX = -minX + CANVAS_PADDING_PX;
+  const offsetX = Math.max(ORIGIN_X_PX, -bounds.minX + CANVAS_PADDING_PX);
+  const width = Math.max(ORIGIN_X_PX * 2, offsetX + bounds.maxX + CANVAS_PADDING_PX);
+  const height = bounds.maxY + CANVAS_PADDING_PX * 2;
   const offsetY = CANVAS_PADDING_PX;
   for (const node of nodes) {
     node.cx += offsetX;
     node.cy += offsetY;
+    if (node.emblem) node.emblem = { ...node.emblem, x: node.emblem.x + offsetX, y: node.emblem.y + offsetY };
   }
   for (const link of links) {
     link.source.x += offsetX;
@@ -189,10 +155,15 @@ export function computeMindMapLayout(root: MindMapRootDatum, expandedIds: Readon
     link.target.y += offsetY;
   }
   for (const spine of spines) {
-    spine.x += offsetX;
-    spine.y0 += offsetY;
-    spine.y1 += offsetY;
+    for (const point of spine.points) {
+      point.x += offsetX;
+      point.y += offsetY;
+    }
+  }
+  for (const chip of verseChips) {
+    chip.x += offsetX;
+    chip.y += offsetY;
   }
 
-  return { nodes, links, spines, width, height };
+  return { nodes, links, spines, verseChips, width, height };
 }

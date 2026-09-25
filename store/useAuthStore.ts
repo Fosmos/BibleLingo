@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { loadCurrentAccount, saveCurrentAccount } from "@/lib/accountStorage";
 import { signUpRequest, signInRequest, fetchServerProgress, AccountApiError, type PublicAccount } from "@/lib/accountApiClient";
-import { loadProgress, saveProgress } from "@/lib/storage";
+import { loadProgress, saveProgress, getDefaultProgress } from "@/lib/storage";
 import { AUTH_REQUIRED, LOCAL_USER_ID } from "@/lib/authConfig";
 import { useProgressStore } from "@/store/useProgressStore";
 
@@ -39,7 +39,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
   async function signInAs(account: PublicAccount) {
     const serverProgress = await fetchServerProgress(account.id);
     if (serverProgress) {
-      useProgressStore.setState(serverProgress);
+      // Backfilled onto the defaults, not adopted as-is — an older server-side progress
+      // record can genuinely be missing a top-level field a newer client build added (see
+      // lib/storage.ts's own loadProgress, which backfills the exact same way for the
+      // localStorage path) — a raw `setState(serverProgress)` would otherwise leave that one
+      // field stuck at whatever this store's own initial default happens to be, forever.
+      useProgressStore.setState({ ...getDefaultProgress(), ...serverProgress });
       saveProgress(account.id, serverProgress);
     } else {
       // Server unreachable, or (belt-and-suspenders) nothing saved yet — fall back to

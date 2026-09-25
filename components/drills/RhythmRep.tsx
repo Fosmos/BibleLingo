@@ -135,8 +135,8 @@ export function RhythmRep({ verse, verseMarkers, annotations, layout, onComplete
         </LessonParchmentCard>
       )}
 
-      <LessonControlBar dockRef={layout?.dockRef} verseText={verse.text} verseMarkers={verseMarkers}>
-        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
+      <LessonControlBar dockRef={layout?.dockRef} verseText={verse.text}>
+        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">
           Learn <InfoTip text={INFO_TIPS.rhythmRep} />
         </p>
         <button

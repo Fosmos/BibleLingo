@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
@@ -11,6 +11,7 @@ import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { ChapterFitProbes } from "@/components/gamification/ChapterFitProbes";
+import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 interface PracticeChainProps {
   verses: VerseSegment[];
@@ -30,6 +31,12 @@ interface PracticeChainProps {
   // InPlaceLessonSession.tsx) and rendered once here, matching the "once per lesson, not once
   // per verse" convention every other layout caller follows.
   layout: ChapterReadingLayout;
+  // The Mind Map sheet's own Review — finishing plays the completion celebration and leaves
+  // straight back to the map, instead of stopping on a "Review complete / again?" screen.
+  exitWhenDone?: boolean;
+  // Reports each verse as it comes up (and how far through the list that is) — the Mind Map sheet
+  // uses it for its progress bar and to keep the canvas on the verse being reviewed.
+  onVerseChange?: (verse: VerseSegment, fraction: number) => void;
 }
 
 // A low-stakes companion to the boss battle: same word-for-word typing, but a mistake just
@@ -38,7 +45,7 @@ interface PracticeChainProps {
 // attempt as prep or after one for upkeep. Leaving early (Exit practice) keeps the
 // verseIndex checkpoint so coming back resumes here — it's only cleared on genuinely
 // finishing every verse, since there's nothing left to resume at that point.
-export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord", layout }: PracticeChainProps) {
+export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord", layout, exitWhenDone, onVerseChange }: PracticeChainProps) {
   const [verseIndex, setVerseIndex] = useCheckpointField(sessionKey, "verseIndex", 0);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const [attempt, setAttempt] = useState(0);
@@ -46,6 +53,9 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", 
   const [donePracticing, setDonePracticing] = useState(false);
 
   const verse = verses[verseIndex];
+  useEffect(() => {
+    if (verse) onVerseChange?.(verse, verseIndex / verses.length);
+  }, [verse, verseIndex, verses.length, onVerseChange]);
   // Destructured into plain local bindings before the JSX below — see LessonChrome.tsx's own
   // identical comment on why (this codebase's react-hooks/refs lint rule).
   const { bodyTopRef, probeContainerRef, pages, fillHeightPx, dayNumberByVerse, todaysVerseNumbers, completedDays, locationTags, iconTags, pegActive } =
@@ -73,6 +83,10 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", 
     } else {
       advanceToNextVerse();
     }
+  }
+
+  if (donePracticing && exitWhenDone) {
+    return <SectionCompleteOverlay text={`${label} complete`} onDone={onExit} />;
   }
 
   if (donePracticing) {

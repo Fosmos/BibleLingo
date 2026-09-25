@@ -95,13 +95,23 @@ const READING_VIEW_CHROME_PX = 96;
 // LessonControlBar is a plain content-sized box now, exactly like PathBottomDock.tsx already
 // was — so `dockRef` measures a REAL height in both cases, and this one formula is correct for
 // both without needing to know which screen is asking.
-export function useParchmentFillHeight(): ParchmentFillHeight {
+// `fixedOverridePx`: PathOverviewScreen.tsx's own in-place Mind Map lesson sheet has no
+// adjacent "dock" to measure a distance against at all — its dedicated sense-line card and its
+// controls are two physically separate fixed regions of the screen (see LessonPageCard.tsx's
+// own portal branch), not a stacked bodyTopRef-then-dockRef column. Passing a real number here
+// (lib/useMindMapSenseCardSlot.ts's own measured slot height) skips this hook's usual DOM
+// measurement entirely and just echoes that number straight back as `fillHeightPx` — still the
+// exact same real, on-screen pixel budget this hook always promises, just measured by a
+// different caller for a differently-shaped screen. `undefined` (every other caller) runs the
+// normal measurement below, unchanged.
+export function useParchmentFillHeight(fixedOverridePx?: number | null): ParchmentFillHeight {
   const bodyTopRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const [fillHeightPx, setFillHeightPx] = useState<number | null>(null);
   // True once a real measurement has landed — see this hook's own top doc comment. Reset only
   // by a genuine window resize, never by a dock/body reflow alone.
   const settledRef = useRef(false);
+  const isOverridden = fixedOverridePx !== undefined;
 
   // No dependency array — deliberately re-runs after EVERY render, not just the first, and
   // re-attaches the ResizeObserver each time (harmless: observing an element it's already
@@ -116,6 +126,7 @@ export function useParchmentFillHeight(): ParchmentFillHeight {
   // even once a later stage genuinely does attach a real element. Re-attaching every render
   // costs nothing extra now that `measure` itself no-ops once settled.
   useEffect(() => {
+    if (isOverridden) return;
     function measure(force: boolean) {
       if (!force && settledRef.current) return;
       // A backgrounded Browser pane / not-yet-laid-out tab reports innerHeight 0 (every rect
@@ -150,5 +161,5 @@ export function useParchmentFillHeight(): ParchmentFillHeight {
     };
   });
 
-  return { bodyTopRef, dockRef, fillHeightPx };
+  return { bodyTopRef, dockRef, fillHeightPx: isOverridden ? fixedOverridePx : fillHeightPx };
 }

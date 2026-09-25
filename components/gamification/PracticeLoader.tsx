@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
+import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath } from "@/lib/memorizationContent";
@@ -39,6 +40,7 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
+  const locationTagLevels = useProgressStore((state) => state.locationTagLevels) ?? NO_LOCATION_TAG_LEVELS;
   // The version query param is what the path overview page treats as the source of truth
   // (see app/path/[key]/page.tsx) — omitting it would default to KJV and silently overwrite
   // an already-selected translation via PathOverviewScreen's sync effect.
@@ -80,7 +82,8 @@ export function PracticeLoader({ pathKey, label, dayNumber }: PracticeLoaderProp
   // useChapterScopedReadingLayout (a hook — can't be called after the early returns below)
   // always has something real to key off of; FALLBACK_DAY's own doc comment explains why its
   // result is simply unused whenever this ends up empty.
-  const days = verses && plan ? buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled) : [];
+  const days =
+    verses && plan ? buildPathDayPlan(pathKey, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled, locationTagLevels) : [];
   const day = days.find((candidate) => candidate.dayNumber === dayNumber);
   const layout = useChapterScopedReadingLayout(days, day ?? FALLBACK_DAY, plan?.completedDays ?? 0, plan ? todaysDayNumber(plan, new Date()) : 0);
 

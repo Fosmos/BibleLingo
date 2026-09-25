@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { VerseSegment, WordDiffToken } from "@/types";
 import { useReviewChain } from "@/lib/useReviewChain";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
@@ -21,14 +22,19 @@ interface ReviewChainProps {
   // See ReviewChainParchment.tsx — when set, `verses` render inline on the Learn flow's own
   // real reading-view page instead of the standalone layout every other caller still gets.
   layout?: ChapterReadingLayout;
-  // See lib/useReviewChain.ts's own doc comment on both of these.
+  // See lib/useReviewChain.ts's own doc comment.
   restartOnMistake?: boolean;
-  requirePerfectPass?: boolean;
+  // Told whichever verse the reader is typing, each time it changes — the Mind Map sheet uses it
+  // to keep the real canvas centered on that verse's chip (see lib/useReportFocusVerse.ts).
+  onVerseChange?: (verse: VerseSegment) => void;
 }
 
-export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, requirePerfectPass }: ReviewChainProps) {
-  const typing = useReviewChain({ verses, restartOnMistake, requirePerfectPass });
+export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange }: ReviewChainProps) {
+  const typing = useReviewChain({ verses, restartOnMistake });
   const { combinedWords, wordIndex, revealedWords, letterInput, restartNotice, wrongWordIndices, finished, currentWord, currentVerse, referenceMatch } = typing;
+  useEffect(() => {
+    if (currentVerse) onVerseChange?.(currentVerse);
+  }, [currentVerse, onVerseChange]);
   const totalWords = combinedWords.length;
 
   if (finished) {
@@ -51,6 +57,14 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
 
   if (!currentWord) return null;
 
+  const revealWord = () => {
+    if (restartOnMistake) {
+      typing.recordMistake(`That word was "${currentWord.word}" — restarting this verse from the beginning.`);
+    } else {
+      typing.markWrongAndAdvance();
+    }
+  };
+
   const chainParchment = (
     <ReviewChainParchment
       verses={verses}
@@ -71,7 +85,14 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
       {layout ? chainParchment : <LessonParchmentCard>{chainParchment}</LessonParchmentCard>}
 
       <LessonControlBar dockRef={layout?.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        {layout && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{label}</p>}
+        {/* "Reveal word" shares the label's row rather than taking its own below the keyboard —
+            one row fewer, so the keyboard keeps its full size in the Mind Map sheet's fixed box. */}
+        {layout && (
+          <div className="flex items-center gap-3 self-center">
+            <p className="text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>
+            {!referenceMatch && <ReviewChainHint onRevealWord={revealWord} />}
+          </div>
+        )}
         {referenceMatch ? (
           <ReferenceNumberEntry
             key={`${wordIndex}-${currentWord.word}`}
@@ -89,25 +110,15 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
             onChange={(event) => typing.handleLetterChange(event.target.value)}
             maxLength={1}
             autoFocus
+            // The on-screen keyboard is the way to type here — never pop the phone's own over it.
+            inputMode="none"
             aria-label="Type the first letter of the next word"
             className="sr-only"
           />
         )}
         {restartNotice && <p className="text-sm font-medium text-heart-600">{restartNotice}</p>}
         {!referenceMatch && <OnScreenKeyboard onKey={typing.handleLetterChange} />}
-        {!referenceMatch && (
-          <div className="flex items-center gap-4">
-            <ReviewChainHint
-              onRevealWord={() => {
-                if (restartOnMistake && !requirePerfectPass) {
-                  typing.recordMistake(`That word was "${currentWord.word}" — restarting this verse from the beginning.`);
-                } else {
-                  typing.markWrongAndAdvance();
-                }
-              }}
-            />
-          </div>
-        )}
+        {!layout && !referenceMatch && <ReviewChainHint onRevealWord={revealWord} />}
         <AutoCompleteButton onClick={() => onComplete(100)} />
       </LessonControlBar>
     </div>

@@ -1,4 +1,5 @@
-import { wordOrBlank } from "@/lib/verseWords";
+import { firstLetterWithPunctuation, hiddenWordBlank } from "@/lib/verseWords";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
 interface WordSlot {
   word: string;
@@ -21,7 +22,9 @@ export function ReviewChainVerseWords({ words, revealedCount }: ReviewChainVerse
   return (
     <>
       {words.map((slot) => (
-        <span key={slot.globalIndex}>{slot.globalIndex < revealedCount ? slot.word : wordOrBlank(slot.word, false)} </span>
+        <span key={slot.globalIndex} className={slot.globalIndex < revealedCount ? FIRST_LETTER_GAP_CLASS : undefined}>
+          {slot.globalIndex < revealedCount ? firstLetterWithPunctuation(slot.word) : hiddenWordBlank(slot.word)}{" "}
+        </span>
       ))}
     </>
   );

@@ -43,12 +43,22 @@ export interface ChapterReadingLayout extends ChapterPagination {
 // doc comment on why that used to let the same chapter paginate differently depending on where
 // it was opened). `probeContainerRef` still needs rendering by the caller too (see
 // ChapterFitProbes.tsx) — a hook can compute state, never render JSX.
-export function useChapterReadingLayout(days: MemorizationDay[], completedDays: number, todaysDay: number): ChapterReadingLayout {
+// `fixedFillHeightPx`: see useParchmentFillHeight.ts's own doc comment — threaded straight
+// through for PathOverviewScreen.tsx's own in-place Mind Map lesson sheet, which has no real
+// bodyTopRef-to-dockRef column to measure. `undefined` (every other caller) is unaffected.
+// `fixedColumnWidthPx`: see useChapterPagination.ts's own doc comment — same sheet, same reason.
+export function useChapterReadingLayout(
+  days: MemorizationDay[],
+  completedDays: number,
+  todaysDay: number,
+  fixedFillHeightPx?: number | null,
+  fixedColumnWidthPx?: number | null,
+): ChapterReadingLayout {
   const locationTags = useProgressStore((state) => state.locationTags);
   const iconTags = useProgressStore((state) => state.iconTags);
   const pegActive = useProgressStore((state) => state.pegSystemEnabled);
-  const { bodyTopRef, dockRef, fillHeightPx } = useParchmentFillHeight();
-  const pagination = useChapterPagination(days, completedDays, todaysDay, fillHeightPx);
+  const { bodyTopRef, dockRef, fillHeightPx } = useParchmentFillHeight(fixedFillHeightPx);
+  const pagination = useChapterPagination(days, completedDays, todaysDay, fillHeightPx, fixedColumnWidthPx);
   const probeContainerRef = useRef<HTMLDivElement>(null);
   // Pinned to the one fixed size every parchment renders at (see lib/parchmentFontRange.ts) —
   // pagination itself (a verse now free to split across the page break) is what fills every

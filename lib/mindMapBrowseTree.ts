@@ -10,7 +10,7 @@ import { getAllPericopesForChapter } from "@/lib/chapterPericopes";
 // lib/useMindMapBrowseChapter.ts's own fetch has cached them. A browsed chapter/pericope's own
 // status reads purely off chapter graduation (`completedChapters`, from lib/canonTree.ts's
 // completedChaptersForBook) — there's no lesson day to be "active" here until the reader
-// actually switches their active path to this book (see BookMindMap.tsx's onSwitchBook).
+// actually starts a path here (see BookMindMap.tsx's onChoosePath).
 export function buildBrowsedChapters(
   bookName: string,
   book: BibleBook,
@@ -25,6 +25,7 @@ export function buildBrowsedChapters(
       kind: "chapter",
       id: `chapter:${bookName}:${chapterNumber}`,
       label: `${chapterNumber}`,
+      book: bookName,
       chapter: chapterNumber,
       status,
       children: pericopes.map((info, index) => ({
@@ -32,13 +33,37 @@ export function buildBrowsedChapters(
         id: `pericope:${bookName}:${chapterNumber}:${index}`,
         label: info.heading || (info.startVerse === info.endVerse ? `Verse ${info.startVerse}` : `Verses ${info.startVerse}-${info.endVerse}`),
         verseRange: info.startVerse === info.endVerse ? `v${info.startVerse}` : `v${info.startVerse}–${info.endVerse}`,
+        tagLabel: info.label,
         status,
         book: bookName,
         chapter: chapterNumber,
         startVerse: info.startVerse,
+        rangeStartVerse: info.startVerse,
+        rangeEndVerse: info.endVerse,
         actionKind: "select" as const,
       })),
     });
   }
   return chapters;
+}
+
+// A path chapter filled out to the whole chapter: a verse path (or any path covering only part of
+// its chapter) has halls for just its own verses, which cut the chapter off around them. Every
+// other section of the chapter joins as a plain browse hall, and a path hall spans its whole
+// section — so every verse of the chapter has a node, and those outside the path offer themselves
+// as new paths when tapped. Learned verses are tracked one by one (see lib/pericopeLearned.ts), so
+// widening a hall never marks anything learned that wasn't.
+export function withWholeChapter(datum: MindMapChapterDatum, book: BibleBook): MindMapChapterDatum {
+  const shell = buildBrowsedChapters(datum.book, book, new Set(), datum.chapter).find((chapter) => chapter.chapter === datum.chapter);
+  if (!shell || shell.children.length === 0) return datum;
+  const children = shell.children.map((section, index) => {
+    const start = section.rangeStartVerse ?? 0;
+    const end = section.rangeEndVerse ?? -1;
+    const own = datum.children.find((hall) => (hall.rangeStartVerse ?? 0) <= end && (hall.rangeEndVerse ?? -1) >= start);
+    if (own) return { ...own, rangeStartVerse: Math.min(start, own.rangeStartVerse ?? start), rangeEndVerse: Math.max(end, own.rangeEndVerse ?? end) };
+    return { ...section, id: `${section.id}:section-${index}`, status: "locked" as const };
+  });
+  // A path hall overlapping two sections would appear twice — keep its first.
+  const seen = new Set<string>();
+  return { ...datum, children: children.filter((hall) => !seen.has(hall.id) && seen.add(hall.id)) };
 }

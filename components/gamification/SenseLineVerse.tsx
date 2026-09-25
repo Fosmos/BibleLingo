@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { Lightbulb, MapPin } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import type { RunState } from "@/lib/chapterReadingRuns";
-import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { mergeRangesToFit, senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
 import { locationTagKey } from "@/lib/locationTags";
 import { verseIconById } from "@/lib/verseIcons";
 import { isStructuralWord } from "@/lib/structuralWords";
@@ -33,6 +34,10 @@ interface SenseLineVerseProps {
   renderVerseWords?: (verse: VerseSegment, range: SenseLineWordRange) => ReactNode | undefined;
   isVerseNumberVisible?: (verse: VerseSegment) => boolean;
   onSelect: (dayNumber: number | undefined) => void;
+  // The text column's own measured width and font size — when set, clauses short enough to
+  // share a line are joined onto one (see lib/senseLineWordRanges.ts's mergeRangesToFit).
+  columnWidthPx?: number;
+  fontSizePx?: number;
 }
 
 // A clause opening with a quotation mark (curly or straight, single or double — e.g. Mark 1:2's
@@ -90,6 +95,8 @@ export function SenseLineVerse({
   renderVerseWords,
   isVerseNumberVisible,
   onSelect,
+  columnWidthPx = 0,
+  fontSizePx = FIXED_PARCHMENT_FONT_PX,
 }: SenseLineVerseProps) {
   const numberColor =
     state === "completed" ? "text-green-600 dark:text-green-500" : state === "today" ? "text-brand-600 dark:text-brand-400" : "text-ink-muted";
@@ -107,8 +114,14 @@ export function SenseLineVerse({
     </>
   );
   const showNumber = !verse.wordOffset && (!isVerseNumberVisible || isVerseNumberVisible(verse));
+  // Skipped below for a clause a drill has overridden (see `overridden` in the map below) — the
+  // ambient "today" underline is meant for plain reading-view prose; on a drill's own boxed/
+  // bordered word spans (FillInTheBlankRep.tsx, FirstLetterBlankRep.tsx) it paints straight
+  // through their dashed border, reading as the box overlapping its neighbors. A drill already
+  // marks its own active state (a highlighted word, a dashed blank), so nothing is lost by
+  // leaving it off there.
   const underline = state === "today";
-  const ranges = senseLineWordRanges(verse.text);
+  const ranges = mergeRangesToFit(senseLineWordRanges(verse.text), columnWidthPx, fontSizePx);
 
   return (
     <div
@@ -123,11 +136,11 @@ export function SenseLineVerse({
         return (
           <SenseLineRow
             key={index}
-            continuation={clause.continuation}
+            topGap={index === 0 ? "verse" : "clause"}
             leadingMarkers={index === 0 ? leadingMarkers : undefined}
             number={index === 0 && showNumber ? verse.verseNumber : undefined}
             numberColor={numberColor}
-            underline={underline}
+            underline={underline && overridden === undefined}
           >
             {overridden !== undefined ? overridden : renderClauseWords(clause.text)}
           </SenseLineRow>

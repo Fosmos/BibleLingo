@@ -17,6 +17,7 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonWholeDayPageCard } from "@/components/gamification/LessonWholeDayPageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { LessonSheetWorkspace, useInLessonSheet } from "@/components/gamification/LessonSheetWorkspace";
 
 interface VerseOrientationSummaryRepProps {
   // Today's own real verses (see LearnSection.tsx's `realVerses`) — every one of them renders
@@ -75,38 +76,51 @@ export function VerseOrientationSummaryRep({ verses, verseOffsets, wordAnnotatio
   }
 
   const canContinue = who.trim().length > 0 && action.trim().length > 0 && scene.trim().length > 0;
+  // In the Mind Map sheet the scene form takes the card's own zone (see LessonSheetWorkspace.tsx);
+  // the passage itself stays one tap away via the breadcrumb's View Verse button.
+  const inSheet = useInLessonSheet();
+
+  const workspace = (
+    <>
+      <VersePOAInput
+        furnitureLabel={locationTag}
+        pegWord={pegSystemEnabled ? pegWord : undefined}
+        pegEmoji={recommendedPeg.emoji}
+        onPegWordChange={setPegWord}
+        who={who}
+        action={action}
+        additionalInfo={additionalInfo}
+        onWhoChange={setWho}
+        onActionChange={setAction}
+        onAdditionalInfoChange={setAdditionalInfo}
+      />
+      <SceneGenerator
+        inputs={{ locus: locationTag ?? "", pegLine, character: who, action, textProp: additionalInfo }}
+        scene={scene}
+        onSceneChange={setScene}
+      />
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-3">
       <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
         Visualize <InfoTip text={INFO_TIPS.verseOrientationSummaryRep} />
       </p>
-      <LessonWholeDayPageCard
-        layout={layout}
-        verses={verses}
-        renderActiveVerse={(verse, verseIndex, range) => (
-          <AnnotatedVerseWordRange verse={verse} range={range} wordAnnotations={wordAnnotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
-        )}
-      />
+      {inSheet ? (
+        <LessonSheetWorkspace>{workspace}</LessonSheetWorkspace>
+      ) : (
+        <LessonWholeDayPageCard
+          layout={layout}
+          verses={verses}
+          renderActiveVerse={(verse, verseIndex, range) => (
+            <AnnotatedVerseWordRange verse={verse} range={range} wordAnnotations={wordAnnotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
+          )}
+        />
+      )}
 
       <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        <VersePOAInput
-          furnitureLabel={locationTag}
-          pegWord={pegSystemEnabled ? pegWord : undefined}
-          pegEmoji={recommendedPeg.emoji}
-          onPegWordChange={setPegWord}
-          who={who}
-          action={action}
-          additionalInfo={additionalInfo}
-          onWhoChange={setWho}
-          onActionChange={setAction}
-          onAdditionalInfoChange={setAdditionalInfo}
-        />
-        <SceneGenerator
-          inputs={{ locus: locationTag ?? "", pegLine, character: who, action, textProp: additionalInfo }}
-          scene={scene}
-          onSceneChange={setScene}
-        />
+        {!inSheet && workspace}
         <motion.button
           type="button"
           whileTap={TAP_SCALE}

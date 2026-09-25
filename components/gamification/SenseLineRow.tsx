@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 
 interface SenseLineRowProps {
-  continuation?: boolean;
+  // "clause" for a genuinely new clause/line within the SAME verse (every punctuation-bounded
+  // split lib/senseLineSplitting.ts's own parser ever produces renders identically — to a
+  // reader they're each just "the rest of this sentence, on the next line"), "verse" for the
+  // first line of a NEW verse.
+  topGap: "clause" | "verse";
   leadingMarkers?: ReactNode;
   number?: number;
   numberColor: string;
@@ -10,17 +14,14 @@ interface SenseLineRowProps {
 }
 
 // One sense-line — a single clause block. Every row starts flush at the SAME left margin as the
-// verse's own very first line, whether it's a genuinely new clause OR a `continuation` row
-// (enforceMaxLength forcing an over-long clause to split, often right at a conjunction/relative
-// pronoun — see SenseLineClause's own doc comment): `-indent-6` is unconditional below, not
-// gated on `continuation`, so a forced split reads as a plain, natural next line rather than
-// hanging indented. `pl-6`/`-indent-6` together (1.5rem — lib/senseLines.ts's own
-// HANGING_INDENT_PX) still do real work within a SINGLE row's own `<p>`: if that one clause's
-// own text is long enough to wrap on its own within the browser (same `<p>`, no forced split at
-// all), the -indent-6 only ever affects that paragraph's own FIRST line — its second line still
-// lands at the padded position, hanging indented under the clause's own first word, same as any
-// hanging-indent paragraph. `text-pretty` avoids leaving an orphan word alone on its own wrapped
-// line.
+// verse's own very first line, whatever produced this particular split (see topGap's own doc
+// comment above) — `pl-6`/`-indent-6` together (1.5rem — lib/senseLines.ts's own
+// HANGING_INDENT_PX) still do real work within a SINGLE row's own `<p>`: if that one line's own
+// text is long enough to wrap on its own within the browser (same `<p>`, a rare case since every
+// line this app hands here already fits the column on its own), the -indent-6 only ever affects
+// that paragraph's own FIRST line — its second line still lands at the padded position, hanging
+// indented under the line's own first word, same as any hanging-indent paragraph. `text-pretty`
+// avoids leaving an orphan word alone on its own wrapped line.
 //
 // leadingMarkers/number render in a SEPARATE `absolute right-full` span, not inline before
 // `children` — inline, they'd sit ahead of the clause's own first word and push it rightward by
@@ -39,23 +40,21 @@ interface SenseLineRowProps {
 // own padding gutter — rather than a fixed width a 3-digit verse number or several icons
 // together could overflow out of.
 //
-// Every row shares the SAME tight leading-[1.5] regardless of `continuation` — that governs the
-// gap between two lines that are still part of the SAME clause, which happens two different
-// ways: an explicit `continuation` row (enforceMaxLength forced a split), or a plain clause
-// that's simply long enough to wrap on its own within the browser (same `<p>`, no continuation
-// flag at all — CSS line-height can't tell "my own natural second line" apart from "my own
-// first line," so both need the identical value or they'd visibly disagree with each other).
-// Distinct clauses get a LARGER gap instead, from `mt-[0.9em]` on every non-continuation row's
-// own outer div (continuation rows get none, so they stay snug under whichever line precedes
-// them, reading as "the rest of that same clause" via spacing alone now that both are flush) —
-// margin, not line-height, is what can tell "a new clause" apart from "still this one." `em`
-// keeps both this and the leading above scaled to whatever font size the page actually renders
-// at, same as every other size on this row. Split out of SenseLineVerse.tsx purely to keep that
-// file under this codebase's own 200-line file cap — no behavior difference from having it
-// inline there.
-export function SenseLineRow({ continuation, leadingMarkers, number, numberColor, underline, children }: SenseLineRowProps) {
+// Every row shares the SAME leading-[1.5] regardless of `topGap` — governs the gap wherever a
+// line happens to wrap within its own `<p>` (rare — see above), so a natural browser wrap and a
+// new sense-line never visibly disagree with each other.
+//
+// A new LINE (still the same verse) gets a real margin instead — `mt-[0.65em]` — and a new VERSE
+// gets bigger still — `mt-[1.3em]`, double that. Two tiers, not three: margin, not line-height,
+// is what tells "a new verse" apart from "still this verse" in the first place. `em` keeps every
+// tier scaled to whatever font size the page actually renders at, same as every other size on
+// this row. Split out of SenseLineVerse.tsx purely to keep that file under this codebase's own
+// 200-line file cap — no behavior difference from having it inline there.
+const TOP_GAP_CLASS: Record<SenseLineRowProps["topGap"], string> = { clause: "mt-[0.65em]", verse: "mt-[1.3em]" };
+
+export function SenseLineRow({ topGap, leadingMarkers, number, numberColor, underline, children }: SenseLineRowProps) {
   return (
-    <div className={continuation ? "" : "mt-[0.9em]"}>
+    <div className={TOP_GAP_CLASS[topGap]}>
       <p className="relative -indent-6 pl-6 text-pretty leading-[1.5]">
         {(leadingMarkers || number !== undefined) && (
           <span className="absolute right-full mr-1 whitespace-nowrap text-right">

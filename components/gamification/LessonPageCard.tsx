@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
@@ -8,10 +9,13 @@ import type { PericopeSegment } from "@/lib/pathZones";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { pageIndexForVerse } from "@/lib/chapterPagination";
 import { computeGhostContext } from "@/lib/ghostContext";
+import { buildEmbeddedChapterPage } from "@/lib/buildEmbeddedChapterPage";
+import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { ChapterPageContent } from "@/components/gamification/ChapterPageContent";
 import { PericopeTitle } from "@/components/gamification/PericopeTitle";
 import { GhostContextLine } from "@/components/gamification/GhostContextLine";
 import { ParchmentCard } from "@/components/ui/ParchmentCard";
+import { SheetVerseZone } from "@/components/gamification/SheetVerseZone";
 
 interface LessonPageCardProps {
   layout: ChapterReadingLayout;
@@ -19,70 +23,48 @@ interface LessonPageCardProps {
   // actually being drilled; for a multi-verse stage (see `isActive` below) it's whichever verse
   // should decide which page opens (e.g. ReviewChain.tsx's own "furthest along" verse).
   activeVerse: VerseSegment;
-  // Which verse(s) on the page actually get `renderActiveVerse` — every other verse on the
-  // same real reading-view page around them renders completely normally (see
-  // ChapterPageContent.tsx). Defaults to matching `activeVerse` alone; pass this for a stage
-  // that drills several verses on the same page at once (ReviewChain.tsx's own combine stage).
+  // Which verse(s) get `renderActiveVerse` — every other verse on the page renders normally.
+  // Defaults to matching `activeVerse` alone; pass this for a stage that drills several verses
+  // on the same page at once (ReviewChain.tsx's own combine stage).
   isActive?: (verse: VerseSegment) => boolean;
   // What to show in the active verse's own place, called ONCE PER CLAUSE (see
-  // lib/senseLines.ts's own senseLineWordRanges and SenseLineVerse.tsx's own doc comment on
-  // renderVerseWords) — the full verse, first letters only, or fully blanked, depending on the
-  // stage, but always through the SAME multi-line clause structure every other verse gets.
-  // Each verse's own number/underline/pericope title around it always render the same
-  // regardless.
+  // lib/senseLines.ts's own senseLineWordRanges) — the full verse, first letters only, or fully
+  // blanked, depending on the stage, but always through the SAME multi-line clause structure
+  // every other verse gets.
   renderActiveVerse: (verse: VerseSegment, range: SenseLineWordRange) => ReactNode;
-  // SRS review only (see FirstLetterMultiVersePageCard.tsx) — an entity can span several real
-  // pages, unlike a single Learn day's own verses (always sized to fit one). Set to let the
-  // reader manually flip between them (same ChevronLeft/ChevronRight arrows
-  // ChapterReadingView.tsx uses), rather than being locked to whichever page `activeVerse`
-  // currently sits on. A manual flip always snaps back the moment `activeVerse` itself moves to
-  // a DIFFERENT page (recall progressing forward) — it's a peek, not a way to get lost from
-  // wherever recall actually is.
+  // SRS review only — an entity can span several real pages. Set to let the reader manually
+  // flip between them, rather than being locked to whichever page `activeVerse` sits on — snaps
+  // back the moment `activeVerse` moves to a DIFFERENT page (recall progressing forward).
   allowManualFlip?: boolean;
-  // SRS review only — see PericopeTitle.tsx. The page's own pericope title (rendered outside
-  // the card, like ChapterReadingView.tsx's own) stays hidden until this returns true for its
-  // own segment — a blind recall test is the one place a title shouldn't leak a section's own
-  // boundary ahead of actually reaching it.
+  // SRS review only — the page's own pericope title stays hidden until this returns true for
+  // its own segment, so a blind recall test never leaks a section boundary early.
   isHeadingVisible?: (segment: PericopeSegment) => boolean;
-  // Blind-recall drills only — see ChapterVerseRun.tsx. A verse's number stays hidden until
-  // this returns true (the word before it has been recalled).
+  // Blind-recall drills only — a verse's number stays hidden until this returns true.
   isVerseNumberVisible?: (verse: VerseSegment) => boolean;
-  // The word index (into `activeVerse.text`'s own tokenizeVerseWords) the reader's actually
-  // on right now — only meaningful when `activeVerse` can be split across a page break (see
-  // lib/chapterPagination.ts's splitVerseAtLineBudget) and the caller reveals it progressively
-  // word by word (RhythmRep, FirstLetterTypeRep, WordTypeEntry, DrawFirstLetterRep, ...).
-  // Undefined keeps the old "always this verse's first page" behavior — fine for a caller that
-  // only ever shows a verse in full at once, never mid-reveal.
+  // The word index the reader's actually on right now — only meaningful when `activeVerse` can
+  // split across a page break and the caller reveals it progressively.
   activeWordIndex?: number;
-  // SRS review only (see FirstLetterMultiVersePageCard.tsx) — hides the trailing ghost line
-  // entirely, since it previews words from BEYOND the entity's own range, a real recall test
-  // shouldn't hint at. Left on (the default) everywhere else, matching ChapterReadingView.tsx's
-  // own always-on prev/next pair.
+  // SRS review only — hides the trailing ghost line, since it previews words BEYOND the
+  // entity's own range. On (the default) everywhere else.
   showNextGhost?: boolean;
+  // The in-place Mind Map lesson sheet's own card renders NO pagination — this stage's own
+  // real verses directly, not a chapter-wide "page" a tiny 40dvh box has no business chunking.
+  // Defaults to `[activeVerse]`; LessonWholeDayPageCard.tsx passes its own list through.
+  embeddedVerses?: VerseSegment[];
 }
 
 // The Learn/Review "verse lives here" surface — the SAME real reading-view page (every verse
-// that page actually holds, in full, at the exact coordinates it sits at while just browsing
-// — see ChapterPageContent.tsx) at the SAME size, position, and uniform font size as the Path
-// screen's own reading view (see lib/useChapterReadingLayout.ts, the shared hook `layout`
-// comes from), with only the one verse actually being drilled swapped for whatever this stage
-// wants shown in its place. Replaces the old LessonParchmentCard/LessonVerseContext pairing,
-// which rendered a stage's own smaller "prev/today/next" window at the stage's own fixed text
-// size instead of the real page a reader would already know from browsing. Doesn't render its
-// own ChapterFitProbes.tsx — that's owned once by the caller (LearnSection.tsx), alongside
-// `layout` itself, since re-mounting a fresh probe set on every single stage change (this
-// component itself remounts each stage, via its own drill's `key={stageKey}`) would be pure
-// waste: the SAME probeContainerRef/fontSizePx already live for the whole lesson, not just
-// one stage.
+// that page actually holds, in full, at the exact coordinates it sits at while just browsing —
+// see ChapterPageContent.tsx) at the SAME size/position/font as the Path screen's own reading
+// view (lib/useChapterReadingLayout.ts), with only the one verse actually being drilled swapped
+// for whatever this stage wants shown in its place. Doesn't render its own ChapterFitProbes.tsx
+// — that's owned once by the caller (LearnSection.tsx), alongside `layout` itself.
 //
-// The pericope title above the card and the ghost-context lines above/below it (see
-// PericopeTitle.tsx/GhostContextLine.tsx/lib/ghostContext.ts) are the exact same shared
-// components ChapterReadingView.tsx renders — same markup, same classes, same spacing — so a
-// reader sees no difference between browsing a page and drilling it mid-lesson beyond the one
-// verse actually being tested. The card itself is the plain, content-sized ParchmentCard too
-// (no `fill`), for the same reason: a short page (1-3 verses) should be exactly as tall here as
-// it is on the Path screen, not artificially stretched to fill this stage's own available
-// space.
+// The pericope title and ghost-context lines around the card (PericopeTitle.tsx/
+// GhostContextLine.tsx) are the exact same shared components ChapterReadingView.tsx renders, so
+// a reader sees no difference between browsing and drilling mid-lesson. The card itself is the
+// plain, content-sized ParchmentCard too (no `fill`) — that's the STANDALONE route's shape; see
+// the portal branch below for the very different in-place Mind Map sheet shape.
 export function LessonPageCard({
   layout,
   activeVerse,
@@ -93,7 +75,13 @@ export function LessonPageCard({
   isVerseNumberVisible,
   activeWordIndex,
   showNextGhost = true,
+  embeddedVerses,
 }: LessonPageCardProps) {
+  // Set only while the in-place Mind Map lesson sheet is open (lib/useMindMapSenseCardSlot.ts)
+  // — a real DOM node this portals its card into instead of rendering inline, plus that same
+  // slot's measured height (also feeds useChapterReadingLayout.ts's `fixedFillHeightPx`
+  // override, so pagination and this card's visual height agree). Null on the standalone route.
+  const senseCardPortalNode = useLessonSessionStore((state) => state.senseCardPortalNode);
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
   const [lastAutoPageIndex, setLastAutoPageIndex] = useState(autoPageIndex);
@@ -115,6 +103,46 @@ export function LessonPageCard({
   const segment = page?.segments[0];
   const heading = segment && (!isHeadingVisible || isHeadingVisible(segment)) ? segment.heading : undefined;
   const { previousEdgeVerse, nextEdgeVerse, prevGhostText, nextGhostText } = computeGhostContext(layout.pages, pageIndex);
+
+  // The in-place Mind Map lesson sheet wants ABSOLUTELY NOTHING but the sense lines in its own
+  // card — no title, no ghost context, no manual-flip arrows, and (see embeddedVerses' own doc
+  // comment) no PAGE either — just this stage's own real verses.
+  if (senseCardPortalNode) {
+    return createPortal(
+      <SheetVerseZone>
+        <ChapterPageContent
+          page={buildEmbeddedChapterPage(embeddedVerses ?? [activeVerse])}
+          dayNumberByVerse={layout.dayNumberByVerse}
+          todaysVerseNumbers={layout.todaysVerseNumbers}
+          completedDays={layout.completedDays}
+          locationTags={layout.locationTags}
+          iconTags={layout.iconTags}
+          pegActive={layout.pegActive}
+          fontSizePx={layout.fontSizePx}
+          renderVerseWords={renderVerseWords}
+          isVerseNumberVisible={isVerseNumberVisible}
+          onSelect={() => {}}
+        />
+      </SheetVerseZone>,
+      senseCardPortalNode,
+    );
+  }
+
+  const chapterPageContent = (
+    <ChapterPageContent
+      page={page}
+      dayNumberByVerse={layout.dayNumberByVerse}
+      todaysVerseNumbers={layout.todaysVerseNumbers}
+      completedDays={layout.completedDays}
+      locationTags={layout.locationTags}
+      iconTags={layout.iconTags}
+      pegActive={layout.pegActive}
+      fontSizePx={layout.fontSizePx}
+      renderVerseWords={renderVerseWords}
+      isVerseNumberVisible={isVerseNumberVisible}
+      onSelect={() => {}}
+    />
+  );
 
   return (
     <div className="flex flex-col">
@@ -149,19 +177,7 @@ export function LessonPageCard({
             <ChevronLeft size={18} />
           </button>
         )}
-        <ChapterPageContent
-          page={page}
-          dayNumberByVerse={layout.dayNumberByVerse}
-          todaysVerseNumbers={layout.todaysVerseNumbers}
-          completedDays={layout.completedDays}
-          locationTags={layout.locationTags}
-          iconTags={layout.iconTags}
-          pegActive={layout.pegActive}
-          fontSizePx={layout.fontSizePx}
-          renderVerseWords={renderVerseWords}
-          isVerseNumberVisible={isVerseNumberVisible}
-          onSelect={() => {}}
-        />
+        {chapterPageContent}
       </ParchmentCard>
 
       {showNextGhost && (

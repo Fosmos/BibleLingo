@@ -12,10 +12,17 @@ export interface MindMapPericopeDatum {
   // case dayNumber's own doc comment already describes, or while pericope data itself is still
   // loading (see PathZone.startVerse/endVerse).
   verseRange?: string;
+  // The SAME stable, verse-range-derived string BuildingRoomView.tsx's own pericope tag field
+  // already keys off (PathZone.label/PericopeInfo.label, e.g. "Mark 1:1-8") — distinct from
+  // `label` above, which prefers the (unstable, translation-dependent) ESV section heading for
+  // DISPLAY. A tag added from this pericope's own Mind Map badge (see MindMapNodeCard.tsx) must
+  // land on the exact same lib/locationTags.ts key BuildingRoomView would use for it, or the two
+  // surfaces would silently show different tags for what's really the same section.
+  tagLabel: string;
   status: PericopeCardStatus;
   // Which book this pericope belongs to — lets BookMindMap.tsx's own pericope-tap handler tell
   // a real active-book pericope (opens that chapter's parchment view) apart from a browsed
-  // (non-active) book's own pericope (offers to switch there instead — see onSwitchBook).
+  // (non-active) book's own pericope (offers it as a new path instead — see onChoosePath).
   book: string;
   // The chapter this pericope belongs to — tapping the card opens that chapter's own
   // parchment view (see BookMindMap.tsx's onSelectChapter) rather than jumping straight into
@@ -27,11 +34,22 @@ export interface MindMapPericopeDatum {
   // pericope, not wherever the chapter's own "today's lesson" default would otherwise land.
   // Undefined only alongside verseRange's own doc comment (pericope data still loading).
   startVerse?: number;
+  // This pericope's own REAL structural range — e.g. 3 and 16 for "Judgment on False Teachers
+  // (v3-16)" — distinct from `startVerse` above, which is a tap-TARGET (the reader's own resume
+  // point, possibly partway through the pericope). MindMapVerseStream.tsx's own verse-by-verse
+  // unroll needs the full literal range, not wherever progress happens to have reached.
+  // Undefined only alongside verseRange's own doc comment (pericope data still loading).
+  rangeStartVerse?: number;
+  rangeEndVerse?: number;
+  // Every verse in this pericope the reader has memorized, verse by verse (see
+  // lib/pericopeLearned.ts) — drives the spine's dashed-to-solid trail, each chip's check and the
+  // hall's fill.
+  learnedVerses?: number[];
   // The lesson day this pericope's card represents — computed by lib/pericopeCardState.ts's
   // computeZoneCardState, the same established logic PericopeCard.tsx/BuildingRoomView
   // already use, so this reads identically everywhere in the app. Undefined for a browsed
   // (non-active) book's own pericope — there's no lesson day to speak of until the reader
-  // actually switches their active path to that book (see BookMindMap.tsx's onSwitchBook).
+  // actually starts a path there (see BookMindMap.tsx's onChoosePath).
   dayNumber?: number;
   actionKind: "select" | "practice";
   children?: never;
@@ -41,11 +59,17 @@ export interface MindMapChapterDatum {
   kind: "chapter";
   id: string;
   label: string;
+  // Which book this chapter belongs to — same role as MindMapPericopeDatum.book, needed to
+  // build this chapter's own lib/locationTags.ts key (see MindMapNodeCard.tsx's tag badge).
+  book: string;
   // The real chapter number — distinct from `label`'s own display string, since
   // BookMindMap.tsx's own initial-centering logic needs to pick out today's specific chapter
   // node by number, not parse it back out of display text.
   chapter: number;
   status: PericopeCardStatus;
+  // 0..1 of its verses memorized across ALL the reader's progress (see
+  // lib/mindMapMemorizedChapter.ts) — known even when its halls aren't loaded.
+  memorizedFraction?: number;
   children: MindMapPericopeDatum[];
 }
 
@@ -59,8 +83,8 @@ export interface MindMapThemeDatum {
   // a small caption under `label` ("Ch 2–8"), the "reference" a theme node carries the same way
   // a pericope card carries its own verseRange.
   reference: string;
-  // Same chapter-graduated completion math as MindMapBookDatum's own `percent`, just scoped to
-  // this theme's own chapter range (see lib/canonTree.ts's themeCompletionPercent) rather than
+  // Same verse-based completion math as MindMapBookDatum's own `percent`, just scoped to
+  // this theme's own chapter range (see lib/bookVerseProgress.ts's themeCompletionPercent) rather than
   // the whole book.
   percent: number;
   // Real for the active book's own theme nodes, AND for whichever single non-active book is
@@ -79,7 +103,7 @@ export interface MindMapBookDatum {
   // needs a book-specific special case to find "the text this node displays," the same way
   // every other kind in this union already works.
   label: string;
-  // The plain book name (e.g. "Mark") — this is the value BookMindMap.tsx's own onSwitchBook
+  // The plain book name (e.g. "Mark") — this is the value BookMindMap.tsx's own onChoosePath
   // needs to build a path key/route with; kept distinct from `label` since a route-building
   // value and a display value are different concerns even when their text happens to match.
   name: string;
@@ -89,8 +113,8 @@ export interface MindMapBookDatum {
   // chapters/pericopes read purely structurally (locked/completed by chapter-graduation only,
   // never "today's lesson" active) until the reader actually switches their active path to it.
   active: boolean;
-  // Chapter-graduated completion, 0-100 — real for every book (see
-  // lib/canonTree.ts's bookCompletionPercent, backed only by localStorage progress, no fetch
+  // Verse-based completion, 0-100 — real for every book (see
+  // lib/bookVerseProgress.ts's bookCompletionPercent, backed only by localStorage progress, no fetch
   // needed), not just the active one.
   percent: number;
   // A book long enough to have a lib/bookThemes.ts entry gets its own Theme layer between it and

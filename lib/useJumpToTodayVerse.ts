@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PathProgress, VerseSegment } from "@/types";
+import type { LocationTagLevel, PathProgress, VerseSegment } from "@/types";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { parsePathKey } from "@/lib/memorizationContent";
@@ -23,13 +23,14 @@ export function useJumpToTodayVerse(
   plan: PathProgress | undefined,
   includeVerseReferences: boolean,
   pegSystemEnabled: boolean,
+  locationTagLevels: LocationTagLevel[],
   selectPericope: (chapter: number, startVerse?: number) => void,
 ): void {
   const [appliedForKey, setAppliedForKey] = useState<string | undefined>(undefined);
   const { kind } = parsePathKey(key);
   if (jumpToToday && kind === "book" && verses && plan && key !== appliedForKey) {
     setAppliedForKey(key);
-    const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled);
+    const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled, locationTagLevels);
     const todaysDay = todaysDayNumber(plan, new Date());
     const todaysLearnDay = days.find((day) => day.kind === "learn" && day.dayNumber === todaysDay);
     const verse = todaysLearnDay?.newVerses[0];

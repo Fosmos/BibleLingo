@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { VerseSegment } from "@/types";
-import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
+import { playLetterSfx, resetLetterCombo } from "@/lib/audio";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 import { computeVerseAccuracies, type VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
@@ -16,14 +16,6 @@ interface UseFirstLetterTypingOptions {
   sessionKey?: string;
   verseMarkers?: Record<number, number>;
   restartOnMistake: boolean;
-  // The Learn flow's own "gentle" mode (first time meeting this verse, not yet a real review)
-  // — a mistake never makes a sound and never interrupts the pass (overrides restartOnMistake:
-  // a mistake always just retries the same word, the same as restartOnMistake off), but a pass
-  // that had ANY mistake in it doesn't count as this rep at all — it silently resets to word 1
-  // and runs again, as many times as it takes, until one full pass comes back clean. Off (every
-  // other caller — SRS review, Mastery-adjacent reps) keeps the plain existing behavior: a
-  // mistake sounds and costs accuracy, `reps` completes regardless of how clean any one of them was.
-  requirePerfectPass?: boolean;
   onComplete: (hadMistake: boolean, accuracy: number) => void;
   onVerseAccuracy?: (results: VerseAccuracy[]) => void;
 }
@@ -63,7 +55,6 @@ export function useFirstLetterTyping({
   sessionKey,
   verseMarkers,
   restartOnMistake,
-  requirePerfectPass = false,
   onComplete,
   onVerseAccuracy,
 }: UseFirstLetterTypingOptions): FirstLetterTyping {
@@ -111,14 +102,6 @@ export function useFirstLetterTyping({
     setLetterInput("");
     const nextWordIndex = wordIndex + 1;
     if (nextWordIndex >= words.length) {
-      // requirePerfectPass: a pass that picked up any mistake along the way doesn't count as
-      // a real rep at all — silently back to word 1, mistakes cleared, and try the whole verse
-      // again. Only a genuinely clean pass (wrongWordIndices still empty here) advances.
-      if (requirePerfectPass && wrongWordIndices.size > 0) {
-        setWrongWordIndices(new Set());
-        setWordIndex(0);
-        return;
-      }
       const nextRep = completedReps + 1;
       if (nextRep >= reps) {
         reportComplete();
@@ -131,13 +114,13 @@ export function useFirstLetterTyping({
     }
   }
 
-  // A mistake restarts this rep's verse reveal from word 1 rather than just retrying it
-  // (unless restartOnMistake is off, or requirePerfectPass is on — see FirstLetterTypeRep's
-  // own prop doc — either way it just retries the same word instead).
+  // A mistake restarts this rep's verse reveal from word 1 rather than just retrying it —
+  // unless restartOnMistake is off (see FirstLetterTypeRep's own prop doc), in which case it
+  // just retries the same word instead.
   function recordMistake() {
     hadMistakeRef.current = true;
     setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-    if (restartOnMistake && !requirePerfectPass) setWordIndex(0);
+    if (restartOnMistake) setWordIndex(0);
   }
 
   // The low-priority "Peek Hint" escape valve (see FirstLetterTypeRep's `allowPeekHint`) —
@@ -160,10 +143,10 @@ export function useFirstLetterTyping({
     const typed = value.toLowerCase();
 
     if (typed && typed === expected) {
-      playCorrectSfx();
+      playLetterSfx();
       revealCurrentWord();
     } else if (typed) {
-      if (!requirePerfectPass) playIncorrectSfx();
+      resetLetterCombo();
       setShowError(true);
       setLetterInput("");
       recordMistake();
