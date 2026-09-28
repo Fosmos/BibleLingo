@@ -14,6 +14,9 @@ import { useMindMapFocusState, INACTIVE_SCALE } from "@/lib/useMindMapFocusState
 import { useMindMapBrowseChapter } from "@/lib/useMindMapBrowseChapter";
 import { useMindMapPericopeZoomLock } from "@/lib/useMindMapPericopeZoomLock";
 import { useMindMapVerseFocusLock } from "@/lib/useMindMapVerseFocusLock";
+import { useLocateOnArrival } from "@/lib/useLocateOnArrival";
+import { useMindMapArrival } from "@/lib/useMindMapArrival";
+import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useMindMapLocate } from "@/lib/useMindMapLocate";
 import { useYesterdayReview } from "@/lib/useYesterdayReview";
 import { useMindMapFollowFocusBranch } from "@/lib/useMindMapFollowFocusBranch";
@@ -41,13 +44,10 @@ interface BookMindMapProps {
   version: string;
   // A hall card's tap opens its chapter's reading view; a verse chip's fallback when the next prop is unset.
   onSelectChapter: (chapter: number, startVerse?: number) => void;
-  // A verse chip's own tap on the ACTIVE book — opens the verse preview tab
-  // (BookMindMapWithLessonSheet.tsx), instead of navigating to the chapter view. Optional —
-  // omitting it keeps every verse chip tap on the plain chapter-view nav.
+  // A verse chip's tap on the ACTIVE book opens the verse preview (BookMindMapWithLessonSheet.tsx);
+  // unset, it falls back to the plain chapter-view nav.
   onSelectVerseForLesson?: (pericope: MindMapPericopeDatum, verseNumber: number) => void;
-  // The verse currently being drilled inside the in-place lesson sheet, if any — zooms/centers
-  // the canvas on it (lib/useMindMapVerseFocusLock.ts), opening its chapter first if needed
-  // (lib/useMindMapFollowFocusBranch.ts), and pins its own chip below.
+  // The verse drilled in the lesson sheet, if any — the canvas opens its chapter and centres on it.
   focusVerse?: { book?: string; chapter: number; verseNumber: number };
   // Offers a tapped book/chapter/verse outside the active path as a new one (mindMapSelectionHandlers.ts).
   onChoosePath: (target: PathTarget) => void;
@@ -95,16 +95,15 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
   const layout = useMemo(() => computeMindMapLayout(tree, new Set(activePath)), [tree, activePath]);
   const { isOnFocusedBranch, sizeScaleFor } = useMindMapFocusState(activePath, parentMap);
   const { celebratingChapterId, celebratingBookId } = useMindMapCompletionCelebration(layout);
-  // The chapter currently selected (activePath's own deepest entry, if it's a chapter) — every
-  // one of ITS pericopes is already unrolled the instant it's open (lib/mindMapPericopeSpine.ts),
-  // which is also exactly when the canvas locks to a vertical-scroll reading column.
+  // The open chapter, if any — its halls unroll and the canvas locks to a reading column.
   const deepestNode = layout.nodes.find((node) => node.data.id === activePath[activePath.length - 1]);
   const expandedChapterId = deepestNode?.data.kind === "chapter" ? deepestNode.data.id : null;
 
-  useMindMapFollowFocusBranch({ focusVerse, tree, activePath, setActivePath });
+  // A one-time arrival (lib/useMindMapArrival.ts) opens its branch the same way.
+  const arrivalVerse = useLessonSessionStore((state) => state.arrivalVerse);
+  useMindMapFollowFocusBranch({ focusVerse: focusVerse ?? arrivalVerse ?? undefined, tree, activePath, setActivePath });
   const todayVerseKeys = useMemo(() => todaysLessonVerseKeys(bookLabel, chapters, todaysDay, focusVerse), [bookLabel, chapters, todaysDay, focusVerse]);
-  // The pin steps back to yesterday's verses while today's lesson still owes their review, and on
-  // to the next lesson's verses once today's is done (lib/useYesterdayReview.ts, nextPathVerse).
+  // The pin: yesterday's verses while their review is owed, else the next lesson's once today's is done.
   const yesterday = useYesterdayReview(pathKey, useMemo(() => chapters.flatMap((chapter) => chapter.days), [chapters]), completedDays, todaysDay);
   const nextVerse = yesterday.first ?? (bookLabel && completedDays >= todaysDay ? nextPathVerse(bookLabel, chapters, completedDays) : undefined);
   const pinTarget = mapPinTarget(treePericopes(tree), focusVerse, todayVerseKeys, nextVerse, bookLabel ? nextPathVerse(bookLabel, chapters, Math.max(completedDays, todaysDay)) : undefined);
@@ -130,6 +129,8 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
   // Called AFTER the two hooks above so a focused verse's own tighter framing always wins.
   useMindMapVerseFocusLock({ focusVerse, layout, wrapperRef, transformRef });
   const locate = useMindMapLocate({ homePath, setActivePath, pinTarget, layout, wrapperRef, transformRef });
+  useLocateOnArrival(locate);
+  useMindMapArrival({ layout, wrapperRef, transformRef });
 
   return (
     <div ref={wrapperRef} className="relative h-full w-full">

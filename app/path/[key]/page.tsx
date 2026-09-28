@@ -4,11 +4,10 @@ import { resolvePathLabel } from "@/lib/memorizationContent";
 
 export default async function PathOverviewPage({ params, searchParams }: PageProps<"/path/[key]">) {
   const { key } = await params;
-  const { version, versesPerDay, today, priorKnownVerseCount, startLesson } = await searchParams;
+  // `today=1` (Home's "Go to your path") is read on the Mind Map itself — see lib/useLocateOnArrival.ts.
+  const { version, versesPerDay, priorKnownVerseCount, startLesson } = await searchParams;
   const decodedKey = decodeURIComponent(key);
   const resolvedVersion = (Array.isArray(version) ? version[0] : version) ?? "KJV";
-  const todayParam = Array.isArray(today) ? today[0] : today;
-  const jumpToToday = todayParam === "1";
   const startLessonParam = Array.isArray(startLesson) ? startLesson[0] : startLesson;
   const versesPerDayParam = Array.isArray(versesPerDay) ? versesPerDay[0] : versesPerDay;
   const resolvedVersesPerDay = versesPerDayParam ? Number(versesPerDayParam) : undefined;
@@ -32,7 +31,6 @@ export default async function PathOverviewPage({ params, searchParams }: PagePro
         label={label}
         version={resolvedVersion}
         versesPerDay={resolvedVersesPerDay}
-        jumpToToday={jumpToToday}
         startLesson={startLessonParam === "1"}
         priorKnownVerseCount={resolvedPriorKnownVerseCount}
       />

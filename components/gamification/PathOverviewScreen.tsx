@@ -12,7 +12,6 @@ import { useHasMounted } from "@/lib/useHasMounted";
 import { usePericopesReady } from "@/lib/usePericopesReady";
 import { resolveBookChapterView } from "@/lib/bookChapterView";
 import { useMindMapSelection } from "@/lib/useMindMapSelection";
-import { useJumpToTodayVerse } from "@/lib/useJumpToTodayVerse";
 import { activeDayNumber, todaysDayNumber } from "@/lib/dayRollover";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
@@ -26,14 +25,13 @@ interface PathOverviewScreenProps {
   label: string;
   version: string;
   versesPerDay?: number;
-  jumpToToday?: boolean; // see lib/useJumpToTodayVerse.ts
   startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
   // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at
   // creation. See PathProgress.priorKnownVerseCount.
   priorKnownVerseCount?: number;
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, jumpToToday, startLesson, priorKnownVerseCount }: PathOverviewScreenProps) {
+export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount }: PathOverviewScreenProps) {
   // `verses` below is lazily seeded from the localStorage-backed content cache, which may
   // already be populated on the client's first render but is always empty during SSR —
   // gating on `mounted` keeps the first paint a stable FetchLoading placeholder either way.
@@ -61,7 +59,6 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   // a chapter number shows that chapter's parchment view, optionally with a specific verse to
   // open straight to (see lib/useMindMapSelection.ts). Never persisted.
   const { chapterOverride, targetVerse, setChapterOverride, selectPericope, reset: resetMindMapSelection } = useMindMapSelection();
-  useJumpToTodayVerse(key, jumpToToday, verses, plan, includeVerseReferences, pegSystemEnabled, locationTagLevels, selectPericope);
   // A lesson/practice session, rendered right here instead of navigating away (InPlaceLessonSession.tsx) — null means none running.
   const [lessonDay, setLessonDay] = useState<{ dayNumber: number; mode: "select" | "practice" } | null>(null);
   const [overrideResetKey, setOverrideResetKey] = useState(key);

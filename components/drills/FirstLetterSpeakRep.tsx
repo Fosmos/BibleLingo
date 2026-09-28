@@ -12,6 +12,7 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { FirstLetterMultiVersePageCard } from "@/components/drills/FirstLetterMultiVersePageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
+import { usePeekedVerses } from "@/lib/usePeekedVerses";
 
 interface FirstLetterSpeakRepProps {
   verse: VerseSegment;
@@ -32,6 +33,9 @@ interface FirstLetterSpeakRepProps {
   onVerseChange?: (verse: VerseSegment) => void;
   // Shown beside View First Letters/View Verse — the Mind Map review's type/speak switch.
   verseViewExtra?: ReactNode;
+  // The Mind Map's SRS review: peeking flags a problem verse, and finishing clears every verse
+  // recalled without one (see lib/usePeekedVerses.ts). The standalone review keeps its own rules.
+  trackPeeks?: boolean;
 }
 
 // SRS review's speak-mode alternative to FirstLetterTypeRep — same "reveal by first letter"
@@ -41,8 +45,13 @@ interface FirstLetterSpeakRepProps {
 // split FirstLetterTypeRep.tsx already follows). SRS review's own sole consumer (see
 // SrsEntityRecall.tsx): never restarts on a mistake, and has no per-letter mistake hint to
 // show (a spoken miss is only ever discovered once the whole attempt is scored).
-export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAccuracy, layout, verses, moveAutoCompleteToVerseView, onVerseChange, verseViewExtra }: FirstLetterSpeakRepProps) {
-  const speaking = useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVerseAccuracy });
+export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAccuracy, layout, verses, moveAutoCompleteToVerseView, onVerseChange, verseViewExtra, trackPeeks }: FirstLetterSpeakRepProps) {
+  const peeks = usePeekedVerses();
+  const finish = (hadMistake: boolean, accuracy: number) => {
+    if (trackPeeks) peeks.settle(verses);
+    onComplete(hadMistake, accuracy);
+  };
+  const speaking = useFirstLetterSpeaking({ verse, verseMarkers, onComplete: finish, onVerseAccuracy });
   const showFallback = !speaking.supported || speaking.permissionDenied || !speaking.isSecure;
   // The ONE real verse currently being recalled, so View First Letters/View Verse (see
   // LessonControlBar.tsx's own `verseText`) peek at just that verse instead of the whole
@@ -58,7 +67,7 @@ export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAc
       <LessonControlBar
         dockRef={layout.dockRef}
         verseText={activeRealVerse?.text ?? verse.text}
-        onVersePeek={() => activeRealVerse && flagPeekedVerse(activeRealVerse)}
+        onVersePeek={() => activeRealVerse && (trackPeeks ? peeks.peek(activeRealVerse) : flagPeekedVerse(activeRealVerse))}
         verseViewExtra={
           <>
             {verseViewExtra}

@@ -5,6 +5,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useActivePathKeys } from "@/lib/useActivePathKeys";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { TodayVersesCard } from "@/components/gamification/TodayVersesCard";
+import { NeedsReviewingCard } from "@/components/gamification/NeedsReviewingCard";
 import { VespersPromptCard } from "@/components/gamification/VespersPromptCard";
 import { SleepTimerCard } from "@/components/gamification/SleepTimerCard";
 import { PageHeading } from "@/components/ui/PageHeading";
@@ -34,13 +35,12 @@ export default function Home() {
         </PageHeading>
         <StreakCounter pill />
       </div>
-      {/* Home is strictly one daily action now — start today's lesson. Every review queue
-          (Spaced Review due-list, the Sword of the Spirit box overview, Problem Verses) lives
-          on the Memorized tab instead (see app/memorized/page.tsx) — Needs Reviewing used to
-          duplicate Spaced Review's own due-entities list right here, competing with the one
-          thing Home should actually be pushing the reader toward. */}
+      {/* Today's lesson first, then whatever's due for review — each with a pin straight to it on
+          the map. The fuller review tools (Sword of the Spirit, Problem Verses) stay on the
+          Memorized tab (see app/memorized/page.tsx). */}
       <div className="flex flex-1 flex-col gap-5">
         {activePathKeys.length === 0 ? <TodayVersesCard /> : activePathKeys.map((key) => <TodayVersesCard key={key} pathKey={key} />)}
+        <NeedsReviewingCard />
         <VespersPromptCard />
         <SleepTimerCard />
       </div>
