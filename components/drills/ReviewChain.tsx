@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { VerseSegment, WordDiffToken } from "@/types";
 import { useReviewChain, type ReviewChainProgress } from "@/lib/useReviewChain";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
@@ -10,7 +10,7 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { MistakeNotice } from "@/components/drills/MistakeNotice";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { ReviewChainResult } from "@/components/drills/ReviewChainResult";
-import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
+import { usePeekedVerses } from "@/lib/usePeekedVerses";
 import { ReviewChainParchment } from "@/components/drills/ReviewChainParchment";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
@@ -41,6 +41,15 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
   useEffect(() => {
     if (currentVerse) onVerseChange?.(currentVerse);
   }, [currentVerse, onVerseChange]);
+  // Peeking flags a problem verse; finishing clears the ones recalled without a peek.
+  const peeks = usePeekedVerses();
+  const { settle } = peeks;
+  const settledRef = useRef(false);
+  useEffect(() => {
+    if (!finished || settledRef.current) return;
+    settledRef.current = true;
+    settle(verses);
+  }, [finished, settle, verses]);
   const totalWords = combinedWords.length;
 
   if (finished) {
@@ -83,8 +92,8 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
       {layout ? chainParchment : <LessonParchmentCard>{chainParchment}</LessonParchmentCard>}
 
       {/* The lookup pair shows only the verse being typed, and opening either one marks it as a
-          problem verse (see lib/flagPeekedVerse.ts). */}
-      <LessonControlBar dockRef={layout?.dockRef} verseText={currentVerse?.text} onVersePeek={() => currentVerse && flagPeekedVerse(currentVerse)} verseViewExtra={verseViewExtra}>
+          problem verse (see lib/usePeekedVerses.ts). */}
+      <LessonControlBar dockRef={layout?.dockRef} verseText={currentVerse?.text} onVersePeek={() => currentVerse && peeks.peek(currentVerse)} verseViewExtra={verseViewExtra}>
         {layout && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>}
         {referenceMatch ? (
           <ReferenceNumberEntry

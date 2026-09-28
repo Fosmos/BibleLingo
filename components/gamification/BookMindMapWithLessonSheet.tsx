@@ -19,6 +19,7 @@ import { MindMapCornerTools } from "@/components/gamification/MindMapCornerTools
 import { MindMapReviewTab } from "@/components/gamification/MindMapReviewTab";
 import { useMindMapReviewOffer } from "@/lib/useMindMapReviewOffer";
 import { useHideTabBarWhile } from "@/lib/useHideTabBarWhile";
+import { useReviewArrival } from "@/lib/useReviewArrival";
 import { MindMapPathTab } from "@/components/gamification/MindMapPathTab";
 import { MindMapPathSetup } from "@/components/gamification/MindMapPathSetup";
 import { MindMapPathsMenu } from "@/components/gamification/MindMapPathsMenu";
@@ -55,6 +56,7 @@ export function BookMindMapWithLessonSheet({ pathKey, label, days, verses, versi
   // The map draws the broadest active path around this one (see lib/useMindMapData.ts).
   const mapData = useMindMapData(pathKey);
   const review = useMindMapReviewOffer(mapData.status === "ready" ? mapData.days : days);
+  useReviewArrival(review.offerVerse);
   const activeKeys = useActivePathKeys();
   const setStoreFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const clearStoreFocusVerse = useLessonSessionStore((state) => state.clearFocusVerse);

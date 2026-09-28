@@ -16,6 +16,9 @@ interface LessonSessionState {
   // threading" role `activeCount` already plays for AuthGate.tsx's tab-bar hiding — null means
   // no sheet-embedded lesson is currently focused on any one verse.
   focusVerse: LessonFocusVerse | null;
+  // A verse the Mind Map should bring into view once, then let go (see lib/useMindMapArrival.ts)
+  // — Home's Needs Reviewing links land here. Unlike focusVerse, the view stays free afterwards.
+  arrivalVerse: LessonFocusVerse | null;
   // The real DOM node lib/useMindMapSenseCardSlot.ts measures for PathOverviewScreen.tsx's own
   // in-place lesson sheet's dedicated "sense lines only" card (see LessonBottomSheet.tsx) —
   // LessonPageCard.tsx portals its card straight into this node instead of rendering inline
@@ -59,6 +62,7 @@ interface LessonSessionActions {
   end: () => void;
   setFocusVerse: (verse: LessonFocusVerse) => void;
   clearFocusVerse: () => void;
+  setArrivalVerse: (verse: LessonFocusVerse | null) => void;
   setSenseCardPortalNode: (node: HTMLDivElement | null) => void;
   setSenseCardFillHeightPx: (px: number | null) => void;
   setSenseCardColumnWidthPx: (px: number | null) => void;
@@ -85,6 +89,7 @@ type LessonSessionStore = LessonSessionState & LessonSessionActions;
 export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   activeCount: 0,
   focusVerse: null,
+  arrivalVerse: null,
   senseCardPortalNode: null,
   senseCardFillHeightPx: null,
   senseCardColumnWidthPx: null,
@@ -98,6 +103,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   end: () => set((state) => ({ activeCount: Math.max(0, state.activeCount - 1) })),
   setFocusVerse: (verse) => set({ focusVerse: verse }),
   clearFocusVerse: () => set({ focusVerse: null }),
+  setArrivalVerse: (verse) => set({ arrivalVerse: verse }),
   setSenseCardPortalNode: (node) => set({ senseCardPortalNode: node }),
   setSenseCardFillHeightPx: (px) => set({ senseCardFillHeightPx: px }),
   setSenseCardColumnWidthPx: (px) => set({ senseCardColumnWidthPx: px }),

@@ -130,6 +130,7 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
             onComplete={(_hadMistake, accuracy) => handleComplete(accuracy)}
             onVerseChange={reportVerse}
             verseViewExtra={<SrsInputModeToggle />}
+            trackPeeks
           />
         ) : (
           <ReviewChain
