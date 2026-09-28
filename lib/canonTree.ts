@@ -2,7 +2,6 @@ import type { BibleBook, PathProgress } from "@/types";
 import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import { pathKey } from "@/lib/memorizationContent";
 import { getMemorizedVerses } from "@/lib/progressSummary";
-import type { BookTheme } from "@/lib/bookThemes";
 
 export type TestamentId = "old" | "new";
 
@@ -158,36 +157,3 @@ export function completedChaptersForBook(paths: Record<string, PathProgress>, bo
   return new Set(memorized.map((entry) => entry.verse.chapter));
 }
 
-// A rough per-book completion percentage — "chapters graduated / total chapters" — Book
-// node's own badge. 0% for a book with no book-mode path at all, same as one genuinely never
-// started.
-export function bookCompletionPercent(paths: Record<string, PathProgress>, book: BibleBook): number {
-  return Math.round((completedChaptersForBook(paths, book).size / book.chapterCount) * 100);
-}
-
-// A theme's own slice of its book's completion — same "chapters graduated / chapters in range"
-// math as bookCompletionPercent, just scoped to the theme's own startChapter..endChapter rather
-// than the whole book, reusing the SAME completedChaptersForBook set (one computation per book,
-// not one per theme) since a theme is purely a display grouping over chapters that already carry
-// their own real completion state.
-export function themeCompletionPercent(paths: Record<string, PathProgress>, book: BibleBook, theme: BookTheme): number {
-  const completed = completedChaptersForBook(paths, book);
-  const totalChapters = theme.endChapter - theme.startChapter + 1;
-  let completedChapters = 0;
-  for (let chapter = theme.startChapter; chapter <= theme.endChapter; chapter++) {
-    if (completed.has(chapter)) completedChapters++;
-  }
-  return totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
-}
-
-// Chapter-weighted average across any group of books — Testament AND Genre nodes' own
-// aggregate badge in the Mind Map; which group `books` came from is irrelevant to the math.
-export function groupCompletionPercent(paths: Record<string, PathProgress>, books: BibleBook[]): number {
-  let totalChapters = 0;
-  let completedChapters = 0;
-  for (const book of books) {
-    totalChapters += book.chapterCount;
-    completedChapters += completedChaptersForBook(paths, book).size;
-  }
-  return totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
-}

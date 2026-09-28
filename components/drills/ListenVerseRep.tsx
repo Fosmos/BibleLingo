@@ -1,9 +1,9 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
+import { ArrowRight, Mic, Play, RotateCcw, Volume2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
-import { useKineticTextSync } from "@/lib/useKineticTextSync";
+import { useListenRepeat, type MicBlocked } from "@/lib/useListenRepeat";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
@@ -22,65 +22,52 @@ interface ListenVerseRepProps {
   onComplete: () => void;
 }
 
-// Per-verse Listen: this ONE verse narrated aloud (Web Speech API), each word highlighted in
-// real time as it's actually spoken — the automatic FIRST stage of every verse's own drilling
-// sequence (see lib/learnSteps.ts's versePhases), a quick "hear it before you drill it" pass,
-// gated by kineticTextStageEnabled (Profile > Advanced). No verseMarkers/context needed, unlike
-// Speak/Type: only ever drills exactly one verse's own text, never a joined multi-verse
-// segment. Not graded, and never auto-advances on its own — same "self-checked" precedent as
-// DrawFirstLetterRep.
+const SECONDARY_CLASS =
+  "flex h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-line bg-mist/40 text-sm font-medium text-ink-soft dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300";
+
+// Why the mic isn't listening, shown after "tap Next" — see lib/useListenRepeat.ts's micBlocked.
+const MIC_BLOCKED_REASON: Record<MicBlocked, string> = {
+  insecure: "mic needs https",
+  denied: "mic access is off",
+  unsupported: "no speech recognition here",
+};
+
+// Listen & Repeat — the automatic FIRST stage of every verse's drilling sequence (see
+// lib/learnSteps.ts's versePhases), gated by kineticTextStageEnabled (Profile > Advanced). The
+// verse goes line by line (its sense lines): each is read aloud with its words lit as they're
+// heard, then the reader says it back, each word lighting green as the mic hears it, and the next
+// line follows on its own (see lib/useListenRepeat.ts). Not graded: Continue is always there.
 export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProps) {
-  const sync = useKineticTextSync(verse.text);
+  const lr = useListenRepeat(verse.text);
+  const current = lr.ranges[lr.clauseIndex];
+  const lineCount = lr.ranges.length;
 
-  const activeVerseWords = (
-    <>
-      {sync.words.map((wordOffset, index) => (
-        <span
-          key={index}
-          className={
-            index === sync.activeWordIndex
-              ? "rounded bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300"
-              : index < sync.activeWordIndex
-                ? "text-ink-muted dark:text-zinc-600"
-                : ""
-          }
-        >
-          {wordOffset.word}{" "}
-        </span>
-      ))}
-    </>
-  );
-
-  // Same word-by-word state as activeVerseWords above, sliced to just this ONE clause's own
-  // range (see LessonPageCard.tsx's own renderActiveVerse doc comment) — `sync.words` comes
-  // from lib/verseWordOffsets.ts's own speech-sync tokenizer (deliberately NOT
-  // tokenizeVerseWords — see that file's own doc comment), which can very rarely disagree with
-  // tokenizeVerseWords' own word count (a hyphenated word, a bare punctuation-only token) —
-  // this stage is never scored, so a clause boundary landing a word off by one on a verse like
-  // that is a cosmetic nit, not a functional bug.
-  function renderActiveVerseRange(_: VerseSegment, range: SenseLineWordRange) {
-    return (
-      <>
-        {sync.words.slice(range.startIndex, range.endIndex).map((wordOffset, offset) => {
-          const index = range.startIndex + offset;
-          return (
-            <span
-              key={index}
-              className={
-                index === sync.activeWordIndex
-                  ? "rounded bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300"
-                  : index < sync.activeWordIndex
-                    ? "text-ink-muted dark:text-zinc-600"
-                    : ""
-              }
-            >
-              {wordOffset.word}{" "}
-            </span>
-          );
-        })}
-      </>
-    );
+  function wordClass(index: number): string {
+    if (lr.phase === "idle" || lr.phase === "done" || !current || index < current.startIndex) return "";
+    if (index >= current.endIndex) return "text-ink-muted/50 dark:text-zinc-600";
+    if (lr.phase === "playing") {
+      if (index === lr.narratedWord) return "rounded bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300";
+      return "text-ink dark:text-zinc-100";
+    }
+    return index - current.startIndex < lr.repeatedCount ? "text-green-700 dark:text-green-400" : "text-brand-700 dark:text-brand-300";
   }
+
+  const renderWords = (start: number, end: number) =>
+    lr.words.slice(start, end).map((word, offset) => (
+      <span key={start + offset} className={`transition-colors ${wordClass(start + offset)}`}>
+        {word}{" "}
+      </span>
+    ));
+
+  const renderActiveVerseRange = (_: VerseSegment, range: SenseLineWordRange) => <>{renderWords(range.startIndex, range.endIndex)}</>;
+
+  const status =
+    lr.phase === "idle" ? "Hear each line, then say it back" :
+    lr.phase === "done" ? "Every line heard and repeated" :
+    lr.phase === "playing" ? `Listen — line ${lr.clauseIndex + 1} of ${lineCount}` :
+    lr.micListening ? "Your turn — say it back" :
+    lr.micBlocked ? `Say it aloud, then tap Next (${MIC_BLOCKED_REASON[lr.micBlocked]})` :
+    "Your turn — say it aloud, then tap Next";
 
   return (
     <div className="flex flex-col gap-3">
@@ -89,32 +76,47 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
       ) : (
         <LessonParchmentCard>
           <p className="mb-1 flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
-            Listen <InfoTip text={INFO_TIPS.listenVerseRep} />
+            Listen &amp; Repeat <InfoTip text={INFO_TIPS.listenVerseRep} />
           </p>
-          <p className="font-serif text-lg leading-loose">{activeVerseWords}</p>
+          <div className="flex flex-col font-serif text-lg leading-loose">
+            {lr.ranges.map((range) => (
+              <p key={range.startIndex}>{renderWords(range.startIndex, range.endIndex)}</p>
+            ))}
+          </div>
         </LessonParchmentCard>
       )}
 
       <LessonControlBar dockRef={layout?.dockRef} verseText={verse.text}>
-        {/* No caption row above the card in `layout` mode — unmeasured chrome there pushes the
-            page past one viewport (useParchmentFillHeight.ts); the InfoTip rides by Continue. */}
-        {sync.isSupported ? (
-          <button
-            type="button"
-            onClick={() => (sync.isPlaying ? sync.stop() : sync.play())}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-mist/40 text-sm font-medium text-ink-soft dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300"
-          >
-            {sync.isPlaying ? <Pause size={16} /> : <Play size={16} />}
-            {sync.isPlaying ? "Pause" : sync.activeWordIndex >= 0 ? "Listen again" : "Listen"}
-          </button>
+        {/* Fixed-height status line, so the controls below never shift as it changes. */}
+        <p className="flex h-6 items-center justify-center gap-1.5 text-sm font-medium text-ink-soft dark:text-zinc-300">
+          {lr.phase === "playing" && <Volume2 size={15} className="text-brand-500" />}
+          {lr.phase === "yourTurn" && lr.micListening && <Mic size={15} className="animate-pulse text-heart-500" />}
+          {status}
+        </p>
+        {lr.phase === "idle" || lr.phase === "done" ? (
+          <motion.button type="button" whileTap={TAP_SCALE} onClick={lr.start} className={`${SECONDARY_CLASS} w-full`}>
+            {lr.phase === "idle" ? <Play size={16} /> : <RotateCcw size={16} />}
+            {lr.phase === "idle" ? "Start" : "Start over"}
+          </motion.button>
         ) : (
-          <p className="text-center text-sm text-ink-muted">Read-aloud isn&apos;t available in this browser — read it over yourself, then continue.</p>
+          <div className="flex w-full gap-2">
+            <button type="button" onClick={lr.hearAgain} className={SECONDARY_CLASS}>
+              <RotateCcw size={16} /> Hear again
+            </button>
+            <button type="button" onClick={lr.next} className={SECONDARY_CLASS}>
+              Next <ArrowRight size={16} />
+            </button>
+          </div>
         )}
         <div className="flex items-center gap-2">
           <motion.button type="button" whileTap={TAP_SCALE} onClick={onComplete} className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white">
             Continue
           </motion.button>
-          {layout && <InfoTip text={INFO_TIPS.listenVerseRep} />}
+          {layout && (
+            <span className="[.lesson-sheet-controls_&]:hidden">
+              <InfoTip text={INFO_TIPS.listenVerseRep} />
+            </span>
+          )}
         </div>
         <AutoCompleteButton onClick={onComplete} />
       </LessonControlBar>

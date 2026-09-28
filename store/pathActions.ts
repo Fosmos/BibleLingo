@@ -1,14 +1,14 @@
 import type { StoreApi } from "zustand";
-import type { LocationTagLevel, PathProgress, UserProgress } from "@/types";
+import type { PathProgress, UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
+import { activePathKeysOf } from "@/lib/activePaths";
+import { syncMemorizedEntities } from "@/lib/memorizedEntities";
 
 interface PathActions {
   setPath: (
     pathKey: string,
     version: string,
     versesPerDay?: number,
-    locationTagLevels?: LocationTagLevel[],
-    sectionEndPegEnabled?: boolean,
     priorKnownVerseCount?: number,
     // How many auto-completed days that verse count actually becomes (see lib/dayPlan.ts's own
     // priorKnownDayCount) — the caller (PathOverviewScreen.tsx) computes this against the
@@ -17,7 +17,15 @@ interface PathActions {
     priorKnownDayCount?: number,
   ) => void;
   resetPathProgress: (pathKey: string) => void;
+  // Focuses `pathKey`, adding it to the active set if it isn't there yet.
   setActivePath: (pathKey: string) => void;
+  // Stops working through `pathKey` (its progress is kept). If it was the focused path, focus
+  // moves to another active path, or to none.
+  removeActivePath: (pathKey: string) => void;
+  // A path found already finished (every verse learned) that's still listed as active — one
+  // completed before finished paths retired themselves: drops it, and makes sure its verses are in
+  // spaced review.
+  retireLearnedPath: (pathKey: string) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -28,7 +36,7 @@ export function createPathActions(
   persist: (progress: UserProgress) => UserProgress,
 ): PathActions {
   return {
-    setPath: (pathKey, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, priorKnownDays) => {
+    setPath: (pathKey, version, versesPerDay, priorKnownVerseCount, priorKnownDays) => {
       const state = get();
       const existing = state.paths[pathKey];
       // Spreads `existing` FIRST rather than naming every field explicitly — a field this
@@ -53,11 +61,16 @@ export function createPathActions(
         // "do" a lesson that's just the verses they already said they knew.
         completedDays: existing?.completedDays ?? priorKnownDays ?? 0,
         versesPerDay: versesPerDay ?? existing?.versesPerDay,
-        locationTagLevels: locationTagLevels ?? existing?.locationTagLevels,
-        sectionEndPegEnabled: sectionEndPegEnabled ?? existing?.sectionEndPegEnabled,
         priorKnownVerseCount: freshPriorKnownVerseCount,
       };
-      set(persist({ ...state, paths: { ...state.paths, [pathKey]: plan } }));
+      const paths = { ...state.paths, [pathKey]: plan };
+      // A path that starts with days already done — the "I already know some of this" step
+      // when choosing it (on the Mind Map or anywhere else) — has verses that are memorized from
+      // the moment it exists, so they go into spaced review (SRS) right away, the same rebuild
+      // completeDay runs, rather than waiting for the reader's first real lesson on it.
+      const gainedDays = plan.completedDays > (existing?.completedDays ?? 0);
+      const memorizedEntities = gainedDays ? syncMemorizedEntities(paths, state.memorizedEntities) : state.memorizedEntities;
+      set(persist({ ...state, paths, memorizedEntities }));
     },
 
     // Called right before navigating to a path chosen through the picker flow (GuidedPathFlow's
@@ -80,8 +93,23 @@ export function createPathActions(
 
     setActivePath: (pathKey) => {
       const state = get();
-      if (state.activePathKey === pathKey) return;
-      set(persist({ ...state, activePathKey: pathKey }));
+      const keys = activePathKeysOf(state);
+      if (state.activePathKey === pathKey && state.activePathKeys?.includes(pathKey)) return;
+      const activePathKeys = keys.includes(pathKey) ? keys : [...keys, pathKey];
+      set(persist({ ...state, activePathKey: pathKey, activePathKeys }));
+    },
+
+    retireLearnedPath: (pathKey) => {
+      get().removeActivePath(pathKey);
+      const state = get();
+      set(persist({ ...state, memorizedEntities: syncMemorizedEntities(state.paths, state.memorizedEntities) }));
+    },
+
+    removeActivePath: (pathKey) => {
+      const state = get();
+      const activePathKeys = activePathKeysOf(state).filter((key) => key !== pathKey);
+      const activePathKey = state.activePathKey === pathKey ? (activePathKeys[0] ?? null) : state.activePathKey;
+      set(persist({ ...state, activePathKey, activePathKeys }));
     },
   };
 }

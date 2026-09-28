@@ -16,6 +16,7 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonWholeDayPageCard } from "@/components/gamification/LessonWholeDayPageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { LessonSheetWorkspace, useInLessonSheet } from "@/components/gamification/LessonSheetWorkspace";
 
 interface VerseOrientationRepProps {
   // The whole day's own joined synthetic segment (see LearnSection.tsx's `wholeDay`) — clause
@@ -123,45 +124,58 @@ export function VerseOrientationRep({ verse, verseMarkers, annotations, onAnnota
   }
 
   const canContinue = blocks.every((block) => annotations[block.startIndex]?.role !== undefined);
+  // In the Mind Map sheet the clause cards (which already show the text, role-tinted) take the
+  // card's own zone instead of the page card — see LessonSheetWorkspace.tsx.
+  const inSheet = useInLessonSheet();
+
+  const workspace = (
+    <>
+      <p className="text-center text-xs text-ink-muted">Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.</p>
+      <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex w-full flex-col gap-2">
+        {orderedBlocks.map((block) => (
+          <ClauseCard
+            key={block.id}
+            block={block}
+            words={words}
+            verseMarkers={verseMarkers}
+            verseLabel={block.startIndex === 0 ? { chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined}
+            annotation={annotations[block.startIndex]}
+            isSelected={block.id === selectedBlockId}
+            onToggleBreak={toggleBreak}
+            onSelect={() => setSelectedBlockId(block.id)}
+            onMergeUp={block.startIndex > 0 ? () => toggleBreak(block.startIndex - 1) : undefined}
+          />
+        ))}
+      </Reorder.Group>
+      <ClauseRolePalette
+        roles={bookRoles}
+        activeRoleId={selectedBlock ? annotations[selectedBlock.startIndex]?.role?.id : undefined}
+        disabled={!selectedBlock}
+        onSelectRole={assignRole}
+        onSaveRole={saveRole}
+      />
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-3">
       <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
         Understand <InfoTip text={INFO_TIPS.verseOrientationRep} />
       </p>
-      <LessonWholeDayPageCard
-        layout={layout}
-        verses={verses}
-        renderActiveVerse={(realVerse, verseIndex, range) => (
-          <AnnotatedVerseWordRange verse={realVerse} range={range} wordAnnotations={annotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
-        )}
-      />
+      {inSheet ? (
+        <LessonSheetWorkspace>{workspace}</LessonSheetWorkspace>
+      ) : (
+        <LessonWholeDayPageCard
+          layout={layout}
+          verses={verses}
+          renderActiveVerse={(realVerse, verseIndex, range) => (
+            <AnnotatedVerseWordRange verse={realVerse} range={range} wordAnnotations={annotations} verseOffset={verseOffsets[verseIndex] ?? 0} />
+          )}
+        />
+      )}
 
       <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        <p className="text-center text-xs text-ink-muted">Tap a word to split or merge clauses. Drag a card to reorder it, then give it a role.</p>
-        <Reorder.Group axis="y" values={orderedIds} onReorder={setOrder} className="flex w-full flex-col gap-2">
-          {orderedBlocks.map((block) => (
-            <ClauseCard
-              key={block.id}
-              block={block}
-              words={words}
-              verseMarkers={verseMarkers}
-              verseLabel={block.startIndex === 0 ? { chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined}
-              annotation={annotations[block.startIndex]}
-              isSelected={block.id === selectedBlockId}
-              onToggleBreak={toggleBreak}
-              onSelect={() => setSelectedBlockId(block.id)}
-              onMergeUp={block.startIndex > 0 ? () => toggleBreak(block.startIndex - 1) : undefined}
-            />
-          ))}
-        </Reorder.Group>
-        <ClauseRolePalette
-          roles={bookRoles}
-          activeRoleId={selectedBlock ? annotations[selectedBlock.startIndex]?.role?.id : undefined}
-          disabled={!selectedBlock}
-          onSelectRole={assignRole}
-          onSaveRole={saveRole}
-        />
+        {!inSheet && workspace}
         <motion.button
           type="button"
           whileTap={TAP_SCALE}

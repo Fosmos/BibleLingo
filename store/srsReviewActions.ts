@@ -1,11 +1,13 @@
 import type { StoreApi } from "zustand";
-import type { UserProgress } from "@/types";
-import { scheduleReview } from "@/lib/srs";
+import type { SrsBox, SrsReviewRun, UserProgress } from "@/types";
+import { moveToBox, scheduleReview } from "@/lib/srs";
 import { SHEKELS_PER_VERSE_REVIEWED } from "@/lib/economy";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 interface SrsReviewActions {
   recordSrsReview: (entityId: string, accuracy: number) => void;
+  moveEntityToBox: (entityId: string, box: SrsBox) => void;
+  saveSrsReviewRun: (run: SrsReviewRun | null) => void;
   earnShekels: (amount: number) => void;
   recordChapterReviewAccuracy: (pathKey: string, accuracy: number) => void;
   recordMasteryLevel: (key: string, level: number) => void;
@@ -23,7 +25,7 @@ export function createSrsReviewActions(
       const state = get();
       const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
       if (!entity) return;
-      const srs = scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold, state.restDayOfWeek ?? null);
+      const srs = { ...scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold, state.restDayOfWeek ?? null), lastAccuracy: accuracy };
       const memorizedEntities = state.memorizedEntities.map((candidate) => (candidate.id === entityId ? { ...candidate, srs } : candidate));
       const best = Math.max(state.srsBestAccuracy[entityId] ?? 0, accuracy);
       set(persist({ ...state, memorizedEntities, srsBestAccuracy: { ...state.srsBestAccuracy, [entityId]: best } }));
@@ -33,6 +35,20 @@ export function createSrsReviewActions(
         const verseCount = entity.endVerse - entity.startVerse + 1;
         get().earnShekels(verseCount * SHEKELS_PER_VERSE_REVIEWED);
       }
+    },
+
+    moveEntityToBox: (entityId, box) => {
+      const state = get();
+      const memorizedEntities = state.memorizedEntities.map((entity) =>
+        entity.id === entityId ? { ...entity, srs: moveToBox(entity.srs, box, new Date(), state.restDayOfWeek ?? null) } : entity,
+      );
+      set(persist({ ...state, memorizedEntities }));
+    },
+
+    saveSrsReviewRun: (run) => {
+      const state = get();
+      if (!run && !state.srsReviewRun) return;
+      set(persist({ ...state, srsReviewRun: run }));
     },
 
     earnShekels: (amount) => {

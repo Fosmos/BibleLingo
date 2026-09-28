@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { MemorizationDay, ReviewStage } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useCelebration } from "@/lib/useCelebration";
+import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { ReviewChain } from "@/components/drills/ReviewChain";
 import { LessonChrome } from "@/components/gamification/LessonChrome";
@@ -39,9 +40,11 @@ interface ReviewSectionProps {
   version?: string;
   // See DaySessionController.tsx's own doc comment — set only by the in-place lesson flow.
   onExit?: () => void;
+  // See LessonChrome.tsx's own doc comment — threaded straight through to its own call below.
+  embeddedInMindMap?: boolean;
 }
 
-export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layout, lessonLabel, version, onExit }: ReviewSectionProps) {
+export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layout, lessonLabel, version, onExit, embeddedInMindMap }: ReviewSectionProps) {
   let stages: StageWithCelebration[];
   if (phase === "previous") {
     const previousVerses = day.previousVerses ?? [];
@@ -59,6 +62,7 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
 
   const [stageIndex, setStageIndex] = useCheckpointField(sessionKey, `reviewStageIndex:${phase}`, 0);
   const { pending, celebrate, finish } = useCelebration();
+  const reportVerse = useReportFocusVerse(embeddedInMindMap);
 
   // Nothing to review (e.g. a path's very first lesson) skips straight past this section
   // instead of showing a placeholder the user has to click through — same "no stage the user
@@ -112,9 +116,10 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
         total={stages.length}
         onExit={onExit}
         layout={layout}
+        embeddedInMindMap={embeddedInMindMap}
       />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-        <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} layout={layout} restartOnMistake={false} />
+        <ReviewChain key={stageIndex} label={label} verses={stage.verses} onComplete={handleStageComplete} layout={layout} restartOnMistake={false} onVerseChange={reportVerse} />
       </div>
     </>
   );

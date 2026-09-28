@@ -1,14 +1,16 @@
 "use client";
 
+import { useEffect, type ReactNode } from "react";
 import type { VerseSegment, WordDiffToken } from "@/types";
-import { useReviewChain } from "@/lib/useReviewChain";
+import { useReviewChain, type ReviewChainProgress } from "@/lib/useReviewChain";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
+import { MistakeNotice } from "@/components/drills/MistakeNotice";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { ReviewChainResult } from "@/components/drills/ReviewChainResult";
-import { ReviewChainHint } from "@/components/drills/ReviewChainHint";
+import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
 import { ReviewChainParchment } from "@/components/drills/ReviewChainParchment";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
@@ -21,14 +23,24 @@ interface ReviewChainProps {
   // See ReviewChainParchment.tsx — when set, `verses` render inline on the Learn flow's own
   // real reading-view page instead of the standalone layout every other caller still gets.
   layout?: ChapterReadingLayout;
-  // See lib/useReviewChain.ts's own doc comment on both of these.
+  // See lib/useReviewChain.ts's own doc comment.
   restartOnMistake?: boolean;
-  requirePerfectPass?: boolean;
+  // Told whichever verse the reader is typing, each time it changes — the Mind Map sheet uses it
+  // to keep the real canvas centered on that verse's chip (see lib/useReportFocusVerse.ts).
+  onVerseChange?: (verse: VerseSegment) => void;
+  // Shown beside View First Letters/View Verse — the Mind Map review's type/speak switch.
+  verseViewExtra?: ReactNode;
+  // Resume point and progress reports — see lib/useReviewChain.ts.
+  initialProgress?: ReviewChainProgress;
+  onProgress?: (progress: ReviewChainProgress) => void;
 }
 
-export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, requirePerfectPass }: ReviewChainProps) {
-  const typing = useReviewChain({ verses, restartOnMistake, requirePerfectPass });
+export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange, verseViewExtra, initialProgress, onProgress }: ReviewChainProps) {
+  const typing = useReviewChain({ verses, restartOnMistake, initialProgress, onProgress });
   const { combinedWords, wordIndex, revealedWords, letterInput, restartNotice, wrongWordIndices, finished, currentWord, currentVerse, referenceMatch } = typing;
+  useEffect(() => {
+    if (currentVerse) onVerseChange?.(currentVerse);
+  }, [currentVerse, onVerseChange]);
   const totalWords = combinedWords.length;
 
   if (finished) {
@@ -70,8 +82,10 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
       )}
       {layout ? chainParchment : <LessonParchmentCard>{chainParchment}</LessonParchmentCard>}
 
-      <LessonControlBar dockRef={layout?.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        {layout && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500">{label}</p>}
+      {/* The lookup pair shows only the verse being typed, and opening either one marks it as a
+          problem verse (see lib/flagPeekedVerse.ts). */}
+      <LessonControlBar dockRef={layout?.dockRef} verseText={currentVerse?.text} onVersePeek={() => currentVerse && flagPeekedVerse(currentVerse)} verseViewExtra={verseViewExtra}>
+        {layout && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>}
         {referenceMatch ? (
           <ReferenceNumberEntry
             key={`${wordIndex}-${currentWord.word}`}
@@ -89,25 +103,14 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
             onChange={(event) => typing.handleLetterChange(event.target.value)}
             maxLength={1}
             autoFocus
+            // The on-screen keyboard is the way to type here — never pop the phone's own over it.
+            inputMode="none"
             aria-label="Type the first letter of the next word"
             className="sr-only"
           />
         )}
-        {restartNotice && <p className="text-sm font-medium text-heart-600">{restartNotice}</p>}
+        <MistakeNotice text={restartNotice} />
         {!referenceMatch && <OnScreenKeyboard onKey={typing.handleLetterChange} />}
-        {!referenceMatch && (
-          <div className="flex items-center gap-4">
-            <ReviewChainHint
-              onRevealWord={() => {
-                if (restartOnMistake && !requirePerfectPass) {
-                  typing.recordMistake(`That word was "${currentWord.word}" — restarting this verse from the beginning.`);
-                } else {
-                  typing.markWrongAndAdvance();
-                }
-              }}
-            />
-          </div>
-        )}
         <AutoCompleteButton onClick={() => onComplete(100)} />
       </LessonControlBar>
     </div>

@@ -29,3 +29,11 @@ export const LOCATION_TAG_LEVEL_LABELS: Record<LocationTagLevel, string> = {
   pericope: "Pericope",
   verse: "Verse",
 };
+
+// A stable empty-array fallback for every `state.locationTagLevels ?? …` Zustand selector —
+// `?? []` inline would hand useSyncExternalStore a fresh array reference on every call
+// whenever this is unset, which it reads as "the store changed" and re-renders forever
+// (surfaces as React's "Maximum update depth exceeded" / "getSnapshot should be cached"). A
+// `never[]`, not `LocationTagLevel[]`, so it stays assignable everywhere an ordinary mutable
+// `LocationTagLevel[]` is expected too.
+export const NO_LOCATION_TAG_LEVELS: never[] = [];

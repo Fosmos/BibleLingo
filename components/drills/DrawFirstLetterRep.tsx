@@ -3,9 +3,10 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
-import { wordLetterPlaceholder } from "@/lib/verseWords";
-import { buildDrawTokens, bucketTokenIndicesByClause } from "@/lib/verseDrawTokens";
+import { firstWordCharacter, hiddenWordBlank, wordLetterPlaceholder } from "@/lib/verseWords";
+import { buildDrawTokens, bucketTokenIndicesByClause, nextWordTokenIndex, withOwnPunctuation } from "@/lib/verseDrawTokens";
 import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 import { useDrawingCanvas } from "@/lib/useDrawingCanvas";
 import { useAutoRecognizeDraw } from "@/lib/useAutoRecognizeDraw";
 import { TAP_SCALE } from "@/lib/motionTokens";
@@ -31,15 +32,15 @@ interface DrawFirstLetterRepProps {
 // Stage 4: the active verse's own words start blank (an underscore stand-in) and turn into
 // just their first letter, one at a time, as the reader draws each one freehand on the
 // canvas below — never the full word. Everything else on the page (every other verse) stays
-// fully printed the whole time. Punctuation/verse-number tokens auto-reveal on their own,
-// long enough to read before moving on; a word token auto-advances once handwriting
-// recognition detects a legible character (never grades correctness, only that something was
-// drawn) — the manual Next/Finish button stays as a fallback.
+// fully printed the whole time. Turns land only on words — a word's own punctuation appears the
+// moment that word is drawn; a word auto-advances once handwriting recognition detects a legible
+// character (never grades correctness, only that something was drawn) — the manual Next/Finish
+// button stays as a fallback.
 export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLetterRepProps) {
   const tokens = useMemo(() => buildDrawTokens(verse.text, {}), [verse.text]);
   const clauseRanges = useMemo(() => senseLineWordRanges(verse.text), [verse.text]);
   const tokenIndicesByClause = useMemo(() => bucketTokenIndicesByClause(tokens, clauseRanges), [tokens, clauseRanges]);
-  const [tokenIndex, setTokenIndex] = useState(0);
+  const [tokenIndex, setTokenIndex] = useState(() => nextWordTokenIndex(tokens, 0));
   const [revealedTokenIndices, setRevealedTokenIndices] = useState<number[]>([]);
   const [hasInk, setHasInk] = useState(false);
   const { canvasRef, onPointerDown, onPointerMove, onPointerUp } = useDrawingCanvas();
@@ -55,12 +56,15 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
     autoRecognize.cancel();
   }
 
+  // Drawing a word's letter reveals that word together with its own punctuation — nothing of a
+  // comma or quote mark shows until the word it belongs to has been drawn — and the turn moves
+  // straight on to the next WORD; punctuation never takes a turn of its own.
   function handleNext() {
     if (!currentToken) return;
-    setRevealedTokenIndices((prev) => [...prev, tokenIndex]);
+    setRevealedTokenIndices((prev) => [...prev, ...withOwnPunctuation(tokens, tokenIndex)]);
     clearCanvas();
-    const next = tokenIndex + 1;
-    if (next >= tokens.length) {
+    const next = nextWordTokenIndex(tokens, tokenIndex + 1);
+    if (next === -1) {
       onComplete();
     } else {
       setTokenIndex(next);
@@ -78,19 +82,12 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
     autoRecognize.notifyStrokeEnd();
   }
 
-  // Punctuation tokens auto-reveal on their own, long enough to read before moving on. A
-  // verse the ESV (or another provider) omits entirely comes back as an empty string — e.g.
+  // A verse the ESV (or another provider) omits entirely comes back as an empty string — e.g.
   // Mark 11:26, a real, documented gap (see lib/bibleProviders/esv.ts), not a rare edge case
-  // — which tokenizes to zero tokens here, meaning no currentToken from the very start.
+  // — which tokenizes to no word tokens here, meaning no currentToken from the very start.
   // Auto-completes straight through instead of sitting on a genuinely blank stage forever.
   useEffect(() => {
-    if (!currentToken) {
-      onComplete();
-      return;
-    }
-    if (isWordToken) return;
-    const timer = setTimeout(() => handleNext(), 400);
-    return () => clearTimeout(timer);
+    if (!currentToken) onComplete();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when tokenIndex changes
   }, [tokenIndex]);
 
@@ -102,8 +99,11 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
   // bucketed into THIS clause (see tokenIndicesByClause above) so a multi-clause verse still
   // renders through the same hanging-indent line structure a non-active verse gets.
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
-    const clauseIndex = clauseRanges.findIndex((candidate) => candidate.startIndex === range.startIndex);
-    const tokenIndices = clauseIndex >= 0 ? (tokenIndicesByClause[clauseIndex] ?? []) : [];
+    // A rendered line can hold several clauses (short ones get joined — see
+    // lib/senseLineWordRanges.ts's mergeRangesToFit), so gather every clause starting inside it.
+    const tokenIndices = clauseRanges.flatMap((clause, clauseIndex) =>
+      clause.startIndex >= range.startIndex && clause.startIndex < range.endIndex ? (tokenIndicesByClause[clauseIndex] ?? []) : [],
+    );
     return (
       <Fragment>
         {tokenIndices.map((index) => {
@@ -111,15 +111,28 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
           const isRevealed = revealedTokenIndices.includes(index);
           const isCurrent = index === tokenIndex;
           // Reference tokens (e.g. "3:16") show in full either way, same convention every
-          // other first-letter display in the app follows — see lib/verseFirstLetters.ts.
-          // Every other word token pads out to its own real length (wordLetterPlaceholder),
-          // so its letter (or its blank, before it's revealed) still sits where that word
-          // would actually be.
-          const display = token.isReference || token.kind !== "word" ? token.text : wordLetterPlaceholder(token.text, isRevealed);
+          // other first-letter display in the app follows — see lib/verseFirstLetters.ts. A
+          // drawn word shows just its letter, so what's been written reads "J, t s o J C," —
+          // letters one space apart with their own punctuation. Nothing of the verse shows ahead
+          // of the reader: a word not yet drawn is blank space its own length, and punctuation
+          // (its own token here) stays hidden until the word it belongs to is drawn.
+          const display = token.isReference
+            ? token.text
+            : token.kind !== "word"
+              ? isRevealed
+                ? token.text
+                : hiddenWordBlank(token.text)
+              : isRevealed
+                ? (firstWordCharacter(token.text) ?? token.text)
+                : wordLetterPlaceholder(token.text, false);
+          // A drawn letter's unit (the letter plus its own punctuation) ends wherever a space
+          // follows — that's where the extra first-letter gap goes (see lib/firstLetterGap.ts).
           const stateClassName = isCurrent
             ? "text-brand-700 underline decoration-2 underline-offset-4 dark:text-brand-300"
             : isRevealed
-              ? ""
+              ? token.spaceAfter
+                ? FIRST_LETTER_GAP_CLASS
+                : ""
               : "text-ink-muted/50 dark:text-zinc-700";
           return (
             <Fragment key={index}>
@@ -150,7 +163,7 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
       <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={activeWordIndex} renderActiveVerse={renderActiveVerse} />
 
       <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
-        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
+        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">
           Learn <InfoTip text={INFO_TIPS.drawFirstLetterRep} />
         </p>
         <canvas
@@ -162,7 +175,7 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
           onPointerMove={onPointerMove}
           onPointerUp={handleStrokeEnd}
           onPointerLeave={handleStrokeEnd}
-          className="h-20 w-full touch-none rounded-xl border border-line bg-white"
+          className="h-20 w-full touch-none rounded-xl border border-line bg-white [.lesson-sheet-controls_&]:h-auto [.lesson-sheet-controls_&]:min-h-0 [.lesson-sheet-controls_&]:flex-1"
         />
         <div className="flex w-full items-center justify-between">
           <button type="button" onClick={clearCanvas} className="text-sm font-medium text-ink-muted hover:underline">

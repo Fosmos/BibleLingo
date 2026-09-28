@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
+import { playLetterSfx, resetLetterCombo } from "@/lib/audio";
 
 interface ReferenceNumberEntryProps {
   chapter: string;
@@ -34,7 +34,7 @@ export function ReferenceNumberEntry({ chapter, verse, onDone, onMistake }: Refe
       return;
     }
     if (!chapter.startsWith(digitsOnly)) {
-      playIncorrectSfx();
+      resetLetterCombo();
       setError(true);
       setChapterValue("");
       onMistake?.();
@@ -42,8 +42,8 @@ export function ReferenceNumberEntry({ chapter, verse, onDone, onMistake }: Refe
     }
     setError(false);
     setChapterValue(digitsOnly);
+    playLetterSfx();
     if (digitsOnly === chapter) {
-      playCorrectSfx();
       setPhase("verse");
     }
   }
@@ -55,7 +55,7 @@ export function ReferenceNumberEntry({ chapter, verse, onDone, onMistake }: Refe
       return;
     }
     if (!verse.startsWith(digitsOnly)) {
-      playIncorrectSfx();
+      resetLetterCombo();
       setError(true);
       setVerseValue("");
       onMistake?.();
@@ -63,8 +63,8 @@ export function ReferenceNumberEntry({ chapter, verse, onDone, onMistake }: Refe
     }
     setError(false);
     setVerseValue(digitsOnly);
+    playLetterSfx();
     if (digitsOnly === verse) {
-      playCorrectSfx();
       onDone();
     }
   }

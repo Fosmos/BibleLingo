@@ -15,13 +15,26 @@ export class BibleFetchError extends Error {}
 // different version (e.g. re-picking the same chapter under ESV after it was previously
 // cached under KJV) always refetches instead of silently reusing the wrong translation's
 // text under the newly-selected version's label.
+//
+// Two callers asking for the same chapter at once (the path screen and the Mind Map both load a
+// path's verses on arrival) share ONE request (`chapterRequests`), rather than each fetching it.
+const chapterRequests = new Map<string, Promise<VerseSegment[]>>();
+
 export async function ensureChapterLoaded(book: string, chapter: number, version: string): Promise<VerseSegment[]> {
   const cached = getCachedChapter(book, chapter);
   if (cached && getCachedChapterVersion(book, chapter) === version) {
     if (version === "ESV") touchEsvChapter(book, chapter, cached.length);
     return cached;
   }
+  const requestKey = `${book}|${chapter}|${version}`;
+  const inFlight = chapterRequests.get(requestKey);
+  if (inFlight) return inFlight;
+  const request = fetchChapter(book, chapter, version).finally(() => chapterRequests.delete(requestKey));
+  chapterRequests.set(requestKey, request);
+  return request;
+}
 
+async function fetchChapter(book: string, chapter: number, version: string): Promise<VerseSegment[]> {
   const response = await fetch(
     `/api/bible/chapter?book=${encodeURIComponent(book)}&chapter=${chapter}&version=${encodeURIComponent(version)}`,
   );
@@ -62,7 +75,7 @@ export async function ensureChapterLoaded(book: string, chapter: number, version
   return verses;
 }
 
-const BOOK_FETCH_CONCURRENCY = 4;
+const BOOK_FETCH_CONCURRENCY = 8;
 
 // Full-book assemblies, kept only in memory for the life of this tab — never written to
 // localStorage. For ESV, a book whose total verses exceed the license's storage cap can
@@ -131,20 +144,30 @@ export async function ensurePathVerses(key: string, version: string): Promise<Ve
     const sessionKey = `${version}:${identifier}`;
     const sessionCached = sessionBookCache.get(sessionKey);
     if (sessionCached) return sessionCached;
-
-    const chapterCount = findBook(identifier)?.chapterCount ?? 0;
-    const chapters = Array.from({ length: chapterCount }, (_, index) => index + 1);
-    // Built from each fetch's own return value rather than re-read from the persistent
-    // cache afterward — for ESV, earlier chapters may already have been evicted by the
-    // time later ones finish fetching (see ensureChapterLoaded), so the cache alone can't
-    // be trusted to hold the whole book at once.
-    const chapterVerses = await mapWithConcurrency(chapters, BOOK_FETCH_CONCURRENCY, (chapter) =>
-      ensureChapterLoaded(identifier, chapter, version),
-    );
-    const verses = chapterVerses.flat();
-    sessionBookCache.set(sessionKey, verses);
-    return verses;
+    // A whole-book load already under way (the path screen and the Mind Map both ask) is shared.
+    const inFlight = bookRequests.get(sessionKey);
+    if (inFlight) return inFlight;
+    const request = loadBook(identifier, version, sessionKey).finally(() => bookRequests.delete(sessionKey));
+    bookRequests.set(sessionKey, request);
+    return request;
   }
 
   return resolvePath(key)?.verses;
+}
+
+const bookRequests = new Map<string, Promise<VerseSegment[]>>();
+
+async function loadBook(identifier: string, version: string, sessionKey: string): Promise<VerseSegment[]> {
+  const chapterCount = findBook(identifier)?.chapterCount ?? 0;
+  const chapters = Array.from({ length: chapterCount }, (_, index) => index + 1);
+  // Built from each fetch's own return value rather than re-read from the persistent
+  // cache afterward — for ESV, earlier chapters may already have been evicted by the
+  // time later ones finish fetching (see ensureChapterLoaded), so the cache alone can't
+  // be trusted to hold the whole book at once.
+  const chapterVerses = await mapWithConcurrency(chapters, BOOK_FETCH_CONCURRENCY, (chapter) =>
+    ensureChapterLoaded(identifier, chapter, version),
+  );
+  const verses = chapterVerses.flat();
+  sessionBookCache.set(sessionKey, verses);
+  return verses;
 }

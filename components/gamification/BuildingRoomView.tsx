@@ -5,49 +5,42 @@ import type { MemorizationDay } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { buildPathZones } from "@/lib/pathZones";
 import { computeZoneCardState, zoneShowsTodaysVerses } from "@/lib/pericopeCardState";
-import { locationTagKey } from "@/lib/locationTags";
+import { locationTagKey, NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
 import { LocationTagField } from "@/components/gamification/LocationTagField";
 import { PegTagField } from "@/components/gamification/PegTagField";
 import { IconTagField } from "@/components/gamification/IconTagField";
 import { PericopeCard } from "@/components/gamification/PericopeCard";
 
-// A stable empty-array fallback for the `locationTagLevels` selector below — `?? []` inline
-// in the selector would hand useSyncExternalStore a fresh array reference on every call
-// whenever a path has none set, which it reads as "the store changed" and re-renders forever
-// (surfaces as React's "Maximum update depth exceeded" / "getSnapshot should be cached").
-const NO_LOCATION_TAG_LEVELS: never[] = [];
-
 interface BuildingRoomViewProps {
   days: MemorizationDay[];
   completedDays: number;
   todaysDayNumber: number;
-  pathKey: string;
   onSelectDay: (dayNumber: number) => void;
   onPracticeDay: (dayNumber: number) => void;
 }
 
 // The Building-view path: the exact same PericopeCard list as the plain view (see
 // PathDayList.tsx) — same rail circles, same cards, same capstone days (Weekly Review, Boss
-// Battle, ...) — with an "add location tag" option layered in at whichever scopes this path
-// picked (see PathProgress.locationTagLevels): a book-level tag once at the top, a
-// chapter-level tag right below it, a pericope-level tag in each card's own header, and a
-// verse-level tag under each card's verse grid — one per verse actually shown there. No walls,
-// no rooms, no predefined suggestions of any kind — every location tag is free text, entered
-// and edited the same way via LocationTagField.tsx. When the Memory Palace step's Pegs
-// checkbox was on, an editable Peg word (PegTagField.tsx, reading/writing the reader's own
-// Master Peg List — see app/profile/peg-list/page.tsx) sits next to the chapter, pericope, and
-// verse tags too — never the book one, since a book has no natural number to peg the way a
-// chapter, section, or verse does. A pericope's own peg is pegged to the VERSE NUMBER it
-// starts with (zone.startVerse), not an arbitrary section index — so, e.g., a section opening
-// at verse 9 always shows the same peg word as verse 9's own tag. When the path's own
-// PathProgress.sectionEndPegEnabled is also on (see LocationTagLevelPicker.tsx — only offered
-// once "pericope" and Pegs are both picked), a second chip pegged to the section's own last
-// verse (zone.endVerse) sits right beside the start one, each labeled so it's clear which is
-// which — suppressed for a one-verse section, where start and end are the same verse anyway.
-export function BuildingRoomView({ days, completedDays, todaysDayNumber, pathKey, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
-  const levels = useProgressStore((state) => state.paths[pathKey]?.locationTagLevels ?? NO_LOCATION_TAG_LEVELS);
+// Battle, ...) — with an "add location tag" option layered in at whichever scopes are turned
+// on globally (Settings > Advanced > Memory Palace Tags — see UserProgress.locationTagLevels):
+// a book-level tag once at the top, a chapter-level tag right below it, a pericope-level tag in
+// each card's own header, and a verse-level tag under each card's verse grid — one per verse
+// actually shown there. No walls, no rooms, no predefined suggestions of any kind — every
+// location tag is free text, entered and edited the same way via LocationTagField.tsx. When the
+// global Pegs setting is also on, an editable Peg word (PegTagField.tsx, reading/writing the
+// reader's own Master Peg List — see app/profile/peg-list/page.tsx) sits next to the chapter,
+// pericope, and verse tags too — never the book one, since a book has no natural number to peg
+// the way a chapter, section, or verse does. A pericope's own peg is pegged to the VERSE NUMBER
+// it starts with (zone.startVerse), not an arbitrary section index — so, e.g., a section
+// opening at verse 9 always shows the same peg word as verse 9's own tag. When the global
+// UserProgress.sectionEndPegEnabled is also on (only shown once "pericope" and Pegs are both
+// on), a second chip pegged to the section's own last verse (zone.endVerse) sits right beside
+// the start one, each labeled so it's clear which is which — suppressed for a one-verse
+// section, where start and end are the same verse anyway.
+export function BuildingRoomView({ days, completedDays, todaysDayNumber, onSelectDay, onPracticeDay }: BuildingRoomViewProps) {
+  const levels = useProgressStore((state) => state.locationTagLevels ?? NO_LOCATION_TAG_LEVELS);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
-  const sectionEndPegEnabled = useProgressStore((state) => state.paths[pathKey]?.sectionEndPegEnabled ?? false);
+  const sectionEndPegEnabled = useProgressStore((state) => state.sectionEndPegEnabled ?? false);
 
   const zones = buildPathZones(days);
   const activeCardRef = useRef<HTMLDivElement | null>(null);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Settings2 } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
+import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { ThresholdSlider } from "@/components/ui/ThresholdSlider";
 import { RestDayPicker } from "@/components/ui/RestDayPicker";
@@ -10,6 +11,7 @@ import { VespersHourPicker } from "@/components/ui/VespersHourPicker";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { LearnStageToggles } from "@/components/gamification/LearnStageToggles";
+import { MemoryPalaceTagLevelToggles } from "@/components/gamification/MemoryPalaceTagLevelToggles";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 
@@ -24,6 +26,9 @@ export function ProfileAdvancedSettings() {
   const setBuildingViewEnabled = useProgressStore((state) => state.setBuildingViewEnabled);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
+  const locationTagLevels = useProgressStore((state) => state.locationTagLevels) ?? NO_LOCATION_TAG_LEVELS;
+  const sectionEndPegEnabled = useProgressStore((state) => state.sectionEndPegEnabled) ?? false;
+  const setSectionEndPegEnabled = useProgressStore((state) => state.setSectionEndPegEnabled);
   const srsSpeakModeEnabled = useProgressStore((state) => state.srsSpeakModeEnabled);
   const setSrsSpeakModeEnabled = useProgressStore((state) => state.setSrsSpeakModeEnabled);
   const srsPromotionThreshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
@@ -48,6 +53,7 @@ export function ProfileAdvancedSettings() {
         />
         <InfoTip text={INFO_TIPS.buildingViewToggle} />
       </div>
+      <MemoryPalaceTagLevelToggles />
       <LearnStageToggles />
       <div>
         <div className="flex items-start gap-1.5">
@@ -67,6 +73,17 @@ export function ProfileAdvancedSettings() {
             <Link href="/profile/peg-list" className="self-start text-sm font-medium text-brand-600 hover:underline">
               Edit peg words →
             </Link>
+          </div>
+        )}
+        {pegSystemEnabled && locationTagLevels.includes("pericope") && (
+          <div className="mt-3 flex items-start gap-1.5 pl-4">
+            <ToggleSwitch
+              checked={sectionEndPegEnabled}
+              onChange={setSectionEndPegEnabled}
+              label="Section end peg"
+              description="Also show a second peg word on each section, pegged to the verse it ends with"
+            />
+            <InfoTip text={INFO_TIPS.sectionEndPegToggle} />
           </div>
         )}
       </div>

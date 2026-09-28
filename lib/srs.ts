@@ -135,3 +135,9 @@ export function createSeedSRSState(phase: SrsPhase, now: Date = new Date()): SRS
   const intervalDays = BOX_INTERVAL_DAYS[box];
   return { box, lastReviewedAt: now.toISOString(), nextDueAt: addDays(now, intervalDays).toISOString() };
 }
+
+// The reader moving a range to another box by hand (see LeitnerBoxes.tsx): it takes up that
+// box's cadence from today, keeping its review history.
+export function moveToBox(state: SRSState, box: SrsBox, now: Date = new Date(), restDayOfWeek: number | null = null): SRSState {
+  return { ...state, box, nextDueAt: skipRestDay(addDays(now, BOX_INTERVAL_DAYS[box]), restDayOfWeek).toISOString() };
+}

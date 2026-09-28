@@ -15,7 +15,10 @@ export function useChapterScopedReadingLayout(
   activeDay: MemorizationDay,
   completedDays: number,
   todaysDay: number,
+  // See useChapterReadingLayout.ts's own doc comment — threaded straight through.
+  fixedFillHeightPx?: number | null,
+  fixedColumnWidthPx?: number | null,
 ): ChapterReadingLayout {
   const scopedDays = useMemo(() => chapterScopedDays(allDays, activeDay), [allDays, activeDay]);
-  return useChapterReadingLayout(scopedDays, completedDays, todaysDay);
+  return useChapterReadingLayout(scopedDays, completedDays, todaysDay, fixedFillHeightPx, fixedColumnWidthPx);
 }

@@ -22,17 +22,14 @@ export const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 // verse (no repeated rounds). Listen (see ListenVerseRep.tsx — this ONE verse narrated aloud)
 // always opens the sequence when its setting (kineticTextEnabled) is on. Rhythm, Write First
 // Letter (the handwriting canvas),
-// and the Fill In The Blank pair each drop out entirely when their own setting is off — Rhythm
+// and the word-bank Fill In The Blank each drop out entirely when their own setting is off — Rhythm
 // defaults off now that Listen is the default introduction to a fresh verse; a reader who wants
-// that per-verse tap-through pacing too opts back into it. The Fill In The Blank pair, when on,
-// sits BEFORE the Speak hint and before the fully-blind Type stage — one more rung on the same
-// "progressively less scaffolding" ladder: hear it (Listen) → read it (Rhythm, if on) → recall
-// whole words with a word bank to lean on (Fill In The Blank) → recall words by typing just
-// their first letter, still with most of the verse visible (Fill In The Blank, first letter) →
-// hear a first-letter hint while speaking it (Speak hint) → recall it with no help at all (Type
-// it by first letter). Both Fill In The Blank stages run their own two internal reps (about half
-// the verse blanked, then all of it — see FillInTheBlankRep.tsx/FirstLetterBlankRep.tsx), so
-// together they're four total passes over the verse before Speak even starts.
+// that per-verse tap-through pacing too opts back into it. The ladder runs from most scaffolding
+// to least: hear it (Listen) → read it (Rhythm, if on) → recall whole words with a word bank to
+// lean on (Fill In The Blank) → speak it with a first-letter hint (Speak hint) → recall words by
+// typing just their first letter (Fill In The Blank, first letter). That last one always runs —
+// it replaced the old separate "type it by first letter" stage, whose recall its own second rep
+// (every word blanked) already covers.
 function versePhases(
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
@@ -43,23 +40,19 @@ function versePhases(
   if (kineticTextEnabled) phases.push("listen_verse");
   if (rhythmEnabled) phases.push("rhythm");
   if (writeFirstLetterEnabled) phases.push("draw_first_letters");
-  if (fillInTheBlankEnabled) {
-    phases.push("fill_in_the_blank");
-    phases.push("fill_in_the_blank_letters");
-  }
+  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
   phases.push("speak_hint");
-  phases.push("type_first_letters");
+  phases.push("fill_in_the_blank_letters");
   return phases;
 }
 
-// Every verse's own type_first_letters — the last of its own sub-stages — is followed right
+// Every verse's own last sub-stage is followed right
 // away by speak_verse: that one verse, just learned, spoken aloud from memory on its own.
 // From the SECOND real verse of its own group on, speak_verse is followed by one more check —
 // type_cumulative_today: every real verse learned TODAY so far IN THIS GROUP, this one
-// included, typed by first letter (see ReviewChain in LearnSection.tsx's render). The first
-// real verse of a group skips it: with only itself learned so far, that check would just
-// repeat the single verse speak_verse already covered — which is also why a one-verse group
-// never gets one at all. This is deliberately scoped to just today's own verses, not
+// included — plus the one verse just before the group (see PRIOR_VERSE_INDEX below) — typed by
+// first letter (see ReviewChain in LearnSection.tsx's render). Only a group with no verse before
+// it at all skips its first verse's check, which would just repeat speak_verse. This is deliberately scoped to just today's own verses, not
 // everything ever learned (that's ReviewSection's job, in its own separate Previous Verses/
 // Chapter Review stages) — so it reads as "did today's lesson actually stick together," not a
 // second copy of the bigger review.
@@ -83,14 +76,21 @@ function versePhases(
 // covers everything today by construction, same as before.
 const SPLIT_THRESHOLD = 6;
 
-function buildGroupSteps(group: number[], phases: Phase[]): FlatStep[] {
+// Every cumulative check also starts one verse early — the verse just before its group, so each
+// check joins today's verses onto what came before: for the first group, the verse just before
+// today's lesson (PRIOR_VERSE_INDEX, when it's one already learned — see LearnSection.tsx); for
+// a split day's second half, the first half's last verse. With that verse in front, even a
+// group's first verse, or a one-verse lesson, gets a check of its own.
+export const PRIOR_VERSE_INDEX = -1;
+
+function buildGroupSteps(group: number[], phases: Phase[], priorIndex: number | undefined): FlatStep[] {
   const steps: FlatStep[] = [];
+  const lead = priorIndex === undefined ? [] : [priorIndex];
   group.forEach((verseIndex, position) => {
     for (const phase of phases) steps.push({ phase, verseIndex });
     steps.push({ phase: "speak_verse", verseIndex });
-    if (position > 0) {
-      steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: group.slice(0, position + 1) });
-    }
+    const cumulative = [...lead, ...group.slice(0, position + 1)];
+    if (cumulative.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: cumulative });
   });
   return steps;
 }
@@ -103,19 +103,22 @@ export function buildSteps(
   fillInTheBlankEnabled: boolean,
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
+  // The verse just before today's lesson is one already learned (PRIOR_VERSE_INDEX's verse).
+  hasPriorVerse: boolean,
 ): FlatStep[] {
   const steps: FlatStep[] = [];
+  const prior = hasPriorVerse ? PRIOR_VERSE_INDEX : undefined;
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
   const phases = versePhases(kineticTextEnabled, rhythmEnabled, writeFirstLetterEnabled, fillInTheBlankEnabled);
 
   if (verseIndices.length >= SPLIT_THRESHOLD) {
     const midpoint = Math.ceil(verseIndices.length / 2);
-    steps.push(...buildGroupSteps(verseIndices.slice(0, midpoint), phases));
-    steps.push(...buildGroupSteps(verseIndices.slice(midpoint), phases));
-    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
+    steps.push(...buildGroupSteps(verseIndices.slice(0, midpoint), phases, prior));
+    steps.push(...buildGroupSteps(verseIndices.slice(midpoint), phases, verseIndices[midpoint - 1]));
+    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: prior === undefined ? verseIndices : [prior, ...verseIndices] });
   } else {
-    steps.push(...buildGroupSteps(verseIndices, phases));
+    steps.push(...buildGroupSteps(verseIndices, phases, prior));
   }
 
   steps.push({ phase: "pray" });

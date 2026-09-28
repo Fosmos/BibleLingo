@@ -6,6 +6,7 @@ import { AUTH_REQUIRED } from "@/lib/authConfig";
 import { ProgressInitializer } from "@/components/gamification/ProgressInitializer";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { AuthScreen } from "@/components/auth/AuthScreen";
+import { PathCompleteCelebration } from "@/components/gamification/PathCompleteCelebration";
 import { useIsLessonSessionActive } from "@/store/useLessonSessionStore";
 
 interface AuthGateProps {
@@ -46,6 +47,7 @@ export function AuthGate({ children }: AuthGateProps) {
       <ProgressInitializer />
       <main className={`flex flex-1 flex-col ${lessonSessionActive ? "" : "pb-20"}`}>{children}</main>
       {!lessonSessionActive && <BottomTabBar />}
+      <PathCompleteCelebration />
     </>
   );
 }

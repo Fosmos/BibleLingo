@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { LocationTagLevel, VerseSegment } from "@/types";
+import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
+import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
 import { buildPathDayPlan, priorKnownDayCount } from "@/lib/dayPlan";
 import { applyReferencePreference } from "@/lib/chapterContent";
 import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
@@ -14,8 +15,8 @@ import { useMindMapSelection } from "@/lib/useMindMapSelection";
 import { useJumpToTodayVerse } from "@/lib/useJumpToTodayVerse";
 import { activeDayNumber, todaysDayNumber } from "@/lib/dayRollover";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
-import { MindMapScreen } from "@/components/gamification/MindMapScreen";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
+import { BookMindMapWithLessonSheet } from "@/components/gamification/BookMindMapWithLessonSheet";
 // TEMPORARILY DISABLED along with its own usage below — see that comment.
 // import { DailyChapterReviewGate } from "@/components/gamification/DailyChapterReviewGate";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
@@ -25,24 +26,14 @@ interface PathOverviewScreenProps {
   label: string;
   version: string;
   versesPerDay?: number;
-  locationTagLevels?: LocationTagLevel[];
-  sectionEndPegEnabled?: boolean;
   jumpToToday?: boolean; // see lib/useJumpToTodayVerse.ts
+  startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
   // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at
   // creation. See PathProgress.priorKnownVerseCount.
   priorKnownVerseCount?: number;
 }
 
-export function PathOverviewScreen({
-  pathKey: key,
-  label,
-  version,
-  versesPerDay,
-  locationTagLevels,
-  sectionEndPegEnabled,
-  jumpToToday,
-  priorKnownVerseCount,
-}: PathOverviewScreenProps) {
+export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, jumpToToday, startLesson, priorKnownVerseCount }: PathOverviewScreenProps) {
   // `verses` below is lazily seeded from the localStorage-backed content cache, which may
   // already be populated on the client's first render but is always empty during SSR —
   // gating on `mounted` keeps the first paint a stable FetchLoading placeholder either way.
@@ -52,6 +43,7 @@ export function PathOverviewScreen({
   const setActivePath = useProgressStore((state) => state.setActivePath);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
+  const locationTagLevels = useProgressStore((state) => state.locationTagLevels) ?? NO_LOCATION_TAG_LEVELS;
 
   // resolvePath() ignores translation — checked during render, not an effect, same pattern as chapterOverride below.
   const [verses, setVerses] = useState<VerseSegment[] | null>(() =>
@@ -69,7 +61,7 @@ export function PathOverviewScreen({
   // a chapter number shows that chapter's parchment view, optionally with a specific verse to
   // open straight to (see lib/useMindMapSelection.ts). Never persisted.
   const { chapterOverride, targetVerse, setChapterOverride, selectPericope, reset: resetMindMapSelection } = useMindMapSelection();
-  useJumpToTodayVerse(key, jumpToToday, verses, plan, includeVerseReferences, pegSystemEnabled, selectPericope);
+  useJumpToTodayVerse(key, jumpToToday, verses, plan, includeVerseReferences, pegSystemEnabled, locationTagLevels, selectPericope);
   // A lesson/practice session, rendered right here instead of navigating away (InPlaceLessonSession.tsx) — null means none running.
   const [lessonDay, setLessonDay] = useState<{ dayNumber: number; mode: "select" | "practice" } | null>(null);
   const [overrideResetKey, setOverrideResetKey] = useState(key);
@@ -101,7 +93,7 @@ export function PathOverviewScreen({
 
   // Also re-runs when an EXISTING plan's version/versesPerDay doesn't match what was just
   // selected, so re-picking either doesn't leave an already-started path stuck at the
-  // original choice. locationTagLevels/sectionEndPegEnabled/priorKnownVerseCount arrive once.
+  // original choice. priorKnownVerseCount arrives once.
   useEffect(() => {
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
@@ -111,9 +103,9 @@ export function PathOverviewScreen({
       // one day each, not always just one) — computed here, the one place this effect already
       // has both the real `verses` AND this path's own `kind` in hand.
       const priorKnownDays = priorKnownVerseCount ? priorKnownDayCount(verses, priorKnownVerseCount, parsePathKey(key).kind) : 0;
-      setPath(key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, priorKnownDays);
+      setPath(key, version, versesPerDay, priorKnownVerseCount, priorKnownDays);
     }
-  }, [plan, verses, key, version, versesPerDay, locationTagLevels, sectionEndPegEnabled, priorKnownVerseCount, setPath]);
+  }, [plan, verses, key, version, versesPerDay, priorKnownVerseCount, setPath]);
   const pericopesReady = usePericopesReady(verses);
   // Wins over every other early return below — the only one identical between server/client.
   if (!mounted) return <FetchLoading label={`Loading ${label}…`} />;
@@ -134,7 +126,7 @@ export function PathOverviewScreen({
   if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
   if (!plan) return null;
 
-  const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled);
+  const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled, locationTagLevels);
   const now = new Date();
   const activeDay = activeDayNumber(plan, now);
   const todaysDay = todaysDayNumber(plan, now);
@@ -157,22 +149,30 @@ export function PathOverviewScreen({
     );
   }
 
-  // Book opens on its own Mind Map — a free pan/zoom view of the whole canon, centered on this
-  // book (see MindMapScreen.tsx/BookMindMap.tsx). Tapping a pericope sets chapterOverride +
-  // targetVerse; "Back" returns here (onShowMindMap). Other kinds skip this.
-  if (kind === "book" && chapterOverride === null) {
-    return <MindMapScreen onSelectChapter={selectPericope} />;
+  // Book, chapter and verse paths open on the Mind Map — a pan/zoom canon view centered on this
+  // path's book. Tapping a pericope sets chapterOverride/targetVerse; a verse CHIP instead opens
+  // an in-place lesson bottom sheet over the still-visible canvas (see
+  // BookMindMapWithLessonSheet.tsx, keyed on `key` so switching paths resets its own sheet state
+  // automatically). Only topic paths (verses from all over) skip this.
+  const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
+  if (onMindMap && chapterOverride === null) {
+    return (
+      <BookMindMapWithLessonSheet
+        key={key}
+        pathKey={key}
+        label={label}
+        days={days}
+        verses={verses}
+        version={version}
+        completedDays={plan.completedDays}
+        todaysDay={todaysDay}
+        onSelectChapter={selectPericope}
+        autoStartLesson={startLesson}
+      />
+    );
   }
 
-  const { visibleDays, title, chapterMemorizedFraction, onNextChapter, onPreviousChapter } = resolveBookChapterView(
-    kind,
-    days,
-    plan,
-    todaysDay,
-    label,
-    chapterOverride,
-    setChapterOverride,
-  );
+  const { visibleDays, title, chapterMemorizedFraction, onNextChapter, onPreviousChapter } = resolveBookChapterView(kind, days, plan, todaysDay, label, chapterOverride, setChapterOverride);
 
   const diagram = (
     <DayPathDiagram
@@ -182,13 +182,12 @@ export function PathOverviewScreen({
       completedDays={plan.completedDays}
       activeDayNumber={activeDay}
       todaysDayNumber={todaysDay}
-      pathKey={key}
       chapterMemorizedFraction={chapterMemorizedFraction}
       onSelectDay={(dayNumber) => setLessonDay({ dayNumber, mode: "select" })}
       onPracticeDay={(dayNumber) => setLessonDay({ dayNumber, mode: "practice" })}
       onNextChapter={onNextChapter}
       onPreviousChapter={onPreviousChapter}
-      onShowMindMap={kind === "book" ? () => setChapterOverride(null) : undefined}
+      onShowMindMap={onMindMap ? () => setChapterOverride(null) : undefined}
       targetVerse={targetVerse}
     />
   );

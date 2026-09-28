@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect, useState, type RefObject } from "react";
-import type { MindMapLayout } from "@/lib/mindMapTreeLayout";
 
 export interface MindMapNodeSize {
   width: number;
@@ -21,7 +20,11 @@ export interface MindMapNodeSize {
 // untransformed "layout space" unit system layout.nodes' own (cx, cy) use, with no extra unit
 // conversion needed. Re-measured whenever `layout` itself changes (a different set of nodes is
 // on screen) — not on every render.
-export function useMindMapNodeSizes(containerRef: RefObject<HTMLDivElement | null>, layout: MindMapLayout): Map<string, MindMapNodeSize> {
+// `dep` is only ever used to retrigger this effect when the set of `[data-node-id]` elements on
+// screen might have changed (a fresh `MindMapLayout` for the real canvas, or e.g. a chapter
+// number for LearnMindMapSpotlight.tsx's own compact, single-chapter node set) — never read
+// itself, so any referentially-meaningful value works.
+export function useMindMapNodeSizes(containerRef: RefObject<HTMLDivElement | null>, dep: unknown): Map<string, MindMapNodeSize> {
   const [sizes, setSizes] = useState<Map<string, MindMapNodeSize>>(new Map());
 
   useLayoutEffect(() => {
@@ -33,8 +36,8 @@ export function useMindMapNodeSizes(containerRef: RefObject<HTMLDivElement | nul
       if (id) next.set(id, { width: el.offsetWidth, height: el.offsetHeight });
     });
     setSizes(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- containerRef's own identity is stable; layout is the real trigger
-  }, [layout]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- containerRef's own identity is stable; dep is the real trigger
+  }, [dep]);
 
   return sizes;
 }

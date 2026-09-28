@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { VerseSegment } from "@/types";
-import { diffAttempt } from "@/lib/textMatch";
+import { diffAttemptFirstLetter } from "@/lib/textMatch";
 import { isSecureContextOrLocal, isSpeechRecognitionSupported, requestMicPermission, startListening, type SpeechErrorKind } from "@/lib/speechRecognition";
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { computeVerseAccuracies, type VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
@@ -35,21 +35,29 @@ function normalizeWord(word: string): string {
   return word.toLowerCase().replace(/[^\w]/g, "");
 }
 
-// How many of `expected`'s own words (in order, from its own start) already appear — in
+// This is a first-letter recall check, not a verbatim recitation one — a spoken word counts
+// toward `expected` the instant its own FIRST letter matches, regardless of anything said after
+// it. Speech recognition is noisy enough (misheard endings, dropped suffixes) that requiring the
+// whole word would fail attempts a reader actually got right.
+function firstLetterOf(word: string): string {
+  return normalizeWord(word).charAt(0);
+}
+
+// How many of `expected`'s own first letters (in order, from its own start) already appear — in
 // order, allowing any number of extra/misheard filler words between them — somewhere in
-// `transcriptWords`. Recomputed from scratch on every interim transcript update rather than
+// `transcriptLetters`. Recomputed from scratch on every interim transcript update rather than
 // tracked incrementally: an interim result is the WHOLE utterance-so-far re-guessed, not an
 // append-only stream (see lib/speechRecognition.ts's own onresult handling), so yesterday's
 // partial match can't just be extended — but re-scanning a verse-length word list on every
 // tick is cheap enough that this is simpler and more robust than trying to diff two interim
 // guesses against each other.
-function countMatchedPrefix(transcriptWords: string[], expected: string[]): number {
+function countMatchedPrefix(transcriptLetters: string[], expected: string[]): number {
   let t = 0;
   let matched = 0;
-  for (const word of expected) {
+  for (const letter of expected) {
     let found = false;
-    for (; t < transcriptWords.length; t++) {
-      if (transcriptWords[t] === word) {
+    for (; t < transcriptLetters.length; t++) {
+      if (transcriptLetters[t] === letter) {
         t++;
         found = true;
         break;
@@ -74,7 +82,7 @@ function countMatchedPrefix(transcriptWords: string[], expected: string[]): numb
 // "Done" tap at all.
 export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVerseAccuracy }: UseFirstLetterSpeakingOptions): FirstLetterSpeaking {
   const words = tokenizeVerseWords(verse.text);
-  const normalizedExpected = words.map(normalizeWord);
+  const expectedFirstLetters = words.map(firstLetterOf);
   const [liveMatched, setLiveMatched] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
@@ -95,7 +103,7 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     if (finishedRef.current) return;
     finishedRef.current = true;
     setIsListening(false);
-    const { verse: diffVerse } = diffAttempt(finalTranscript, verse.text);
+    const { verse: diffVerse } = diffAttemptFirstLetter(finalTranscript, verse.text);
     const wrongWordIndices = new Set<number>();
     diffVerse.forEach((token, index) => {
       if (!token.correct) wrongWordIndices.add(index);
@@ -109,10 +117,17 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
     stopRef.current?.();
   }
 
-  // Every word heard — stop listening and score right away instead of waiting for a manual
-  // tap, which a reader who recited cleanly would never think to make.
+  // Every word heard — wait a beat, then stop listening and score, instead of waiting for a
+  // manual tap (which a reader who recited cleanly would never think to make) or cutting off
+  // the instant the last word lands (speech recognition's own final result for that last word
+  // can still arrive a moment after the live match already counted it). The effect's own
+  // cleanup cancels the pending finish if `isListening`/`wordIndex` change again before it
+  // fires — a real stop()/unmount, or (impossible today since liveMatched only ever grows, but
+  // harmless either way) the match count dropping back below the last word.
   useEffect(() => {
-    if (isListening && wordIndex >= words.length && words.length > 0) stop();
+    if (!isListening || wordIndex < words.length || words.length === 0) return;
+    const timer = setTimeout(stop, 2000);
+    return () => clearTimeout(timer);
   }, [isListening, wordIndex, words.length]);
 
   function start() {
@@ -130,8 +145,8 @@ export function useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVers
       const { transcriptPromise, stop: stopListening } = startListening(
         (transcript) => {
           setLiveTranscript(transcript);
-          const transcriptWords = transcript.split(/\s+/).filter(Boolean).map(normalizeWord);
-          const matched = countMatchedPrefix(transcriptWords, normalizedExpected);
+          const transcriptLetters = transcript.split(/\s+/).filter(Boolean).map(firstLetterOf);
+          const matched = countMatchedPrefix(transcriptLetters, expectedFirstLetters);
           setLiveMatched((prev) => {
             if (matched > prev) {
               playCorrectSfx();

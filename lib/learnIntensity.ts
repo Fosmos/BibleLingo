@@ -1,7 +1,7 @@
 // Data table for the Learn intensity slider (see LearnIntensityPicker.tsx) — 5 preset levels
 // from least time/weakest encoding to most time/strongest encoding. Every level keeps the same
-// floor of per-verse stages (Speak with a first-letter hint, Type by first letter, Speak with
-// nothing) plus whatever stages it adds on top — these are the same four booleans
+// floor of per-verse stages (Speak with a first-letter hint, Fill in the Blank by first letter,
+// Speak with nothing) plus whatever stages it adds on top — these are the same four booleans
 // LearnSection.tsx's buildSteps/versePhases already gate the flattened step list on (see
 // UserProgress.understandStageEnabled etc. in types/index.ts). Listen and Rhythm are each a
 // separate, global Profile > Advanced toggle instead (see kineticTextStageEnabled/
@@ -36,7 +36,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 1,
     label: "Quick Pass",
-    description: "Speak with a first-letter hint, Type it by first letter, Speak with nothing.",
+    description: "Speak with a first-letter hint, fill in the blanks by first letter, Speak with nothing.",
     estimateSecondsPerVerse: 135,
     understandStageEnabled: false,
     visualizeStageEnabled: false,
@@ -46,7 +46,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 2,
     label: "+ Fill in the Blank",
-    description: "Adds a word-bank tap exercise and a type-the-first-letter exercise, both before the Speak hint, each run twice (half blanked, then all blanked).",
+    description: "Adds a word-bank tap exercise before the Speak hint, run twice (half blanked, then all blanked).",
     estimateSecondsPerVerse: 325,
     understandStageEnabled: false,
     visualizeStageEnabled: false,

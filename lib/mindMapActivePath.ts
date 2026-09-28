@@ -103,31 +103,6 @@ export function defaultActivePath(bookLabel: string, chapters: ChapterNode[]): s
   return path;
 }
 
-// Every id on the path from root down to whichever pericope or (pericope-less) chapter is
-// literally TODAY's own lesson — not just the single currently-open UI branch (`activePath`
-// above, which the reader controls by tapping). Used to force the "active" amber/yellow read
-// (see MindMapNodeCard.tsx's own STATUS_CLASS/RING_STATUS_CLASS) up through every ancestor ring
-// too — Testament, Genre, Subgenre, Book, Theme — not just the leaf that already carries it via
-// its own real PericopeCardStatus, so the reader can always see, at a glance and from anywhere
-// on the canvas, which whole branch actually contains today's real memorization work, even while
-// it's still collapsed. Only ever real for the currently ACTIVE book's own descendants — a
-// browsed (non-active) book's own chapters/pericopes never carry status "active" (see
-// lib/mindMapBrowseTree.ts), so this never lights up anywhere else.
-export function activeChainIds(root: MindMapRootDatum): Set<string> {
-  const ids = new Set<string>();
-  function walk(datum: MindMapDatum, ancestors: string[]) {
-    const isActiveLeaf = (datum.kind === "pericope" || datum.kind === "chapter") && datum.status === "active";
-    if (isActiveLeaf) {
-      for (const id of ancestors) ids.add(id);
-      ids.add(datum.id);
-    }
-    const childAncestors = datum.kind === "root" ? ancestors : [...ancestors, datum.id];
-    for (const child of childrenOf(datum)) walk(child, childAncestors);
-  }
-  walk(root, []);
-  return ids;
-}
-
 // Which OTHER (non-active) book's own chapter ring `activePath` currently has open, if any —
 // CAFD's single-open-branch rule means there's ever at most one (see BookMindMap.tsx's own
 // browse support, lib/mindMapBrowseTree.ts). Null when nothing but the real active book is open,
@@ -148,4 +123,15 @@ export function findBrowsedChapter(activePath: string[], browsedBookName: string
   if (!chapterId) return undefined;
   const chapter = Number(chapterId.slice(prefix.length));
   return Number.isFinite(chapter) ? chapter : undefined;
+}
+
+// The one book/chapter open for structural browsing (fetched on demand — see
+// lib/useMindMapBrowseChapter.ts): another book's chapter, or a chapter of the active book the
+// drawn path doesn't include (the rest of the book around a chapter or verse path).
+export function findBrowseTarget(activePath: string[], activeBookName: string, pathChapters: { chapter: number }[]): { browsedBookName: string | null; browsedChapter: number | undefined } {
+  const other = findBrowsedBook(activePath, activeBookName);
+  if (other) return { browsedBookName: other, browsedChapter: findBrowsedChapter(activePath, other) };
+  const chapter = activeBookName ? findBrowsedChapter(activePath, activeBookName) : undefined;
+  if (chapter === undefined || pathChapters.some((node) => node.chapter === chapter)) return { browsedBookName: null, browsedChapter: undefined };
+  return { browsedBookName: activeBookName, browsedChapter: chapter };
 }

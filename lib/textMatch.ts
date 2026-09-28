@@ -97,6 +97,26 @@ export function diffAttempt(input: string, target: string): { spoken: WordDiffTo
   };
 }
 
+// First-letter-only counterpart to normalizedTokens — used wherever a spoken word only needs to
+// match the target's own first letter, not the whole word (see diffAttemptFirstLetter below).
+function firstLetters(words: string[]): string[] {
+  return normalizedTokens(words).map((word) => word.charAt(0));
+}
+
+// Same LCS alignment as diffAttempt, but a word counts as matched once its own FIRST LETTER
+// lines up with the target's — used by lib/useFirstLetterSpeaking.ts's own live "Listen" stage,
+// where speech recognition is noisy enough that requiring the whole word is too strict for what
+// is meant to be a first-letter recall check, not a verbatim recitation one.
+export function diffAttemptFirstLetter(input: string, target: string): { spoken: WordDiffToken[]; verse: WordDiffToken[] } {
+  const spokenWords = input.trim().split(/\s+/).filter(Boolean);
+  const targetWords = tokenizeVerseWords(target);
+  const { matchedA: targetMatched, matchedB: spokenMatched } = lcsAlign(firstLetters(targetWords), firstLetters(spokenWords));
+  return {
+    spoken: spokenWords.map((word, index) => ({ word, correct: spokenMatched[index] ?? false })),
+    verse: targetWords.map((word, index) => ({ word, correct: targetMatched[index] ?? false })),
+  };
+}
+
 // How many of targetWords, counting from the very start, have already been recognized in a
 // live (possibly still-interim) speech transcript — used to reveal a verse's words in place as
 // they're spoken (see SpeakRep.tsx) rather than only judging the whole attempt once it ends.
@@ -110,6 +130,23 @@ export function spokenPrefixMatchCount(transcript: string, targetWords: string[]
   const spokenWords = normalizedWords(transcript);
   if (spokenWords.length === 0) return 0;
   const { matchedA } = lcsAlign(normalizedTargetWords, spokenWords);
+  let count = 0;
+  while (count < matchedA.length && matchedA[count]) count++;
+  return count;
+}
+
+// First-letter counterpart to spokenPrefixMatchCount above — same "longest unbroken run from
+// the start" shape, aligned on FIRST LETTERS (see firstLetters above) rather than whole
+// normalized words. Used by SpeakRep.tsx's own hint-mode reveal (see useSpeakRepReveal.ts) so a
+// word visibly fills in the instant its own first letter is heard, matching the SAME criterion
+// diffAttemptFirstLetter above grades the finished attempt by — a word that ends up "correct" at
+// the end always visibly revealed while the reader was still speaking, never the other way
+// around.
+export function spokenPrefixMatchCountFirstLetter(transcript: string, targetWords: string[]): number {
+  const targetLetters = firstLetters(targetWords);
+  const spokenWords = normalizedWords(transcript);
+  if (spokenWords.length === 0) return 0;
+  const { matchedA } = lcsAlign(targetLetters, spokenWords.map((word) => word.charAt(0)));
   let count = 0;
   while (count < matchedA.length && matchedA[count]) count++;
   return count;

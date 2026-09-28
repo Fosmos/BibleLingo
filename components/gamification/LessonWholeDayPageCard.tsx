@@ -39,6 +39,7 @@ export function LessonWholeDayPageCard({ layout, verses, renderActiveVerse }: Le
       layout={layout}
       activeVerse={firstVerse}
       isActive={(verse) => verseIds.has(verse.id)}
+      embeddedVerses={verses}
       renderActiveVerse={(verse, range) => {
         const verseIndex = verses.findIndex((candidate) => candidate.id === verse.id);
         return renderActiveVerse(verse, verseIndex, range);

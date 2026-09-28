@@ -1,13 +1,29 @@
 "use client";
 
-import { useMindMapData } from "@/lib/useMindMapData";
-import { useSwitchBookPath } from "@/lib/useSwitchBookPath";
+import type { MindMapData } from "@/lib/useMindMapData";
+import { BIBLE_VERSIONS } from "@/lib/bibleVersions";
+import type { PathTarget } from "@/lib/mindMapPathTarget";
+import type { MindMapPericopeDatum } from "@/lib/mindMapHierarchy";
 import { BookMindMap } from "@/components/gamification/BookMindMap";
-import { Button } from "@/components/ui/Button";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface MindMapScreenProps {
+  // The drawn path's data — from the caller's own useMindMapData, which may need it too (the
+  // lesson sheet runs lessons of the drawn path, see BookMindMapWithLessonSheet.tsx).
+  data: MindMapData;
   onSelectChapter: (chapter: number, startVerse?: number) => void;
+  // See BookMindMap.tsx's own doc comment — threaded straight through.
+  onSelectVerseForLesson?: (pericope: MindMapPericopeDatum, verseNumber: number) => void;
+  // See BookMindMap.tsx's own doc comment — threaded straight through.
+  focusVerse?: { book?: string; chapter: number; verseNumber: number };
+  // See BookMindMap.tsx's own doc comment — threaded straight through.
+  onChoosePath: (target: PathTarget) => void;
+  // See BookMindMap.tsx's own doc comment — threaded straight through.
+  onTapChapter?: (book: string, chapter: number) => void;
+  // Overrides the canvas's own default full-screen height — PathOverviewScreen.tsx passes a
+  // shorter one while its own in-place lesson bottom sheet is open, so the canvas shrinks to
+  // fill just the space left above it instead of sitting underneath it at full height.
+  heightClassName?: string;
 }
 
 // The Book path's own landing screen: a free pan/zoom view of the WHOLE canon's own
@@ -17,11 +33,10 @@ interface MindMapScreenProps {
 // book switches the active path to it (see BookMindMap.tsx's own doc comment) — this screen
 // itself never navigates on its own beyond wiring those two actions through. All the real data
 // work for the ACTIVE book (loading verses, building the day plan, slicing it per chapter)
-// lives in lib/useMindMapData.ts; every other book's own shell (label, chapter count,
+// lives in lib/useMindMapData.ts (called by this screen's host); every other book's own shell (label, chapter count,
 // completion badge) is cheap, static data lib/mindMapHierarchy.ts pulls in directly.
-export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
-  const data = useMindMapData();
-  const switchBook = useSwitchBookPath(data.status === "ready" ? data.version : "");
+export function MindMapScreen({ data, onSelectChapter, onSelectVerseForLesson, focusVerse, onChoosePath, onTapChapter, heightClassName }: MindMapScreenProps) {
+  const heightClass = heightClassName ?? "h-[calc(100dvh-63px-env(safe-area-inset-bottom))]";
 
   if (data.status === "loading") {
     return <FetchLoading label="Loading mind map…" />;
@@ -31,12 +46,21 @@ export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
     return <FetchError message={data.message} onRetry={data.retry} />;
   }
 
+  // No book/chapter/verse path yet (or a topic path): the whole canon, nothing active — every
+  // tap offers a path (see onChoosePath), so this IS where a path gets picked.
   if (data.status === "no-path") {
     return (
-      <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-4 p-8 text-center">
-        <h1 className="text-title text-ink dark:text-zinc-100">No book path active</h1>
-        <p className="text-ink-muted">The Mind Map only works for a Book path — start or switch to one to see its chapter/pericope tree here.</p>
-        <Button href="/begin">Choose a path</Button>
+      <div className={`${heightClass} w-full`}>
+        <BookMindMap
+          pathKey={null}
+          bookLabel=""
+          chapters={[]}
+          completedDays={0}
+          todaysDay={0}
+          version={BIBLE_VERSIONS[0].code}
+          onSelectChapter={onSelectChapter}
+          onChoosePath={onChoosePath}
+        />
       </div>
     );
   }
@@ -56,15 +80,19 @@ export function MindMapScreen({ onSelectChapter }: MindMapScreenProps) {
     // No explanation bar above this, no wrapper padding/border below whatever sits above this
     // screen — the canvas fills this entire box itself, edge to edge, with nothing between it
     // and the top of the box to read as a gap.
-    <div className="h-[calc(100dvh-63px-env(safe-area-inset-bottom))] w-full">
+    <div className={`${heightClass} w-full`}>
       <BookMindMap
+        pathKey={data.pathKey}
         bookLabel={data.label}
         chapters={data.chapters}
         completedDays={data.completedDays}
         todaysDay={data.todaysDay}
         version={data.version}
         onSelectChapter={onSelectChapter}
-        onSwitchBook={switchBook}
+        onSelectVerseForLesson={onSelectVerseForLesson}
+        focusVerse={focusVerse}
+        onChoosePath={onChoosePath}
+        onTapChapter={onTapChapter}
       />
     </div>
   );

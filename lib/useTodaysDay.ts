@@ -39,8 +39,11 @@ export interface TodaysDay {
 // from the client-side content cache when already present, or from ensurePathVerses()'s own
 // return value otherwise — rather than re-derived from resolvePath() on every render, since a
 // book-mode ESV path's cache slot can't hold a whole book at once (see ensureChapterLoaded).
-export function useTodaysDay(): TodaysDay {
-  const activePathKey = useProgressStore((state) => state.activePathKey);
+// `pathKey` picks which active path (Home shows one card per path — see TodayVersesCard.tsx);
+// omitted, it's the focused one.
+export function useTodaysDay(pathKey?: string): TodaysDay {
+  const focusedPathKey = useProgressStore((state) => state.activePathKey);
+  const activePathKey = pathKey ?? focusedPathKey;
   const paths = useProgressStore((state) => state.paths);
   const plan = activePathKey ? paths[activePathKey] : undefined;
 

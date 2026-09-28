@@ -29,8 +29,14 @@ function practiceHref(activePathKey: string, dayNumber: number): string {
   return `/path/${encodeURIComponent(activePathKey)}/day/${dayNumber}/practice`;
 }
 
-export function TodayVersesCard() {
-  const { activePathKey, plan, currentDay, restingUntilTomorrow, lastCompletedDay, error, retry } = useTodaysDay();
+interface TodayVersesCardProps {
+  // Which active path this card is for — Home shows one per path (see app/page.tsx). Omitted:
+  // the focused one (and the "no path yet" state when there is none).
+  pathKey?: string;
+}
+
+export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
+  const { activePathKey, plan, currentDay, restingUntilTomorrow, lastCompletedDay, error, retry } = useTodaysDay(pathKey);
   const label = activePathKey ? resolvePathLabel(activePathKey) : undefined;
 
   return (

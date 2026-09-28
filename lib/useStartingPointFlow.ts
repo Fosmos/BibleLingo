@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { BibleBook, LocationTagLevel } from "@/types";
+import type { BibleBook } from "@/types";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
 import { priorKnownVerseCountThrough } from "@/lib/dayPlan";
@@ -15,8 +15,6 @@ interface PendingFinish {
   kind: "book" | "chapter";
   version: string;
   versesPerDay?: number;
-  locationTagLevels?: LocationTagLevel[];
-  sectionEndPegEnabled?: boolean;
 }
 
 type GoToPath = (
@@ -24,8 +22,6 @@ type GoToPath = (
   kind: "book" | "chapter" | "verse",
   version: string,
   versesPerDay?: number,
-  locationTagLevels?: LocationTagLevel[],
-  sectionEndPegEnabled?: boolean,
   priorKnownVerseCount?: number,
 ) => void;
 
@@ -54,27 +50,13 @@ export function useStartingPointFlow({ selectedBook, goToPath, onLoading, onErro
   // signature exactly, since intensityFlow never knows a starting point itself. Verse mode's own
   // handleSelectVerse (GuidedPathFlow.tsx) calls goToPath directly instead — a single verse
   // has nothing to "already know part of."
-  function requestFinish(
-    identifier: string,
-    kind: "book" | "chapter" | "verse",
-    version: string,
-    versesPerDay?: number,
-    locationTagLevels?: LocationTagLevel[],
-    sectionEndPegEnabled?: boolean,
-  ) {
-    setPendingFinish({ identifier, kind: kind as "book" | "chapter", version, versesPerDay, locationTagLevels, sectionEndPegEnabled });
+  function requestFinish(identifier: string, kind: "book" | "chapter" | "verse", version: string, versesPerDay?: number) {
+    setPendingFinish({ identifier, kind: kind as "book" | "chapter", version, versesPerDay });
   }
 
   function finishFromBeginning() {
     if (!pendingFinish) return;
-    goToPath(
-      pendingFinish.identifier,
-      pendingFinish.kind,
-      pendingFinish.version,
-      pendingFinish.versesPerDay,
-      pendingFinish.locationTagLevels,
-      pendingFinish.sectionEndPegEnabled,
-    );
+    goToPath(pendingFinish.identifier, pendingFinish.kind, pendingFinish.version, pendingFinish.versesPerDay);
   }
 
   // Turns "I've memorized through book X, chapter/verse Y" into an exact prior-known-verse
@@ -97,15 +79,7 @@ export function useStartingPointFlow({ selectedBook, goToPath, onLoading, onErro
           : await ensureChapterLoaded(selectedBook.name, chapter, pendingFinish.version);
       const priorKnownVerseCount = priorKnownVerseCountThrough(verses, chapter, verseNumber);
       onIdle();
-      goToPath(
-        pendingFinish.identifier,
-        pendingFinish.kind,
-        pendingFinish.version,
-        pendingFinish.versesPerDay,
-        pendingFinish.locationTagLevels,
-        pendingFinish.sectionEndPegEnabled,
-        priorKnownVerseCount,
-      );
+      goToPath(pendingFinish.identifier, pendingFinish.kind, pendingFinish.version, pendingFinish.versesPerDay, priorKnownVerseCount);
     } catch (error) {
       onError(error instanceof BibleFetchError ? error.message : "Something went wrong figuring out where to start.");
     }

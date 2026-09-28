@@ -98,3 +98,67 @@ export function playSectionCompleteSfx(): void {
   setTimeout(() => playTone(659, 110, "sine"), 90);
   setTimeout(() => playTone(784, 220, "sine"), 180);
 }
+
+// A grander four-note arpeggio (one note higher/longer than playSectionCompleteSfx) — fires for
+// a whole-BOOK Mind Map completion, so it reads as a bigger moment than a single chapter's own
+// three-note cue without inventing an unrelated sound.
+export function playBookCompleteSfx(): void {
+  playTone(523, 100, "sine");
+  setTimeout(() => playTone(659, 100, "sine"), 85);
+  setTimeout(() => playTone(784, 100, "sine"), 170);
+  setTimeout(() => playTone(1047, 260, "sine"), 255);
+}
+
+// A single soft, short tick — fires on a plain Mind Map node tap (expand/collapse a branch,
+// open a pericope's own reading view). Quiet and low-key on purpose: this plays on nearly every
+// tap across the canvas, so anything louder/longer than playCorrectSfx would quickly grate.
+export function playMindMapTapSfx(): void {
+  playTone(740, 60, "sine");
+}
+
+// The per-letter typing sound: a soft, bright pluck that climbs a pentatonic scale with every
+// correct letter in a row — like a combo — so a smooth run of recall literally sounds like it's
+// building; any pentatonic step sounds good after any other, so it never jars. It starts back at
+// the bottom after a pause or a wrong letter (which itself makes no sound at all — see
+// resetLetterCombo), so the climb is something the reader earns by keeping going.
+const LETTER_SCALE_HZ = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760];
+const LETTER_COMBO_TIMEOUT_MS = 1800;
+let letterCombo = 0;
+let lastLetterAt = 0;
+
+function playPluck(frequency: number): void {
+  const ctx = getSfxContext();
+  if (!ctx) return;
+  if (ctx.state === "suspended") void ctx.resume();
+  const now = ctx.currentTime;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.16, now + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+  gain.connect(ctx.destination);
+  // A pure tone plus a quiet octave above it — the octave gives it a glassy, "ding" sparkle.
+  for (const [multiple, level] of [[1, 1], [2, 0.25]] as const) {
+    const oscillator = ctx.createOscillator();
+    const partial = ctx.createGain();
+    oscillator.type = multiple === 1 ? "sine" : "triangle";
+    oscillator.frequency.value = frequency * multiple;
+    partial.gain.value = level;
+    oscillator.connect(partial);
+    partial.connect(gain);
+    oscillator.start(now);
+    oscillator.stop(now + 0.2);
+  }
+}
+
+export function playLetterSfx(): void {
+  const nowMs = typeof performance === "undefined" ? Date.now() : performance.now();
+  if (nowMs - lastLetterAt > LETTER_COMBO_TIMEOUT_MS) letterCombo = 0;
+  lastLetterAt = nowMs;
+  playPluck(LETTER_SCALE_HZ[Math.min(letterCombo, LETTER_SCALE_HZ.length - 1)]);
+  letterCombo += 1;
+}
+
+// A wrong letter: silent, but the climb starts over.
+export function resetLetterCombo(): void {
+  letterCombo = 0;
+}

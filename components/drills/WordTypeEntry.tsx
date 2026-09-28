@@ -2,7 +2,7 @@
 
 import { useState, type KeyboardEvent } from "react";
 import type { VerseSegment } from "@/types";
-import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
+import { playLetterSfx, resetLetterCombo } from "@/lib/audio";
 import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { WordRevealLine } from "@/components/drills/WordRevealLine";
@@ -66,10 +66,10 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
 
   function submitWord() {
     if (normalizeWord(value) === normalizeWord(currentWord)) {
-      playCorrectSfx();
+      playLetterSfx();
       revealCurrentWord(false);
     } else if (value.trim()) {
-      playIncorrectSfx();
+      resetLetterCombo();
       setValue("");
       setHadMistake(true);
       onMistake?.();
@@ -89,10 +89,10 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
     const typed = inputValue.toLowerCase();
 
     if (typed && typed === expected) {
-      playCorrectSfx();
+      playLetterSfx();
       revealCurrentWord(false);
     } else if (typed) {
-      playIncorrectSfx();
+      resetLetterCombo();
       setValue("");
       setHadMistake(true);
       onMistake?.();
@@ -108,7 +108,7 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
         activeVerse={verse}
         activeWordIndex={wordIndex}
         renderActiveVerse={(_: VerseSegment, { startIndex, endIndex }: SenseLineWordRange) => (
-          <WordRevealLine words={words.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={revealedWords.length} />
+          <WordRevealLine words={words.slice(startIndex, endIndex)} startIndex={startIndex} revealedCount={revealedWords.length} firstLettersOnly={mode === "firstLetter"} />
         )}
       />
 
@@ -134,6 +134,8 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
               onChange={(event) => handleLetterChange(event.target.value)}
               maxLength={1}
               autoFocus
+              // The on-screen keyboard is the way to type here — never pop the phone's own over it.
+              inputMode="none"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
@@ -149,6 +151,8 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
               onChange={(event) => setValue(event.target.value)}
               onKeyDown={handleKeyDown}
               autoFocus
+              // The on-screen keyboard is the way to type here — never pop the phone's own over it.
+              inputMode="none"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}

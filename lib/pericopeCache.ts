@@ -18,11 +18,18 @@ function cacheKey(book: string, chapter: number): string {
   return `${book}|${chapter}`;
 }
 
+// The last parse, keyed by the stored string it came from — the Mind Map reads section headings
+// many times per render, so the stored JSON is only re-parsed when it actually changes (same as
+// lib/bibleContentCache.ts).
+let parsed: { raw: string; cache: PericopeCache } | null = null;
+
 function readCache(): PericopeCache {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(CACHE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PericopeCache) : {};
+    if (!raw) return {};
+    if (parsed?.raw !== raw) parsed = { raw, cache: JSON.parse(raw) as PericopeCache };
+    return parsed.cache;
   } catch {
     return {};
   }
@@ -30,7 +37,14 @@ function readCache(): PericopeCache {
 
 function writeCache(cache: PericopeCache): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
+  const raw = JSON.stringify(cache);
+  try {
+    window.localStorage.setItem(CACHE_STORAGE_KEY, raw);
+    parsed = { raw, cache };
+  } catch (error) {
+    parsed = null;
+    throw error;
+  }
 }
 
 export function getCachedPericopes(book: string, chapter: number): Pericope[] | undefined {

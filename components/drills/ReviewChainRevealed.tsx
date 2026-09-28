@@ -1,7 +1,8 @@
 "use client";
 
 import type { VerseSegment } from "@/types";
-import { wordOrBlank } from "@/lib/verseWords";
+import { firstLetterWithPunctuation, hiddenWordBlank } from "@/lib/verseWords";
+import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
 interface CombinedWord {
   word: string;
@@ -46,9 +47,9 @@ interface ReviewChainRevealedProps {
 
 // ReviewChain.tsx's own word-by-word reveal display, split out purely to keep that file under
 // this codebase's 200-line cap. Shows the WHOLE chain from the start — every word already
-// typed in full, every word still to come reserved as blank space in its own real position
-// (see lib/verseWords.ts's wordOrBlank) — so typing a word fills it into the exact spot it was
-// always going to sit in. No scroll container of its own — the chain just grows the
+// typed as its first letter, every word still to come reserved as blank space in its own real
+// position (see lib/verseWords.ts's hiddenWordBlank) — so typing a word fills it into the spot
+// it was always going to sit in. No scroll container of its own — the chain just grows the
 // LessonParchmentCard around it, same "never scroll, only grow" rule every other lesson stage
 // follows.
 export function ReviewChainRevealed({ verses, combinedWords, revealedCount }: ReviewChainRevealedProps) {
@@ -64,7 +65,9 @@ export function ReviewChainRevealed({ verses, combinedWords, revealedCount }: Re
               {groupVerse.chapter}:{groupVerse.verseNumber}
             </span>
             {group.words.map((slot) => (
-              <span key={slot.globalIndex}>{slot.globalIndex < revealedCount ? slot.word : wordOrBlank(slot.word, false)} </span>
+              <span key={slot.globalIndex} className={slot.globalIndex < revealedCount ? FIRST_LETTER_GAP_CLASS : undefined}>
+                {slot.globalIndex < revealedCount ? firstLetterWithPunctuation(slot.word) : hiddenWordBlank(slot.word)}{" "}
+              </span>
             ))}
           </p>
         );

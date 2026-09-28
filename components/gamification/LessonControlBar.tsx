@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { VerseViewButtons } from "@/components/gamification/VerseViewButtons";
+import { SheetDrillPortal } from "@/components/gamification/SheetDrillPortal";
 
 interface LessonControlBarProps {
   children: ReactNode;
@@ -14,16 +16,22 @@ interface LessonControlBarProps {
   // old, content-driven parchment sizing.
   dockRef?: RefObject<HTMLDivElement | null>;
   // The verse(s) this stage drills, already joined into one string for a multi-verse stage —
-  // when set, renders VerseViewButtons.tsx's own "View Verse"/"View Whole Verse" pair at the top
-  // of this bar, so every stage carries the same neutral reference lookup regardless of whether
-  // it happens to show the verse plainly or hides it for recall. Left unset only by a caller
-  // with no single verse/text of its own to show (none currently — every real stage passes it).
+  // when set, renders VerseViewButtons.tsx's own "View Verse"/"View First Letters" pair, so
+  // every stage carries the same neutral reference lookup regardless of whether it happens to
+  // show the verse plainly or hides it for recall. On the in-place Mind Map sheet this pair
+  // portals up into the breadcrumb instead of rendering in this bar (see `verseViewPortalNode`
+  // below) — it's a lookup, not a drill control, so it doesn't compete for this bar's own
+  // essential-controls space. Left unset only by a caller with no single verse/text of its own
+  // to show (none currently — every real stage passes it).
   verseText?: string;
-  verseMarkers?: Record<number, number>;
   // Rendered in the SAME row as the View First Letters/View Verse pair, to their right — see
-  // VerseViewButtons.tsx's own `extra` prop this just forwards to. Left unset by every caller
-  // with nothing of its own to put there.
+  // VerseViewButtons.tsx's own `extra` prop this just forwards to (follows it to the breadcrumb
+  // portal too, when that applies). Left unset by every caller with nothing of its own to put
+  // there.
   verseViewExtra?: ReactNode;
+  // Called whenever the reader opens View First Letters or View Verse — review stages use it to
+  // flag the verse as a problem verse (see lib/flagPeekedVerse.ts).
+  onVersePeek?: () => void;
 }
 
 // The shared "act here" surface below a LessonParchmentCard/LessonPageCard — every stage's own
@@ -47,7 +55,7 @@ interface LessonControlBarProps {
 // Docks at the true screen bottom (not PathBottomDock's own `bottom-20`) because AuthGate.tsx
 // hides the bottom tab bar for as long as this bar is mounted this way — see
 // store/useLessonSessionStore.ts.
-export function LessonControlBar({ children, dockRef, verseText, verseMarkers, verseViewExtra }: LessonControlBarProps) {
+export function LessonControlBar({ children, dockRef, verseText, verseViewExtra, onVersePeek }: LessonControlBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether this box's own content currently overflows its max-h cap, with more still below
   // the fold — a box this small giving no hint there's anything to scroll to at all left a
@@ -59,6 +67,14 @@ export function LessonControlBar({ children, dockRef, verseText, verseMarkers, v
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
   const beginSession = useLessonSessionStore((state) => state.begin);
   const endSession = useLessonSessionStore((state) => state.end);
+  // Set only while the in-place Mind Map lesson sheet is open (see
+  // lib/useMindMapVerseViewSlot.ts) — the neutral "View First Letters"/"View Verse" lookup below
+  // portals straight into the breadcrumb above the sheet instead of taking up room in this bar's
+  // own essential drill controls. Null on the standalone route, where it renders inline as usual.
+  const verseViewPortalNode = useLessonSessionStore((state) => state.verseViewPortalNode);
+  // The Mind Map sheet's drill zone (see SheetDrillPortal.tsx) — when set, this bar's controls
+  // render there, filling it, instead of as a docked bar of their own.
+  const drillPortalNode = useLessonSessionStore((state) => state.drillPortalNode);
 
   // Docked mode is exactly "a lesson-like session is on screen" — tells AuthGate.tsx to hide
   // the bottom tab bar for as long as this bar itself is mounted this way (see
@@ -87,13 +103,28 @@ export function LessonControlBar({ children, dockRef, verseText, verseMarkers, v
     };
   });
 
-  const verseView = verseText && <VerseViewButtons text={verseText} verseMarkers={verseMarkers} extra={verseViewExtra} />;
+  // Portaled (icon-only, to fit a phone-width breadcrumb) into the breadcrumb's own slot whenever
+  // it exists (the in-place Mind Map sheet), rendered inline right here otherwise (the
+  // standalone route, which has no such slot).
+  const verseView = verseText && !verseViewPortalNode ? <VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} /> : null;
+  const portaledVerseView =
+    verseText && verseViewPortalNode ? createPortal(<VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} compact />, verseViewPortalNode) : null;
+
+  if (drillPortalNode) {
+    return (
+      <>
+        <SheetDrillPortal node={drillPortalNode}>{children}</SheetDrillPortal>
+        {portaledVerseView}
+      </>
+    );
+  }
 
   if (!dockRef) {
     return (
       <div className="flex flex-col items-center gap-3 px-2">
         {verseView}
         {children}
+        {portaledVerseView}
       </div>
     );
   }
@@ -126,6 +157,7 @@ export function LessonControlBar({ children, dockRef, verseText, verseMarkers, v
           <ChevronDown size={14} className="mb-0.5 animate-bounce text-ink-muted dark:text-zinc-500" />
         </div>
       )}
+      {portaledVerseView}
     </div>
   );
 }

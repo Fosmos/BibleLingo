@@ -2,34 +2,33 @@
 
 import { useState } from "react";
 import type { BibleBook } from "@/types";
-import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
 import { useGoToPath } from "@/lib/useGoToPath";
 import { useLearnIntensityFlow } from "@/lib/useLearnIntensityFlow";
 import { useStartingPointFlow } from "@/lib/useStartingPointFlow";
-import { BookList } from "@/components/gamification/BookList";
-import { ChapterGrid } from "@/components/gamification/ChapterGrid";
 import { VersionPicker } from "@/components/gamification/VersionPicker";
-import { VersePicker } from "@/components/gamification/VersePicker";
 import { VersesPerDayPicker } from "@/components/gamification/VersesPerDayPicker";
 import { LearnIntensityPicker } from "@/components/gamification/LearnIntensityPicker";
-import { LocationTagLevelPicker } from "@/components/gamification/LocationTagLevelPicker";
 import { StartingPointFlow } from "@/components/gamification/StartingPointFlow";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface GuidedPathFlowProps {
   mode: "book" | "chapter" | "verse";
   onBack: () => void;
+  // The book/chapter/verse, already chosen by navigating the Mind Map (see MindMapPathSetup.tsx)
+  // — this flow runs just the steps after it, starting at the translation; backing out of that
+  // first step leaves the flow. `chapter` is set for chapter/verse mode, `verse` for verse mode.
+  preset: { book: BibleBook; chapter?: number; verse?: number };
 }
 
 const CHAPTER_FETCH_CONCURRENCY = 4;
 
-export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
+export function GuidedPathFlow({ mode, onBack, preset }: GuidedPathFlowProps) {
   const goToPath = useGoToPath();
-  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const selectedBook = preset.book;
+  const selectedChapter = preset.chapter ?? null;
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [verseCount, setVerseCount] = useState<number | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -58,7 +57,6 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
   const intensityFlow = useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath: startingPointFlow.requestFinish });
 
   async function handleSelectVersion(version: string) {
-    if (!selectedBook) return;
     setStatus("loading");
     setErrorMessage("");
 
@@ -79,6 +77,10 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
       if (!selectedChapter) return;
       setLoadingLabel(`Loading ${formatChapterLabel(selectedBook.name, selectedChapter)}…`);
       const verses = await ensureChapterLoaded(selectedBook.name, selectedChapter, version);
+      if (mode === "verse" && preset.verse) {
+        goToPath(`${selectedBook.name}|${selectedChapter}|${preset.verse}`, "verse", version);
+        return;
+      }
 
       // Chapter mode stays on this flow to ask how many verses/day (like book mode); verse
       // mode stays on it to show the verse grid for the now-loaded chapter.
@@ -91,11 +93,6 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     }
   }
 
-  function handleSelectVerse(verseNumber: number) {
-    if (!selectedBook || !selectedChapter || !selectedVersion) return;
-    goToPath(`${selectedBook.name}|${selectedChapter}|${verseNumber}`, "verse", selectedVersion);
-  }
-
   if (status === "loading") {
     return <FetchLoading label={loadingLabel} />;
   }
@@ -104,7 +101,7 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     return <FetchError message={errorMessage} onRetry={() => setStatus("idle")} />;
   }
 
-  if (startingPointFlow.pendingFinish && selectedBook) {
+  if (startingPointFlow.pendingFinish) {
     const pendingFinish = startingPointFlow.pendingFinish;
     return (
       <StartingPointFlow
@@ -120,16 +117,6 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     );
   }
 
-  if (intensityFlow.showLocationTagLevels) {
-    return (
-      <LocationTagLevelPicker
-        onSelect={intensityFlow.handleSelectLocationTagLevels}
-        onBack={intensityFlow.resetShowLocationTagLevels}
-        initialPegSystemEnabled={intensityFlow.initialPegSystemEnabled}
-      />
-    );
-  }
-
   if (intensityFlow.pendingVersesPerDay !== null) {
     return (
       <LearnIntensityPicker
@@ -141,7 +128,7 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     );
   }
 
-  if (selectedBook && verseCount !== null && (mode === "book" || (mode === "chapter" && selectedChapter))) {
+  if (verseCount !== null && (mode === "book" || (mode === "chapter" && selectedChapter))) {
     const description =
       mode === "chapter" ? "each lesson reviews everything learned so far in this chapter, then learns this many new verses." : undefined;
     return (
@@ -157,42 +144,12 @@ export function GuidedPathFlow({ mode, onBack }: GuidedPathFlowProps) {
     );
   }
 
-  if (selectedBook && selectedChapter && verseCount !== null && mode === "verse") {
-    return (
-      <VersePicker
-        book={selectedBook.name}
-        chapter={selectedChapter}
-        totalVerses={verseCount}
-        onSelectVerse={handleSelectVerse}
-        onBack={() => {
-          setVerseCount(null);
-          setSelectedVersion(null);
-        }}
-      />
-    );
-  }
-
-  if (selectedBook && (mode === "book" || selectedChapter)) {
+  if (mode === "book" || selectedChapter) {
     const title = mode === "book" ? selectedBook.name : formatChapterLabel(selectedBook.name, selectedChapter as number);
     return (
-      <VersionPicker
-        title={title}
-        onSelectVersion={handleSelectVersion}
-        onBack={() => (mode === "book" ? setSelectedBook(null) : setSelectedChapter(null))}
-      />
+      <VersionPicker title={title} onSelectVersion={handleSelectVersion} onBack={onBack} />
     );
   }
 
-  if (selectedBook) {
-    return <ChapterGrid book={selectedBook} onSelectChapter={setSelectedChapter} onBack={() => setSelectedBook(null)} />;
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <button type="button" onClick={onBack} className="self-start text-sm font-medium text-brand-600 hover:underline">
-        ← Choose a different way
-      </button>
-      <BookList books={BIBLE_BOOKS} onSelectBook={setSelectedBook} />
-    </div>
-  );
+  return null;
 }

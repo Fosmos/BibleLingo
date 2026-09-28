@@ -19,7 +19,10 @@ export function getDefaultProgress(): UserProgress {
     },
     paths: {},
     stickers: [],
+    celebratedMindMapChapters: [],
+    celebratedMindMapBooks: [],
     activePathKey: null,
+    activePathKeys: [],
     memorizedEntities: [],
     shekels: 0,
     includeVerseReferences: false,
@@ -75,7 +78,16 @@ export function loadProgress(userId: string): UserProgress {
   if (!raw) {
     return getDefaultProgress();
   }
-  return parseStoredProgress(raw) ?? getDefaultProgress();
+  const parsed = parseStoredProgress(raw);
+  if (!parsed) return getDefaultProgress();
+  // Backfill onto the defaults rather than returning the parsed blob as-is — a schema-matched
+  // blob saved before a new top-level field existed (see celebratedMindMapBooks's own doc
+  // comment in types/index.ts) is otherwise missing that key entirely, not just holding an old
+  // value for it, and a consumer that shallow-merges this straight into a store (see
+  // store/useProgressStore.ts's own `set(loadProgress(userId))`) would leave that field
+  // permanently stuck at whatever the store's OWN initial default happened to be, silently
+  // diverging from every other field real progress data already reflects.
+  return { ...getDefaultProgress(), ...parsed };
 }
 
 export function saveProgress(userId: string, progress: UserProgress): void {

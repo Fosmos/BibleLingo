@@ -80,9 +80,8 @@ export interface MemorizationDay {
   previousVerses?: VerseSegment[];
 }
 
-// A scope a location tag can be attached to (see UserProgress.locationTags) — chosen per
-// path, any combination at once, at path-creation time (see
-// components/gamification/LocationTagLevelPicker.tsx).
+// A scope a location tag can be attached to (see UserProgress.locationTags) — any combination
+// at once, turned on/off globally from Settings (see UserProgress.locationTagLevels).
 export type LocationTagLevel = "book" | "chapter" | "pericope" | "verse";
 
 export interface PathProgress {
@@ -90,16 +89,6 @@ export interface PathProgress {
   completedDays: number;
   // Set for "book" and "chapter" kind paths — verse/topic paths stay one verse per lesson.
   versesPerDay?: number;
-  // Which scopes get an "add location tag" option in this path's Building view — any
-  // combination, chosen once at path-creation time. Undefined (an older path, or Building
-  // view was off when this one was made) means none.
-  locationTagLevels?: LocationTagLevel[];
-  // When true (and "pericope" is one of locationTagLevels above and pegSystemEnabled is on),
-  // each pericope card's header shows a SECOND peg chip pegged to the section's own last verse
-  // number, alongside the usual one pegged to its first verse — chosen once at path-creation
-  // time, right alongside locationTagLevels (see LocationTagLevelPicker.tsx). Undefined means
-  // off, same "never asked/older path" convention as locationTagLevels.
-  sectionEndPegEnabled?: boolean;
   // How many of this path's own verses (array position, not a verse NUMBER — see
   // lib/dayPlan.ts's buildDayPlan) the reader already claimed to know at path-creation time
   // (GuidedPathFlow.tsx's "I've already learned some of this" step) — excluded from lesson
@@ -131,6 +120,10 @@ export interface SRSState {
   box: SrsBox;
   lastReviewedAt: string | null;
   nextDueAt: string | null;
+  // The most recent review's word-recall accuracy (0-100) — shown as the Mind Map's "last
+  // review %" badge. Optional: undefined until this range's first SRS review (and for any
+  // entity saved before this field existed).
+  lastAccuracy?: number;
 }
 
 // A contiguous, gap-free run of verses within a single book+chapter that have all been
@@ -227,19 +220,45 @@ export interface UserProgress {
   streak: StreakState;
   paths: Record<string, PathProgress>;
   stickers: string[];
+  // Chapter ids (Mind Map's own stable `chapter:{book}:{n}` key) whose completion celebration
+  // (sound + confetti + badge pop — see lib/useMindMapChapterCelebration.ts) has already fired
+  // once. Deliberately a SEPARATE array from `stickers` above: that one is modeled as "one entry
+  // per completed learning PATH," rendered by StickerBook.tsx via resolvePathLabel(key) — a
+  // 16-chapter book would spam 16 unrelated, unresolvable entries into that screen if chapter
+  // completions were folded into it instead.
+  celebratedMindMapChapters: string[];
+  // Same one-time-celebration dedup as celebratedMindMapChapters above, scoped to a whole BOOK
+  // finishing (see lib/useMindMapCompletionCelebration.ts) — a bigger, separate celebration tier,
+  // keyed by the Mind Map's own stable `book:{name}` id.
+  celebratedMindMapBooks: string[];
+  // The FOCUSED path — the one the Path tab and the Mind Map open on.
   activePathKey: string | null;
+  // Every path the reader is currently working through, the focused one included — each keeps
+  // its own day count and gets its own lesson each day (see lib/activePaths.ts). Optional for
+  // profiles saved before several paths could run at once; read it through activePathKeysOf.
+  activePathKeys?: string[];
   memorizedEntities: MemorizedEntity[];
   shekels: number;
   includeVerseReferences: boolean;
   // Whether the path view renders BuildingRoomView (the same lesson list as the plain view,
-  // with an "add location tag" option at whichever scopes this path picked — see
-  // PathProgress.locationTagLevels) instead of the plain list — see
+  // with an "add location tag" option at whichever scopes are turned on — see
+  // UserProgress.locationTagLevels) instead of the plain list — see
   // components/gamification/DayPathDiagram.tsx.
   buildingViewEnabled: boolean;
   // The reader's own Who/Action/scene for a verse (see VersePOA above), keyed by
   // lib/verseKey.ts's verseKey — shown as that verse's DayCircle icon (alongside its room
   // item).
   versePOA: Record<string, VersePOA>;
+  // Which scopes get an "add location tag" option at all — any combination of book/chapter/
+  // pericope/verse, turned on/off globally from Settings > Advanced > Memory Palace Tags (see
+  // components/gamification/MemoryPalaceTagLevelToggles.tsx), applying everywhere a tag can
+  // show up: a Mind Map node's own tag badge (book/chapter/pericope — see
+  // MindMapNodeCard.tsx), and the Building path view's per-scope fields (BuildingRoomView.tsx,
+  // book/chapter/pericope/verse). Optional (rather than bumped in alongside a schema version)
+  // so an existing saved profile missing it just falls back to `[]` (no scopes tagged) at
+  // every read site, the same self-healing convention srsPromotionThreshold above already
+  // uses — never requires wiping progress.
+  locationTagLevels?: LocationTagLevel[];
   // The reader's own free-text location tags, keyed by lib/locationTags.ts's locationTagKey —
   // one flat map covering every scope (book/chapter/pericope/verse), no predefined
   // suggestions of any kind. A scope with no entry here yet just shows an "add location tag"
@@ -265,6 +284,12 @@ export interface UserProgress {
   // above) become available from Profile — including the Memory Palace tag view, where it
   // shows an editable PegTagField right next to every location tag spot the reader picked.
   pegSystemEnabled: boolean;
+  // When true (and "pericope" is one of locationTagLevels above and pegSystemEnabled is on),
+  // each pericope card's header shows a SECOND peg chip pegged to the section's own last verse
+  // number, alongside the usual one pegged to its first verse. A global setting (Settings >
+  // Advanced > Memory Palace Tags), same self-healing `?? false` convention as
+  // srsPromotionThreshold above.
+  sectionEndPegEnabled?: boolean;
   // The last calendar date (YYYY-MM-DD, local) a Building-view chapter review was shown —
   // gates DailyChapterReviewGate.tsx to at most once per day per the reader's own clock,
   // not tied to any specific path/chapter.
@@ -313,6 +338,9 @@ export interface UserProgress {
   // review, or by fully relearning it (components/gamification/RelearnSession.tsx) — a
   // review that lands strictly between the two thresholds changes nothing either way.
   problemVerses: Record<string, ProblemVerseEntry>;
+  // The Mind Map's SRS review run left part-way (see lib/useSrsReviewRun.ts), so it can be picked
+  // up again. Optional: absent on profiles saved before this existed, and once a run finishes.
+  srsReviewRun?: SrsReviewRun | null;
   // Cumulative per-word SRS miss counts, keyed by lib/verseKey.ts's verseKey — see
   // lib/stumbleTracking.ts. Powers the Stumble Map heat-map view (surfaced from
   // ProblemVersesBin.tsx): which exact words in a verse are the reader's actual weak points,
@@ -374,6 +402,15 @@ export interface UserProgress {
 
 // One verse flagged into the Problem Verses bin — see UserProgress.problemVerses above for
 // the two ways out (a later strong review, or fully relearning it).
+// Where an unfinished Mind Map SRS review run stopped: the ranges it walks, which one it was on,
+// and how far into that range's first-letter typing (its next word, and the words missed so far).
+export interface SrsReviewRun {
+  entityIds: string[];
+  index: number;
+  wordIndex: number;
+  wrongWordIndices: number[];
+}
+
 export interface ProblemVerseEntry {
   book: string;
   chapter: number;

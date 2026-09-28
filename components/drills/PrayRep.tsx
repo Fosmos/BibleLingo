@@ -92,8 +92,8 @@ export function PrayRep({ verses, verseOffsets, wordAnnotations, onComplete, dur
       />
 
       <LessonControlBar dockRef={layout.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        <p className="text-center text-xs text-ink-muted">Take {durationLabel} to pray about this — what it means, and how you want to respond.</p>
-        <div className="flex flex-col items-center gap-2">
+        <p className="text-center text-xs text-ink-muted [.lesson-sheet-controls_&]:hidden">Take {durationLabel} to pray about this — what it means, and how you want to respond.</p>
+        <div className="flex items-center gap-3">
           <span className="text-xl font-semibold tabular-nums text-ink dark:text-zinc-100">
             {minutes}:{seconds.toString().padStart(2, "0")}
           </span>
@@ -104,27 +104,17 @@ export function PrayRep({ verses, verseOffsets, wordAnnotations, onComplete, dur
               transition={{ duration: isRunning ? 1 : 0, ease: "linear" }}
             />
           </div>
-          {!isRunning && !isDone && (
-            <motion.button
-              type="button"
-              whileTap={TAP_SCALE}
-              onClick={handleStart}
-              className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white"
-            >
-              Start prayer timer ({durationLabel})
-            </motion.button>
-          )}
-          {isRunning && <p className="text-sm text-ink-muted">Praying…</p>}
-          {isDone && <p className="text-sm font-medium text-brand-600 dark:text-brand-400">Amen.</p>}
         </div>
+        {/* One action slot that steps through the stage — start, wait, continue — rather than a
+            Start button stacked over a Continue button that stays disabled the whole time. */}
         <motion.button
           type="button"
           whileTap={TAP_SCALE}
-          disabled={!isDone}
-          onClick={onComplete}
-          className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={isRunning}
+          onClick={isDone ? onComplete : handleStart}
+          className="rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Continue
+          {isDone ? "Amen — Continue" : isRunning ? "Praying…" : `Start prayer timer (${durationLabel})`}
         </motion.button>
         <AutoCompleteButton onClick={onComplete} />
       </LessonControlBar>

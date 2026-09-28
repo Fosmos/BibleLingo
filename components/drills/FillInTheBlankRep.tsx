@@ -30,15 +30,10 @@ interface FillInTheBlankRepProps {
 // this app's other 2-rep drills already follow.
 const REP_COUNT = 2;
 
-// A mistake reverts to the last checkpoint rather than the very first blank — same
-// "restart the section, not the whole thing" leniency this app already extends elsewhere
-// (see ReviewChain's own per-verse restart) — so one slip late in a long verse doesn't wipe
-// every correct tile placed before it.
-const CHECKPOINT_SIZE = 4;
-
 // Tap the missing words, in order, from a bank below — tiles are alphabetized (punctuation
-// stripped) rather than shuffled, so their position never hints at the answer. A wrong tap
-// flashes red and reverts to the last checkpoint instead of the very first blank.
+// stripped) rather than shuffled, so their position never hints at the answer. A wrong tap just
+// flashes red and stays available to try again — every tile already placed correctly stays
+// placed, so one slip never costs any real progress (see handleTileClick).
 export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
   const [repIndex, setRepIndex] = useState(0);
@@ -86,8 +81,6 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
     } else {
       playIncorrectSfx();
       setWrongTileId(tileId);
-      const lastCheckpoint = Math.floor(placedCount / CHECKPOINT_SIZE) * CHECKPOINT_SIZE;
-      setUsedTileIds((prev) => new Set(Array.from(prev).slice(0, lastCheckpoint)));
     }
   }
 
@@ -96,6 +89,16 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
   // (see LessonPageCard.tsx's own renderActiveVerse doc comment) — slices `words` down to just
   // this clause's own range so a multi-clause verse still renders through the same hanging-
   // indent line structure a non-active verse gets.
+  // `indent-0` on the blank span below undoes something otherwise invisible: SenseLineRow.tsx's
+  // own `-indent-6` (a negative text-indent, for its hanging-indent layout) is CSS-inherited, and
+  // an `inline-block` establishes its own line box for its own content — so without resetting it
+  // here, that negative indent applies AGAIN to this span's own text, shifting it left by that
+  // same amount and painting it back over whatever word came right before it.
+  //
+  // A blank always holds its own word, just invisible until placed — so it's exactly that word's
+  // width from the start, and filling it in never widens the line. (A fixed-width blank used to
+  // grow on fill and knock the rest of the line down onto the next one.) No side margin either:
+  // the ordinary trailing space separates it, the same room sense-line merging measured for.
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
     return (
       <>
@@ -105,15 +108,18 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
           const slotPosition = blankIndices.indexOf(index);
           const isFilled = slotPosition < placedCount;
           return (
-            <span
-              key={index}
-              className={`inline-flex min-w-12 items-center justify-center rounded-lg border-2 border-dashed px-2 py-0.5 ${
-                isFilled
-                  ? "border-brand-500 bg-brand-50 font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300"
-                  : "border-line dark:border-zinc-700"
-              }`}
-            >
-              {isFilled ? word : " "}
+            <span key={index}>
+              <span
+                className={`inline-block indent-0 whitespace-nowrap border-b-2 font-medium leading-none ${
+                  isFilled
+                    ? "border-brand-500 text-brand-700 dark:text-brand-300"
+                    : "border-dashed border-line dark:border-zinc-700"
+                }`}
+              >
+                <span className={isFilled ? "" : "invisible"} aria-hidden={isFilled ? undefined : true}>
+                  {word}
+                </span>
+              </span>{" "}
             </span>
           );
         })}
@@ -126,20 +132,24 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
       <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={targetIndex ?? words.length} renderActiveVerse={renderActiveVerse} />
 
       <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
-        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500">
-          Fill in the blanks <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
+        <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">
+          Fill in the blanks
+          <span className="font-normal normal-case tracking-normal text-ink-muted">
+            · Rep {repIndex + 1} of {REP_COUNT}
+          </span>
+          <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
         </p>
-        <p className="self-center text-xs text-ink-muted">
-          Rep {repIndex + 1} of {REP_COUNT}
-        </p>
-        <div className="flex w-full flex-wrap gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900">
+        {/* Inside the Mind Map sheet's drill zone (tagged `lesson-sheet-controls` — see
+            LessonBottomSheet.tsx) the options aren't boxed at all: they spread straight across
+            the whole zone, centered in whatever height it has. */}
+        <div className="flex w-full flex-wrap justify-center gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:content-center [.lesson-sheet-controls_&]:bg-transparent [.lesson-sheet-controls_&]:p-0 dark:[.lesson-sheet-controls_&]:bg-transparent">
           {tray.map((entry) => (
             <motion.button
               key={entry.tileId}
               type="button"
               whileTap={TAP_SCALE}
               onClick={() => handleTileClick(entry.tileId, entry.word)}
-              className={`rounded-lg px-3 py-2 text-base font-medium text-white ${
+              className={`rounded-lg px-3 py-2 text-base font-medium text-white [.lesson-sheet-controls_&]:py-1.5 ${
                 wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500"
               } ${usedTileIds.has(entry.tileId) ? "invisible" : ""}`}
             >

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MemorizationDay } from "@/types";
 import { versesByPericopeSegment } from "@/lib/pathZones";
 import { paginateSegments, pageIndexForVerse, type ChapterPage } from "@/lib/chapterPagination";
-import { resolvePageBudget, type PageBudget } from "@/lib/pageBudget";
+import { resolvePageBudget, resolvePageBudgetForColumn, COMPACT_HORIZONTAL_PADDING_PX, COMPACT_VERTICAL_PADDING_PX, type PageBudget } from "@/lib/pageBudget";
 import { usePericopesReady } from "@/lib/usePericopesReady";
 
 // The reading view's per-page budget depends on the viewport's own WIDTH (see
@@ -16,16 +16,31 @@ import { usePericopesReady } from "@/lib/usePericopesReady";
 // renders, so hydration has nothing to reconcile), and corrects itself once mounted, via a
 // `resize`-driven check rather than a one-shot read, so rotating a device or resizing a window
 // re-paginates live instead of freezing in whichever width was true on load.
-function useResponsivePageBudget(fillHeightPx: number | null): PageBudget {
+//
+// `fixedColumnWidthPx`: the in-place Mind Map lesson sheet's own dedicated sense-line card has
+// no `max-w-2xl`-capped reading column at all — it fills its slot's own real measured width
+// edge-to-edge (ParchmentCard.tsx's own `compactPadding`) — so `textColumnWidthPx`'s standalone-
+// route assumptions (a capped outer wrapper, that card's own generous default padding) would
+// compute the wrong column entirely. A real number here skips that derivation and subtracts the
+// SAME compact padding constants ParchmentCard.tsx's own `compactPadding` class names spend,
+// straight off the slot's own measured width/height, instead.
+function useResponsivePageBudget(fillHeightPx: number | null, fixedColumnWidthPx?: number | null): PageBudget {
   const [width, setWidth] = useState(0);
+  const isColumnOverridden = fixedColumnWidthPx !== undefined;
   useEffect(() => {
+    if (isColumnOverridden) return;
     function readWidth() {
       setWidth(window.innerWidth);
     }
     readWidth();
     window.addEventListener("resize", readWidth);
     return () => window.removeEventListener("resize", readWidth);
-  }, []);
+  }, [isColumnOverridden]);
+  if (isColumnOverridden) {
+    const columnWidthPx = (fixedColumnWidthPx ?? 0) - COMPACT_HORIZONTAL_PADDING_PX;
+    const textAreaHeightPx = Math.max((fillHeightPx ?? 0) - COMPACT_VERTICAL_PADDING_PX, 0);
+    return resolvePageBudgetForColumn(columnWidthPx, textAreaHeightPx);
+  }
   // Packs for the one fixed size every parchment renders at (resolvePageBudget's own default —
   // see lib/parchmentFontRange.ts).
   return resolvePageBudget(width, fillHeightPx ?? 0);
@@ -61,6 +76,8 @@ export function useChapterPagination(
   completedDays: number,
   todaysDay: number,
   fillHeightPx: number | null,
+  // See useResponsivePageBudget's own doc comment — threaded straight through.
+  fixedColumnWidthPx?: number | null,
 ): ChapterPagination {
   const learnDays = useMemo(() => days.filter((day) => day.kind === "learn"), [days]);
   const verses = useMemo(() => learnDays.flatMap((day) => day.newVerses), [learnDays]);
@@ -84,7 +101,7 @@ export function useChapterPagination(
   const pericopesReady = usePericopesReady(verses);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- pericopesReady deliberately unread below; see doc comment above.
   const segments = useMemo(() => versesByPericopeSegment(verses), [verses, pericopesReady]);
-  const pageBudget = useResponsivePageBudget(fillHeightPx);
+  const pageBudget = useResponsivePageBudget(fillHeightPx, fixedColumnWidthPx);
   const pages = useMemo(
     () =>
       paginateSegments(

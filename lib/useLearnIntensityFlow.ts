@@ -1,18 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { BibleBook, LocationTagLevel } from "@/types";
+import type { BibleBook } from "@/types";
 import type { LearnIntensityStages } from "@/lib/learnIntensity";
 import { useProgressStore } from "@/store/useProgressStore";
 
-type GoToPath = (
-  identifier: string,
-  kind: "book" | "chapter" | "verse",
-  version: string,
-  versesPerDay?: number,
-  locationTagLevels?: LocationTagLevel[],
-  sectionEndPegEnabled?: boolean,
-) => void;
+type GoToPath = (identifier: string, kind: "book" | "chapter" | "verse", version: string, versesPerDay?: number) => void;
 
 interface UseLearnIntensityFlowArgs {
   mode: "book" | "chapter" | "verse";
@@ -25,8 +18,9 @@ interface UseLearnIntensityFlowArgs {
 // Extracted out of GuidedPathFlow.tsx purely to keep that file under this codebase's 200-line
 // cap. Holds the step chain that follows book/chapter mode's VersesPerDayPicker: pick verses
 // per day -> pick a Learn intensity (applied as global stage toggles, see
-// store/learnSettingsActions.ts — not per-path) -> optionally pick Memory Palace tag levels
-// (LocationTagLevelPicker) -> finish the path.
+// store/learnSettingsActions.ts — not per-path) -> finish the path. Memory Palace tag levels
+// (which scopes get an "add location tag" option) are a global Settings toggle now (see
+// components/gamification/MemoryPalaceTagLevelToggles.tsx), not asked here.
 export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, selectedVersion, goToPath }: UseLearnIntensityFlowArgs) {
   const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   const setBuildingViewEnabled = useProgressStore((state) => state.setBuildingViewEnabled);
@@ -38,12 +32,9 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
   const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   const setFillInTheBlankStageEnabled = useProgressStore((state) => state.setFillInTheBlankStageEnabled);
-  const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
-  const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
 
-  // Held between steps so the final goToPath call has all three answers at once.
+  // Held between steps so the final goToPath call has both answers at once.
   const [pendingVersesPerDay, setPendingVersesPerDay] = useState<number | null>(null);
-  const [showLocationTagLevels, setShowLocationTagLevels] = useState(false);
 
   function handleSelectVersesPerDay(versesPerDay: number) {
     if (!selectedBook || !selectedVersion) return;
@@ -56,10 +47,6 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
     setWriteFirstLetterStageEnabled(stages.writeFirstLetterStageEnabled);
     setFillInTheBlankStageEnabled(stages.fillInTheBlankStageEnabled);
     setBuildingViewEnabled(memoryPalace);
-    if (memoryPalace) {
-      setShowLocationTagLevels(true);
-      return;
-    }
     if (!selectedBook || !selectedVersion || pendingVersesPerDay === null) return;
     if (mode === "chapter" && selectedChapter) {
       goToPath(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, pendingVersesPerDay);
@@ -68,26 +55,12 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
     goToPath(selectedBook.name, "book", selectedVersion, pendingVersesPerDay);
   }
 
-  function handleSelectLocationTagLevels(levels: LocationTagLevel[], pegsEnabled: boolean, sectionEndPegEnabled: boolean) {
-    setPegSystemEnabled(pegsEnabled);
-    if (!selectedBook || !selectedVersion || pendingVersesPerDay === null) return;
-    if (mode === "chapter" && selectedChapter) {
-      goToPath(`${selectedBook.name}|${selectedChapter}`, "chapter", selectedVersion, pendingVersesPerDay, levels, sectionEndPegEnabled);
-      return;
-    }
-    goToPath(selectedBook.name, "book", selectedVersion, pendingVersesPerDay, levels, sectionEndPegEnabled);
-  }
-
   return {
     pendingVersesPerDay,
-    showLocationTagLevels,
     initialStages: { understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled },
     initialMemoryPalace: buildingViewEnabled,
-    initialPegSystemEnabled: pegSystemEnabled,
     handleSelectVersesPerDay,
     handleIntensityContinue,
-    handleSelectLocationTagLevels,
     resetPendingVersesPerDay: () => setPendingVersesPerDay(null),
-    resetShowLocationTagLevels: () => setShowLocationTagLevels(false),
   };
 }
