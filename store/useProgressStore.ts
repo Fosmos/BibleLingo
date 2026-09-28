@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, LocationTagLevel, UserProgress, VersePOA, VerseSegment } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -45,6 +45,8 @@ interface ProgressActions {
   // Same, scoped to a whole book finishing — see types/index.ts's celebratedMindMapBooks.
   markMindMapBookCelebrated: (bookId: string) => void;
   recordSrsReview: (entityId: string, accuracy: number) => void;
+  moveEntityToBox: (entityId: string, box: SrsBox) => void;
+  saveSrsReviewRun: (run: SrsReviewRun | null) => void;
   earnShekels: (amount: number) => void;
   recordChapterReviewAccuracy: (pathKey: string, accuracy: number) => void;
   recordMasteryLevel: (key: string, level: number) => void;

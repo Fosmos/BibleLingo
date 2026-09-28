@@ -12,6 +12,7 @@ import { useCelebration } from "@/lib/useCelebration";
 import { usePericopeHeading } from "@/lib/usePericopeHeading";
 import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
 import { useLearnSteps } from "@/lib/useLearnSteps";
+import { usePriorLearnedVerse } from "@/lib/usePriorLearnedVerse";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
@@ -96,7 +97,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   );
   const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
 
-  const steps = useLearnSteps(realVerseIndices);
+  const steps = useLearnSteps(realVerseIndices, !!usePriorLearnedVerse(day));
 
   const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);
   useRecordLearnedVerseCount(sessionKey, steps, stepIndex);

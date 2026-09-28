@@ -6,7 +6,6 @@ import type { MindMapPericopeDatum } from "@/lib/mindMapHierarchy";
 import { mindMapNodeColor, mindMapNodeColorVars, BRASS_PLAQUE_CLASS } from "@/lib/mindMapGenreColor";
 import { MOTION_DURATION, MOTION_EASE, TAP_SCALE } from "@/lib/motionTokens";
 import { MindMapMemorizedCheck } from "@/components/gamification/MindMapMemorizedCheck";
-import { MindMapReviewBadge } from "@/components/gamification/MindMapReviewBadge";
 import { MindMapHallEditor } from "@/components/gamification/MindMapHallEditor";
 import { useProgressStore } from "@/store/useProgressStore";
 import { hallDefaultName, hallNameKey, hallShape } from "@/lib/hallEmblems";
@@ -31,9 +30,6 @@ interface MindMapPericopeGatewayProps {
   // This pericope's own 0..1 fraction of its structural verse range actually reached (see
   // lib/mindMapCompletion.ts's pericopeVerseProgress) — at 1 the hall earns its green check.
   progress: number | undefined;
-  // The latest SRS review score across this hall's verses (see lib/srsScopeStatus.ts) — its
-  // top-right "last review %" badge. Undefined draws none.
-  lastReviewPct?: number;
   onSelect: () => void;
 }
 
@@ -44,7 +40,7 @@ interface MindMapPericopeGatewayProps {
 // address, above its real section-heading label. Split out of MindMapNodeCard.tsx purely to keep
 // that file under this codebase's own 200-line file cap (see CLAUDE.md) — no behavior difference
 // from having it inline there.
-export function MindMapPericopeGateway({ pericope, style, hallNumber, tagKey, progress, lastReviewPct, onSelect }: MindMapPericopeGatewayProps) {
+export function MindMapPericopeGateway({ pericope, style, hallNumber, tagKey, progress, onSelect }: MindMapPericopeGatewayProps) {
   const complete = (progress ?? 0) >= 1;
   // A wrapped heading's box hugs its longest line instead of staying at the full max width.
   const titleRef = useShrinkWrapText<HTMLSpanElement>(pericope.label);
@@ -132,7 +128,6 @@ export function MindMapPericopeGateway({ pericope, style, hallNumber, tagKey, pr
       </div>
       {editing && <MindMapHallEditor pericope={pericope} hallNumber={hallNumber} tagKey={tagKey} onClose={() => setEditing(false)} />}
       {complete && <MindMapMemorizedCheck size="md" />}
-      {lastReviewPct !== undefined && <MindMapReviewBadge percent={lastReviewPct} size="md" />}
     </motion.div>
   );
 }

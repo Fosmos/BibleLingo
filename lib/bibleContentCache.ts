@@ -29,11 +29,20 @@ function cacheKey(book: string, chapter: number): string {
   return `${book}|${chapter}`;
 }
 
+// The last parse of the persisted cache, keyed by the exact stored string it came from — the
+// Mind Map looks chapters up hundreds of times per render (chapter lengths for progress rings,
+// verse lengths for its path shapes), and re-parsing the whole cache on every one of those made
+// the map noticeably slow. Re-parsed only when the stored string actually changes (another tab,
+// or this module's own write below).
+let parsed: { raw: string; cache: ChapterCache } | null = null;
+
 function readCache(): ChapterCache {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(CACHE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ChapterCache) : {};
+    if (!raw) return {};
+    if (parsed?.raw !== raw) parsed = { raw, cache: JSON.parse(raw) as ChapterCache };
+    return parsed.cache;
   } catch {
     return {};
   }
@@ -41,7 +50,16 @@ function readCache(): ChapterCache {
 
 function writeCache(cache: ChapterCache): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
+  const raw = JSON.stringify(cache);
+  try {
+    window.localStorage.setItem(CACHE_STORAGE_KEY, raw);
+    parsed = { raw, cache };
+  } catch (error) {
+    // The caller already changed `cache` (the memoized copy) — drop it so the next read
+    // re-parses what's really stored.
+    parsed = null;
+    throw error;
+  }
 }
 
 // A verse round-tripped through JSON is only ever malformed one way: `text` missing or

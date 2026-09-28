@@ -50,10 +50,9 @@ function versePhases(
 // away by speak_verse: that one verse, just learned, spoken aloud from memory on its own.
 // From the SECOND real verse of its own group on, speak_verse is followed by one more check —
 // type_cumulative_today: every real verse learned TODAY so far IN THIS GROUP, this one
-// included, typed by first letter (see ReviewChain in LearnSection.tsx's render). The first
-// real verse of a group skips it: with only itself learned so far, that check would just
-// repeat the single verse speak_verse already covered — which is also why a one-verse group
-// never gets one at all. This is deliberately scoped to just today's own verses, not
+// included — plus the one verse just before the group (see PRIOR_VERSE_INDEX below) — typed by
+// first letter (see ReviewChain in LearnSection.tsx's render). Only a group with no verse before
+// it at all skips its first verse's check, which would just repeat speak_verse. This is deliberately scoped to just today's own verses, not
 // everything ever learned (that's ReviewSection's job, in its own separate Previous Verses/
 // Chapter Review stages) — so it reads as "did today's lesson actually stick together," not a
 // second copy of the bigger review.
@@ -77,14 +76,21 @@ function versePhases(
 // covers everything today by construction, same as before.
 const SPLIT_THRESHOLD = 6;
 
-function buildGroupSteps(group: number[], phases: Phase[]): FlatStep[] {
+// Every cumulative check also starts one verse early — the verse just before its group, so each
+// check joins today's verses onto what came before: for the first group, the verse just before
+// today's lesson (PRIOR_VERSE_INDEX, when it's one already learned — see LearnSection.tsx); for
+// a split day's second half, the first half's last verse. With that verse in front, even a
+// group's first verse, or a one-verse lesson, gets a check of its own.
+export const PRIOR_VERSE_INDEX = -1;
+
+function buildGroupSteps(group: number[], phases: Phase[], priorIndex: number | undefined): FlatStep[] {
   const steps: FlatStep[] = [];
+  const lead = priorIndex === undefined ? [] : [priorIndex];
   group.forEach((verseIndex, position) => {
     for (const phase of phases) steps.push({ phase, verseIndex });
     steps.push({ phase: "speak_verse", verseIndex });
-    if (position > 0) {
-      steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: group.slice(0, position + 1) });
-    }
+    const cumulative = [...lead, ...group.slice(0, position + 1)];
+    if (cumulative.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: cumulative });
   });
   return steps;
 }
@@ -97,19 +103,22 @@ export function buildSteps(
   fillInTheBlankEnabled: boolean,
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
+  // The verse just before today's lesson is one already learned (PRIOR_VERSE_INDEX's verse).
+  hasPriorVerse: boolean,
 ): FlatStep[] {
   const steps: FlatStep[] = [];
+  const prior = hasPriorVerse ? PRIOR_VERSE_INDEX : undefined;
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
   const phases = versePhases(kineticTextEnabled, rhythmEnabled, writeFirstLetterEnabled, fillInTheBlankEnabled);
 
   if (verseIndices.length >= SPLIT_THRESHOLD) {
     const midpoint = Math.ceil(verseIndices.length / 2);
-    steps.push(...buildGroupSteps(verseIndices.slice(0, midpoint), phases));
-    steps.push(...buildGroupSteps(verseIndices.slice(midpoint), phases));
-    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
+    steps.push(...buildGroupSteps(verseIndices.slice(0, midpoint), phases, prior));
+    steps.push(...buildGroupSteps(verseIndices.slice(midpoint), phases, verseIndices[midpoint - 1]));
+    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: prior === undefined ? verseIndices : [prior, ...verseIndices] });
   } else {
-    steps.push(...buildGroupSteps(verseIndices, phases));
+    steps.push(...buildGroupSteps(verseIndices, phases, prior));
   }
 
   steps.push({ phase: "pray" });

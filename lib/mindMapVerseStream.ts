@@ -87,6 +87,9 @@ export function mapPinTarget(
   focusVerse: PinTarget | undefined,
   todayVerseKeys?: Set<string>,
   nextVerse?: PinTarget,
+  // The start of the lesson after today's — where the pin goes once every verse of today's lesson
+  // is learned, even before the lesson itself is marked finished.
+  afterToday?: PinTarget,
 ): PinTarget | undefined {
   if (focusVerse) return focusVerse;
   if (nextVerse) return nextVerse;
@@ -101,7 +104,9 @@ export function mapPinTarget(
     );
     if (verseNumber !== undefined) return { book: pericope.book, chapter: pericope.chapter, verseNumber };
   }
-  // No hall of today's lesson laid out (its chapter isn't open) — the first verse of today's lesson.
+  // Every verse of today's lesson is learned — on to the next lesson's first verse.
+  if (afterToday && pericopes.some((pericope) => pericope.status === "active")) return afterToday;
+  // No hall of today's lesson known — the first verse of today's lesson.
   const first = [...(todayVerseKeys ?? [])]
     .map((key) => key.split(":"))
     .map(([book, chapter, verse]) => ({ book, chapter: Number(chapter), verseNumber: Number(verse) }))
@@ -161,4 +166,11 @@ export function nextPathVerse(
     .sort((a, b) => a.dayNumber - b.dayNumber)[0];
   const verse = next?.newVerses[0];
   return verse ? { book: bookLabel, chapter: verse.chapter, verseNumber: verse.verseNumber } : undefined;
+}
+
+// Every hall in the tree (open on the canvas or not) — so the pin can tell which of today's verses
+// are learned whatever is currently laid out.
+export function treePericopes(datum: { kind: string; children?: unknown[] }): MindMapPericopeDatum[] {
+  if (datum.kind === "pericope") return [datum as unknown as MindMapPericopeDatum];
+  return ((datum.children ?? []) as { kind: string; children?: unknown[] }[]).flatMap(treePericopes);
 }

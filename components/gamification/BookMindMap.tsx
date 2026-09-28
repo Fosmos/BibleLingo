@@ -6,7 +6,7 @@ import type { ChapterNode } from "@/lib/useMindMapData";
 import { buildMindMapTree, type MindMapPericopeDatum } from "@/lib/mindMapHierarchy";
 import { computeMindMapLayout } from "@/lib/mindMapTreeLayout";
 import { isPericopeNode } from "@/lib/mindMapLayoutTypes";
-import { mapPinTarget, nextPathVerse, pinVerseNumber, pinnedRingId, todaysLessonVerseKeys } from "@/lib/mindMapVerseStream";
+import { mapPinTarget, nextPathVerse, pinVerseNumber, pinnedRingId, todaysLessonVerseKeys, treePericopes } from "@/lib/mindMapVerseStream";
 import { buildParentMap, defaultActivePath, toggleActivePath, findBrowseTarget } from "@/lib/mindMapActivePath";
 import { useMindMapAutoCenter } from "@/lib/useMindMapAutoCenter";
 import { useMindMapNodeSizes } from "@/lib/useMindMapNodeSizes";
@@ -51,6 +51,8 @@ interface BookMindMapProps {
   focusVerse?: { book?: string; chapter: number; verseNumber: number };
   // Offers a tapped book/chapter/verse outside the active path as a new one (mindMapSelectionHandlers.ts).
   onChoosePath: (target: PathTarget) => void;
+  // Any chapter ring tapped (opened or closed) — offers its review (lib/useMindMapReviewOffer.ts).
+  onTapChapter?: (book: string, chapter: number) => void;
 }
 
 // A free pan/zoom canvas of the WHOLE canon's Bible -> Testament -> Genre -> Book -> Chapter ->
@@ -66,7 +68,7 @@ interface BookMindMapProps {
 // it — see toggleActivePath's own doc comment. Every node/link neither ON that path NOR one of
 // the deepest active node's own real children dims to 25% opacity (see MindMapNodeCard.tsx's own
 // `dimmed` prop and this file's own link rendering below, both via isOnFocusedBranch).
-export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, todaysDay, version, onSelectChapter, onSelectVerseForLesson, focusVerse, onChoosePath }: BookMindMapProps) {
+export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, todaysDay, version, onSelectChapter, onSelectVerseForLesson, focusVerse, onChoosePath, onTapChapter }: BookMindMapProps) {
   const paths = useProgressStore((state) => state.paths);
   const entities = useProgressStore((state) => state.memorizedEntities);
   const locationTagLevels = useProgressStore((state) => state.locationTagLevels) ?? NO_LOCATION_TAG_LEVELS;
@@ -105,7 +107,7 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
   // to the next lesson's verses once today's is done (lib/useYesterdayReview.ts, nextPathVerse).
   const yesterday = useYesterdayReview(pathKey, useMemo(() => chapters.flatMap((chapter) => chapter.days), [chapters]), completedDays, todaysDay);
   const nextVerse = yesterday.first ?? (bookLabel && completedDays >= todaysDay ? nextPathVerse(bookLabel, chapters, completedDays) : undefined);
-  const pinTarget = mapPinTarget(layout.nodes.filter(isPericopeNode).map((node) => node.data), focusVerse, todayVerseKeys, nextVerse);
+  const pinTarget = mapPinTarget(treePericopes(tree), focusVerse, todayVerseKeys, nextVerse, bookLabel ? nextPathVerse(bookLabel, chapters, Math.max(completedDays, todaysDay)) : undefined);
   const pinnedId = pinnedRingId(pinTarget, layout, parentMap);
 
   const { onSelectPericope, onSelectVerse, onOpenRing } = buildMindMapSelectionHandlers(pathKey, onSelectChapter, onSelectVerseForLesson, onChoosePath);
@@ -114,8 +116,9 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
     playMindMapTapSfx();
     const opening = !activePath.includes(id);
     setActivePath((prev) => toggleActivePath(tree, prev, id));
-    const datum = opening ? layout.nodes.find((node) => node.data.id === id)?.data : undefined;
-    if (datum) onOpenRing(datum);
+    const datum = layout.nodes.find((node) => node.data.id === id)?.data;
+    if (datum && opening) onOpenRing(datum);
+    if (datum?.kind === "chapter") onTapChapter?.(datum.book, datum.chapter);
   }
 
   const wrapperRef = useRef<HTMLDivElement>(null);

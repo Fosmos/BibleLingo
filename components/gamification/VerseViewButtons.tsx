@@ -15,6 +15,8 @@ interface VerseViewButtonsProps {
   // Icon-only round buttons — for the Mind Map sheet's breadcrumb row (see LessonControlBar.tsx's
   // portal), where two full-text pills left the chapter/pericope trail no room on a phone.
   compact?: boolean;
+  // Told each time either overlay opens (see LessonControlBar.tsx's own `onVersePeek`).
+  onPeek?: () => void;
 }
 
 const PILL_CLASS =
@@ -28,8 +30,12 @@ const ICON_CLASS =
 // effects at all, meant to sit on every stage (see LessonControlBar.tsx's own `verseText` prop).
 // The overlay renders into <body> (see BodyPortal.tsx) — its buttons can live inside the Mind
 // Map breadcrumb, whose backdrop-blur would otherwise pin a `fixed` overlay to just that bar.
-export function VerseViewButtons({ text, extra, compact }: VerseViewButtonsProps) {
-  const [open, setOpen] = useState<"none" | "letters" | "full">("none");
+export function VerseViewButtons({ text, extra, compact, onPeek }: VerseViewButtonsProps) {
+  const [open, setOpenState] = useState<"none" | "letters" | "full">("none");
+  const setOpen = (next: "none" | "letters" | "full") => {
+    if (next !== "none") onPeek?.();
+    setOpenState(next);
+  };
 
   return (
     <>

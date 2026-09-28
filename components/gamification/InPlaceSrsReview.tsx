@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
@@ -9,8 +9,13 @@ import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
 import { useCelebration } from "@/lib/useCelebration";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
+import { useSrsReviewRun } from "@/lib/useSrsReviewRun";
+import type { ReviewChainProgress } from "@/lib/useReviewChain";
 import { useWholeChapterReadingLayout } from "@/lib/useWholeChapterReadingLayout";
 import { ReviewChain } from "@/components/drills/ReviewChain";
+import { FirstLetterSpeakRep } from "@/components/drills/FirstLetterSpeakRep";
+import { SrsInputModeToggle } from "@/components/gamification/SrsInputModeToggle";
+import { joinVerses, verseNumberMarkers } from "@/lib/verseBatching";
 import { LessonChrome } from "@/components/gamification/LessonChrome";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
@@ -24,7 +29,7 @@ interface InPlaceSrsReviewProps {
 }
 
 // SRS review inside the Mind Map sheet, run exactly like a lesson's Previous Verses / Chapter
-// Review stages (see ReviewSection.tsx): each due range is typed by first letter through
+// Review stages (see ReviewSection.tsx): each due range is typed by first letter (or spoken aloud) through
 // ReviewChain on its own real chapter page, the canvas above following verse to verse (and
 // flying on to the next range's chapter — see lib/useMindMapFollowFocusBranch.ts). Each range's
 // score reschedules it (store/srsReviewActions.ts's recordSrsReview, which also keeps it as the
@@ -33,14 +38,22 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   const entities = useProgressStore((state) => state.memorizedEntities);
   const recordSrsReview = useProgressStore((state) => state.recordSrsReview);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
+  const speakMode = useProgressStore((state) => state.srsSpeakModeEnabled);
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   const reportVerse = useReportFocusVerse(true);
   const { pending, celebrate, finish } = useCelebration();
   // How far through `entityIds` the run is. A range that vanished since the run started
   // (re-synced away) is simply stepped over: `current` is the first one still there from here on.
-  const [index, setIndex] = useState(0);
+  // Saved as it goes, so leaving part-way can be picked up later (lib/useSrsReviewRun.ts).
+  const run = useSrsReviewRun(entityIds);
+  const [index, setIndex] = useState(run.startIndex);
   const current = entityIds.findIndex((id, position) => position >= index && entities.some((candidate) => candidate.id === id));
   const entity = current === -1 ? undefined : entities.find((candidate) => candidate.id === entityIds[current]);
+  const { saveIndex, saveProgress, finish: finishRun } = run;
+  const onProgress = useCallback((progress: ReviewChainProgress) => saveProgress(current, progress), [current, saveProgress]);
+  useEffect(() => {
+    if (current !== -1) saveIndex(current);
+  }, [current, saveIndex]);
 
   const [chapterVerses, setChapterVerses] = useState<VerseSegment[]>([]);
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
@@ -74,8 +87,10 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
 
   // Nothing (left) to review — straight back to the map.
   useEffect(() => {
-    if (!entity && !pending) onExit();
-  }, [entity, pending, onExit]);
+    if (entity || pending) return;
+    finishRun();
+    onExit();
+  }, [entity, pending, onExit, finishRun]);
 
   if (pending) return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
   if (!entity) return null;
@@ -95,6 +110,8 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
     if (!entity) return;
     recordSrsReview(entity.id, accuracy);
     const isLast = current + 1 >= entityIds.length;
+    if (isLast) finishRun();
+    else saveIndex(current + 1);
     celebrate(isLast ? onExit : () => setIndex(current + 1), `${label} reviewed`);
   }
 
@@ -102,7 +119,32 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
     <>
       <LessonChrome label={label} version={entity.version} current={current + 1} total={entityIds.length} onExit={onExit} layout={layout} embeddedInMindMap />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
-        <ReviewChain key={entity.id} label={`Review ${label}`} verses={verses} onComplete={handleComplete} layout={layout} restartOnMistake={false} onVerseChange={reportVerse} />
+        {/* Typed by first letter, or spoken aloud — the reader's choice (SrsInputModeToggle.tsx). */}
+        {speakMode ? (
+          <FirstLetterSpeakRep
+            key={`speak-${entity.id}`}
+            verse={joinVerses(verses, "entity")}
+            verses={verses}
+            layout={layout}
+            verseMarkers={verseNumberMarkers(verses)}
+            onComplete={(_hadMistake, accuracy) => handleComplete(accuracy)}
+            onVerseChange={reportVerse}
+            verseViewExtra={<SrsInputModeToggle />}
+          />
+        ) : (
+          <ReviewChain
+            key={entity.id}
+            label={`Review ${label}`}
+            verses={verses}
+            onComplete={handleComplete}
+            layout={layout}
+            restartOnMistake={false}
+            onVerseChange={reportVerse}
+            verseViewExtra={<SrsInputModeToggle />}
+            initialProgress={run.progressFor(current)}
+            onProgress={onProgress}
+          />
+        )}
       </div>
     </>
   );

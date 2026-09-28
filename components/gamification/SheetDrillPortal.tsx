@@ -41,7 +41,11 @@ export function SheetDrillPortal({ node, children }: SheetDrillPortalProps) {
     <div
       ref={contentRef}
       className="flex min-h-full flex-col items-center justify-end gap-2 px-3 pb-3 pt-2"
-      style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: scale < 1 ? `${100 / scale}%` : "100%" }}
+      // Scaled about its top centre at its normal width. It used to widen by 1/scale to keep the
+      // scaled result full-width, but wider content wraps onto fewer lines and gets shorter: right
+      // at the fit limit that made it fit, drop the scale, re-wrap taller, and scale again — a
+      // loop that flickered the whole sheet (the HTTPS mic notice, fill-in-the-blank boxes).
+      style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}
     >
       {children}
     </div>,

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { VerseSegment, WordDiffToken } from "@/types";
-import { useReviewChain } from "@/lib/useReviewChain";
+import { useReviewChain, type ReviewChainProgress } from "@/lib/useReviewChain";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
+import { MistakeNotice } from "@/components/drills/MistakeNotice";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { ReviewChainResult } from "@/components/drills/ReviewChainResult";
-import { ReviewChainHint } from "@/components/drills/ReviewChainHint";
+import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
 import { ReviewChainParchment } from "@/components/drills/ReviewChainParchment";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
@@ -27,10 +28,15 @@ interface ReviewChainProps {
   // Told whichever verse the reader is typing, each time it changes — the Mind Map sheet uses it
   // to keep the real canvas centered on that verse's chip (see lib/useReportFocusVerse.ts).
   onVerseChange?: (verse: VerseSegment) => void;
+  // Shown beside View First Letters/View Verse — the Mind Map review's type/speak switch.
+  verseViewExtra?: ReactNode;
+  // Resume point and progress reports — see lib/useReviewChain.ts.
+  initialProgress?: ReviewChainProgress;
+  onProgress?: (progress: ReviewChainProgress) => void;
 }
 
-export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange }: ReviewChainProps) {
-  const typing = useReviewChain({ verses, restartOnMistake });
+export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange, verseViewExtra, initialProgress, onProgress }: ReviewChainProps) {
+  const typing = useReviewChain({ verses, restartOnMistake, initialProgress, onProgress });
   const { combinedWords, wordIndex, revealedWords, letterInput, restartNotice, wrongWordIndices, finished, currentWord, currentVerse, referenceMatch } = typing;
   useEffect(() => {
     if (currentVerse) onVerseChange?.(currentVerse);
@@ -57,14 +63,6 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
 
   if (!currentWord) return null;
 
-  const revealWord = () => {
-    if (restartOnMistake) {
-      typing.recordMistake(`That word was "${currentWord.word}" — restarting this verse from the beginning.`);
-    } else {
-      typing.markWrongAndAdvance();
-    }
-  };
-
   const chainParchment = (
     <ReviewChainParchment
       verses={verses}
@@ -84,15 +82,10 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
       )}
       {layout ? chainParchment : <LessonParchmentCard>{chainParchment}</LessonParchmentCard>}
 
-      <LessonControlBar dockRef={layout?.dockRef} verseText={verses.map((v) => v.text).join(" ")}>
-        {/* "Reveal word" shares the label's row rather than taking its own below the keyboard —
-            one row fewer, so the keyboard keeps its full size in the Mind Map sheet's fixed box. */}
-        {layout && (
-          <div className="flex items-center gap-3 self-center">
-            <p className="text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>
-            {!referenceMatch && <ReviewChainHint onRevealWord={revealWord} />}
-          </div>
-        )}
+      {/* The lookup pair shows only the verse being typed, and opening either one marks it as a
+          problem verse (see lib/flagPeekedVerse.ts). */}
+      <LessonControlBar dockRef={layout?.dockRef} verseText={currentVerse?.text} onVersePeek={() => currentVerse && flagPeekedVerse(currentVerse)} verseViewExtra={verseViewExtra}>
+        {layout && <p className="self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">{label}</p>}
         {referenceMatch ? (
           <ReferenceNumberEntry
             key={`${wordIndex}-${currentWord.word}`}
@@ -116,9 +109,8 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
             className="sr-only"
           />
         )}
-        {restartNotice && <p className="text-sm font-medium text-heart-600">{restartNotice}</p>}
+        <MistakeNotice text={restartNotice} />
         {!referenceMatch && <OnScreenKeyboard onKey={typing.handleLetterChange} />}
-        {!layout && !referenceMatch && <ReviewChainHint onRevealWord={revealWord} />}
         <AutoCompleteButton onClick={() => onComplete(100)} />
       </LessonControlBar>
     </div>

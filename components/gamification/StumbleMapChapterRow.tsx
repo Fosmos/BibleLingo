@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { relearnHref } from "@/lib/relearnHref";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatChapterLabel, formatVerseSpanLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
@@ -21,11 +22,6 @@ interface StumbleMapChapterRowProps {
   book: string;
   chapter: number;
   verses: StumbleVerseEntry[];
-}
-
-function relearnHref(book: string, chapter: number, verseNumber: number, version: string): string {
-  const query = new URLSearchParams({ book, chapter: String(chapter), verse: String(verseNumber), version });
-  return `/memorized/relearn?${query}`;
 }
 
 // One row in StumbleMapsSection.tsx — a whole CHAPTER's worth of stumbled verses grouped

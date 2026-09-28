@@ -18,6 +18,8 @@ interface MindMapScreenProps {
   focusVerse?: { book?: string; chapter: number; verseNumber: number };
   // See BookMindMap.tsx's own doc comment — threaded straight through.
   onChoosePath: (target: PathTarget) => void;
+  // See BookMindMap.tsx's own doc comment — threaded straight through.
+  onTapChapter?: (book: string, chapter: number) => void;
   // Overrides the canvas's own default full-screen height — PathOverviewScreen.tsx passes a
   // shorter one while its own in-place lesson bottom sheet is open, so the canvas shrinks to
   // fill just the space left above it instead of sitting underneath it at full height.
@@ -33,7 +35,7 @@ interface MindMapScreenProps {
 // work for the ACTIVE book (loading verses, building the day plan, slicing it per chapter)
 // lives in lib/useMindMapData.ts (called by this screen's host); every other book's own shell (label, chapter count,
 // completion badge) is cheap, static data lib/mindMapHierarchy.ts pulls in directly.
-export function MindMapScreen({ data, onSelectChapter, onSelectVerseForLesson, focusVerse, onChoosePath, heightClassName }: MindMapScreenProps) {
+export function MindMapScreen({ data, onSelectChapter, onSelectVerseForLesson, focusVerse, onChoosePath, onTapChapter, heightClassName }: MindMapScreenProps) {
   const heightClass = heightClassName ?? "h-[calc(100dvh-63px-env(safe-area-inset-bottom))]";
 
   if (data.status === "loading") {
@@ -90,6 +92,7 @@ export function MindMapScreen({ data, onSelectChapter, onSelectVerseForLesson, f
         onSelectVerseForLesson={onSelectVerseForLesson}
         focusVerse={focusVerse}
         onChoosePath={onChoosePath}
+        onTapChapter={onTapChapter}
       />
     </div>
   );

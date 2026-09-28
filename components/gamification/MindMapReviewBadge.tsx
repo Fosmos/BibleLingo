@@ -1,13 +1,12 @@
 interface MindMapReviewBadgeProps {
   // The node's last SRS review score, 0-100 (see lib/srsScopeStatus.ts).
   percent: number;
-  // "sm" for a 24px verse chip, "md" for halls and rings.
-  size: "sm" | "md";
+  size: "md";
 }
 
-const SIZE_CLASS = { sm: "-right-2.5 -top-2 px-0.5 text-[6px]", md: "-right-2 -top-2 px-1 py-px text-[8px]" };
+const SIZE_CLASS = { md: "-right-2 -top-2 px-1 py-px text-[8px]" };
 
-// The "last review %" tag on the top-right corner of every Mind Map node holding SRS verses —
+// The "last review %" tag on the top-right corner of a Mind Map chapter holding SRS verses —
 // green once the score is solid, amber below that, so a shaky review stands out. The parent must
 // be positioned and must not clip its own overflow.
 export function MindMapReviewBadge({ percent, size }: MindMapReviewBadgeProps) {

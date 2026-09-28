@@ -29,6 +29,9 @@ interface LessonControlBarProps {
   // portal too, when that applies). Left unset by every caller with nothing of its own to put
   // there.
   verseViewExtra?: ReactNode;
+  // Called whenever the reader opens View First Letters or View Verse — review stages use it to
+  // flag the verse as a problem verse (see lib/flagPeekedVerse.ts).
+  onVersePeek?: () => void;
 }
 
 // The shared "act here" surface below a LessonParchmentCard/LessonPageCard — every stage's own
@@ -52,7 +55,7 @@ interface LessonControlBarProps {
 // Docks at the true screen bottom (not PathBottomDock's own `bottom-20`) because AuthGate.tsx
 // hides the bottom tab bar for as long as this bar is mounted this way — see
 // store/useLessonSessionStore.ts.
-export function LessonControlBar({ children, dockRef, verseText, verseViewExtra }: LessonControlBarProps) {
+export function LessonControlBar({ children, dockRef, verseText, verseViewExtra, onVersePeek }: LessonControlBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether this box's own content currently overflows its max-h cap, with more still below
   // the fold — a box this small giving no hint there's anything to scroll to at all left a
@@ -103,9 +106,9 @@ export function LessonControlBar({ children, dockRef, verseText, verseViewExtra 
   // Portaled (icon-only, to fit a phone-width breadcrumb) into the breadcrumb's own slot whenever
   // it exists (the in-place Mind Map sheet), rendered inline right here otherwise (the
   // standalone route, which has no such slot).
-  const verseView = verseText && !verseViewPortalNode ? <VerseViewButtons text={verseText} extra={verseViewExtra} /> : null;
+  const verseView = verseText && !verseViewPortalNode ? <VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} /> : null;
   const portaledVerseView =
-    verseText && verseViewPortalNode ? createPortal(<VerseViewButtons text={verseText} extra={verseViewExtra} compact />, verseViewPortalNode) : null;
+    verseText && verseViewPortalNode ? createPortal(<VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} compact />, verseViewPortalNode) : null;
 
   if (drillPortalNode) {
     return (

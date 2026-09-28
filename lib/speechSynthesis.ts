@@ -102,12 +102,12 @@ export function speak(text: string, onEnd?: () => void, options?: SpeakOptions):
   };
 }
 
-// ListenVerseRep's own narration — one utterance for a whole passage, reporting each word's
+// Listen & Repeat's fallback narration (see lib/narrateText.ts) — one utterance for a whole passage, reporting each word's
 // own `charIndex` as it's spoken (via the engine's native `onboundary` event) rather than
 // synthesizing word-by-word the way speak() above does — a single utterance is what lets the
 // OS/browser voice read at its own natural cadence and inflection across a full passage,
 // which back-to-back single-word utterances can't reproduce. `onWordBoundary` fires with
-// where in `text` the current word starts; the caller (lib/useKineticTextSync.ts) maps that
+// where in `text` the current word starts; the caller (lib/useListenRepeat.ts) maps that
 // back to a word index via lib/verseWordOffsets.ts's own tokenization of the SAME string.
 // Boundary-event support/accuracy is real but browser-dependent (Chrome fires them reliably
 // per word; other engines vary) — degrading to "audio plays, highlight doesn't move" on a

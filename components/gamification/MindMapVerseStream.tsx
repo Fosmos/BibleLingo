@@ -8,9 +8,9 @@ import { VERSE_CHIP_SIZE_PX } from "@/lib/mindMapVerseStream";
 import { MOTION_DURATION, MOTION_EASE, TAP_SCALE } from "@/lib/motionTokens";
 import { MindMapMemorizedCheck } from "@/components/gamification/MindMapMemorizedCheck";
 import { MindMapActivePin } from "@/components/gamification/MindMapActivePin";
-import { MindMapReviewBadge } from "@/components/gamification/MindMapReviewBadge";
+import { MindMapProblemMark } from "@/components/gamification/MindMapProblemMark";
+import { verseKey } from "@/lib/verseKey";
 import { useProgressStore } from "@/store/useProgressStore";
-import { srsScopeStatus } from "@/lib/srsScopeStatus";
 import { isVerseLearned } from "@/lib/pericopeLearned";
 import type { LayoutPoint } from "@/lib/mindMapLayoutTypes";
 import { MindMapHallEmblem } from "@/components/gamification/MindMapHallEmblem";
@@ -46,18 +46,16 @@ interface MindMapVerseStreamProps {
 // pericope card's own tap no longer does that itself now that it toggles this stream instead.
 export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips, hallNumber, pinVerseNumber, todayVerseKeys, onSelectVerse }: MindMapVerseStreamProps) {
   const color = verseChipColor(pericope);
-  const entities = useProgressStore((state) => state.memorizedEntities);
-  // Each chip's own "last review %" (see lib/srsScopeStatus.ts) — read off one subscription for
-  // the whole stream rather than one per chip.
-  const lastReview = (verseNumber: number) =>
-    srsScopeStatus(entities, { book: pericope.book, chapter: pericope.chapter, startVerse: verseNumber, endVerse: verseNumber }).lastAccuracy;
+  // Verses the reader had to peek at in review (see lib/flagPeekedVerse.ts) — read off one
+  // subscription for the whole stream rather than one per chip.
+  const problemVerses = useProgressStore((state) => state.problemVerses);
   const memorized = (verseNumber: number) => isVerseLearned(pericope, verseNumber);
 
   return (
     <>
       {emblem && <MindMapHallEmblem pericope={pericope} hallNumber={hallNumber} point={emblem} />}
       {verseChips.map((chip) => {
-        const reviewPct = lastReview(chip.verseNumber);
+        const problem = verseKey(pericope.book, pericope.chapter, chip.verseNumber) in problemVerses;
         const pulsing = !memorized(chip.verseNumber) && (todayVerseKeys?.has(`${pericope.book}:${pericope.chapter}:${chip.verseNumber}`) ?? false);
         return (
           <motion.button
@@ -104,7 +102,7 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
               <MindMapMemorizedCheck size="sm" reviewDue={reviewDueKeys?.has(`${pericope.book}:${pericope.chapter}:${chip.verseNumber}`)} />
             )}
             {chip.verseNumber === pinVerseNumber && <MindMapActivePin />}
-            {reviewPct !== undefined && <MindMapReviewBadge percent={reviewPct} size="sm" />}
+            {problem && <MindMapProblemMark />}
             v{chip.verseNumber}
           </motion.button>
         );

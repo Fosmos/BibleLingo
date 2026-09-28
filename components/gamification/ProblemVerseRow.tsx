@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { relearnHref } from "@/lib/relearnHref";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { ProblemVerseEntry } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
@@ -13,11 +14,6 @@ import { VerseStumbleHeatMap } from "@/components/gamification/VerseStumbleHeatM
 
 interface ProblemVerseRowProps {
   entry: ProblemVerseEntry;
-}
-
-function relearnHref(book: string, chapter: number, verseNumber: number, version: string): string {
-  const query = new URLSearchParams({ book, chapter: String(chapter), verse: String(verseNumber), version });
-  return `/memorized/relearn?${query}`;
 }
 
 // One Problem Verses entry — a plain row until tapped, at which point it lazily fetches its

@@ -21,19 +21,19 @@ export const INFO_TIPS = {
   writeRep:
     "Type the verse from memory (or copy it, on the first rep when it's shown). Checked with fuzzy matching, so minor typos/punctuation differences still pass.",
   listenVerseRep:
-    "This verse read aloud by your browser's own voice, one word highlighted at a time as it's actually spoken — the automatic first pass on every verse, before its own Rhythm/Write/Speak/Type stages. Tap Listen to play (Pause to stop partway); tap it again anytime to listen once more before continuing. Not graded.",
+    "Listen & Repeat: the verse one line at a time. Each line is read aloud with its words lit as they're spoken, then it's your turn to say it back — words turn green as the mic hears them, and the next line follows on its own. Hear again replays a line; Next moves on (without a mic, say it aloud and tap Next). The automatic first pass on every verse. Not graded.",
   firstLetterTypeRep:
     "Type just the first letter of each word, in order, to reveal it. A wrong letter restarts this pass through the verse from word 1.",
   reviewChain:
-    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter, a wrong reference number, or revealing the whole word bounces you back to the start of just that one verse (every earlier verse in the chain stays revealed) — so the review only finishes once every verse has, in the end, been typed correctly in one clean pass. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
+    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter or a wrong reference number bounces you back to the start of just that one verse (every earlier verse in the chain stays revealed) — so the review only finishes once every verse has, in the end, been typed correctly in one clean pass. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
   reviewChainNoRestart:
-    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter or a wrong reference number just costs accuracy and lets you retry that same word — nothing you've already typed correctly is lost. Revealing the whole word moves straight on to the next one. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
+    "Same first-letter mechanic as above, chained across every verse being reviewed here. A wrong letter or a wrong reference number just costs accuracy and lets you retry that same word — nothing you've already typed correctly is lost. Opening View First Letters or View Verse marks that verse as a problem verse. The accuracy score at the end reflects every miss along the way, even ones you later got right.",
   chapterReviewStage:
     "A multi-part review before moving on: the full chapter's words, then a spoken recitation of the whole thing.",
   bossBattleStage:
     "Recite every verse in the section/path, back to back — a section boss battle only needs each word's first letter, the whole-path finale needs the full word. 5 lives per attempt, except a section boss battle (every 8 chapters, book mode) gets 20 for its longer recitation. Run out of lives and it restarts from the beginning.",
   practiceChain:
-    "A redoable, no-stakes replay of the word-for-word typing — doesn't touch progress or lock state. For a boss battle, it's practice before/after the real attempt; for a completed lesson's own Review button, it's just a quick way to revisit those verses.",
+    "A no-stakes replay of the word-for-word typing that flows straight from verse to verse — doesn't touch progress or lock state. For a boss battle, it's practice before/after the real attempt; for a completed lesson's own Review button, it's just a quick way to revisit those verses.",
   masteryChaseRound:
     "Type the first letter of each word to keep your runner ahead of the pursuing chariots, which close in on their own pace. A wrong letter doesn't set you back — it jumps the chariots closer instead, and you still need to get that word right.",
   versionPicker: "Pick which Bible translation to memorize this passage in.",
@@ -58,7 +58,7 @@ export const INFO_TIPS = {
   srsOverview:
     "Spaced-repetition review for verses you've fully learned — due verses are surfaced on a schedule so they stay memorized long-term.",
   swordOfTheSpirit:
-    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), then Box 5 (every 30 days). Fall below 90% and it drops back just one box, not all the way to Box 1.",
+    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), then Box 5 (every 30 days). Fall below 90% and it drops back just one box, not all the way to Box 1. You can also move any group up or down a box yourself with the arrows.",
   stickerBook: "A collectible record of every path, boss battle, and Mastery level you've cleared.",
   includeVerseReferencesToggle:
     'When on, shows the verse number/reference inline in the text (e.g. "1:1 Paul and Timotheus...") wherever a verse is displayed.',
@@ -91,7 +91,7 @@ export const INFO_TIPS = {
   vespersHourPicker:
     "Pick a local hour, and Home offers a quiet, warm-toned prompt to recall a few previous lessons' verses by first letter once the clock reaches it — a calm retrieval moment, not a graded one, and it never affects your progress, SRS boxes, or streak. Tap \"Not tonight\" to skip it for the rest of that day; it'll offer again the next evening.",
   problemVersesBin:
-    "Any individual verse whose most recent SRS review accuracy fell below 80% lands here — a standing list, separate from its Sword of the Spirit box, so a weak verse in an otherwise-strong group still stands out for extra practice. It clears back out once a later review scores 90% or higher, or tap Relearn to run through the full Learn flow for that verse again.",
+    "Any individual verse you needed a hint for in review (including opening View First Letters or View Verse) lands here, and the Mind Map marks it with an orange sign — a standing list, separate from its Sword of the Spirit box, so a weak verse in an otherwise-strong group still stands out for extra practice. It clears back out once a later review scores 90% or higher, or tap Relearn to run through the full Learn flow for that verse again.",
   stumbleMapsSection:
     "Every verse you've reviewed at least once, worst first — tap one to see exactly which words have tripped you up, color-coded by how many times each word's been missed (1-2 misses, 3-4, or 5+). The scale is fixed and the same for every verse, so a color always means the same thing everywhere, not just \"worse than the rest of this verse.\"",
   resetProgressButton: "Erases all progress for this account — paths, streak, stickers, memorized verses. Cannot be undone.",

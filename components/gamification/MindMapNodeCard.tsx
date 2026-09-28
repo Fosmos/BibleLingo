@@ -101,7 +101,6 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, meas
         hallNumber={hallNumber}
         tagKey={tagKey}
         progress={pericopeVerseProgress(datum)}
-        lastReviewPct={srs.lastAccuracy}
         onSelect={() => onSelectPericope(datum)}
       />
     );
@@ -124,6 +123,7 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, meas
         onClick={() => onToggleNode(datum.id)}
         celebrating={celebrating}
         srsDue={srs.due}
+        // The "last review %" is shown on chapters only; halls, verses and books leave it off.
         lastReviewPct={srs.lastAccuracy}
         pathMark={pathMark}
       />
@@ -175,7 +175,6 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, meas
         bookTier={datum.kind === "book" ? celebratingBookTier : undefined}
         // A book's ring only ever shows progress (green) — "review due" yellow is for its chapters.
         srsDue={datum.kind === "book" ? false : srs.due}
-        lastReviewPct={srs.lastAccuracy}
         pathMark={pathMark}
         emblem={datum.kind === "book" ? bookEmblem(datum.name)?.Icon : undefined}
       />

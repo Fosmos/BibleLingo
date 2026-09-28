@@ -2,6 +2,7 @@ import type { FirstLetterTyping } from "@/lib/useFirstLetterTyping";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
+import { MistakeNotice } from "@/components/drills/MistakeNotice";
 
 interface FirstLetterTypingControlsProps {
   typing: FirstLetterTyping;
@@ -46,22 +47,26 @@ export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hi
             aria-label="Type the first letter of the next word"
             className="sr-only"
           />
-          {allowPeekHint && !typing.showError && (
-            <button type="button" onClick={typing.peekHint} className="text-xs font-medium text-ink-muted hover:text-brand-600 hover:underline">
+          {/* Hidden (not removed) while the mistake note shows, so the keyboard's size holds. */}
+          {allowPeekHint && (
+            <button
+              type="button"
+              onClick={typing.peekHint}
+              className={`text-xs font-medium text-ink-muted hover:text-brand-600 hover:underline ${typing.showError ? "invisible" : ""}`}
+            >
               Peek hint
             </button>
           )}
+          {/* A genuine mistake never reveals the letter — just the generic note, so it costs a
+              real retry rather than handing over the answer. "Peek Hint" is the one deliberate
+              exception (see typing.wrongLetterExpected's own doc comment). */}
+          <MistakeNotice
+            text={
+              typing.showError ? (typing.wrongLetterExpected ? `Not quite — the next word starts with "${typing.wrongLetterExpected}".` : "Not quite — try again.") : null
+            }
+          />
           <OnScreenKeyboard onKey={typing.handleLetterChange} />
         </div>
-      )}
-      {/* A genuine mistake never reveals the letter — just the generic notice, so it costs a
-          real retry rather than handing over the answer. "Peek Hint" is the one deliberate
-          exception (see typing.wrongLetterExpected's own doc comment): tapping it still shows
-          the letter, since the reader asked for it outright rather than getting it wrong. */}
-      {!typing.referenceMatch && typing.showError && (
-        <p className="text-sm font-medium text-heart-600">
-          {typing.wrongLetterExpected ? `Not quite — the next word starts with "${typing.wrongLetterExpected}".` : "Not quite — try again."}
-        </p>
       )}
       {!hideAutoComplete && <AutoCompleteButton onClick={typing.reportComplete} />}
     </>

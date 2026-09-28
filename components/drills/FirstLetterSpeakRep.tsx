@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, type ReactNode } from "react";
 import { Mic, MicOff, Square } from "lucide-react";
 import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
@@ -10,6 +11,7 @@ import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { FirstLetterMultiVersePageCard } from "@/components/drills/FirstLetterMultiVersePageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
 
 interface FirstLetterSpeakRepProps {
   verse: VerseSegment;
@@ -25,6 +27,11 @@ interface FirstLetterSpeakRepProps {
   // Moves Auto-complete beside the View First Letters/View Verse pair (see
   // LessonControlBar.tsx's own `verseViewExtra`) instead of its usual spot below the mic button.
   moveAutoCompleteToVerseView?: boolean;
+  // Told whichever real verse is being recited, each time it changes (see ReviewChain.tsx's own
+  // `onVerseChange`) — the Mind Map sheet keeps its canvas on that verse's chip.
+  onVerseChange?: (verse: VerseSegment) => void;
+  // Shown beside View First Letters/View Verse — the Mind Map review's type/speak switch.
+  verseViewExtra?: ReactNode;
 }
 
 // SRS review's speak-mode alternative to FirstLetterTypeRep — same "reveal by first letter"
@@ -34,13 +41,16 @@ interface FirstLetterSpeakRepProps {
 // split FirstLetterTypeRep.tsx already follows). SRS review's own sole consumer (see
 // SrsEntityRecall.tsx): never restarts on a mistake, and has no per-letter mistake hint to
 // show (a spoken miss is only ever discovered once the whole attempt is scored).
-export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAccuracy, layout, verses, moveAutoCompleteToVerseView }: FirstLetterSpeakRepProps) {
+export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAccuracy, layout, verses, moveAutoCompleteToVerseView, onVerseChange, verseViewExtra }: FirstLetterSpeakRepProps) {
   const speaking = useFirstLetterSpeaking({ verse, verseMarkers, onComplete, onVerseAccuracy });
   const showFallback = !speaking.supported || speaking.permissionDenied || !speaking.isSecure;
   // The ONE real verse currently being recalled, so View First Letters/View Verse (see
   // LessonControlBar.tsx's own `verseText`) peek at just that verse instead of the whole
   // entity's combined range.
   const activeRealVerse = verses.find((candidate) => candidate.verseNumber === speaking.currentVerseNumber) ?? verses[0];
+  useEffect(() => {
+    if (activeRealVerse) onVerseChange?.(activeRealVerse);
+  }, [activeRealVerse, onVerseChange]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +58,13 @@ export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAc
       <LessonControlBar
         dockRef={layout.dockRef}
         verseText={activeRealVerse?.text ?? verse.text}
-        verseViewExtra={moveAutoCompleteToVerseView ? <AutoCompleteButton onClick={() => onComplete(false, 100)} /> : undefined}
+        onVersePeek={() => activeRealVerse && flagPeekedVerse(activeRealVerse)}
+        verseViewExtra={
+          <>
+            {verseViewExtra}
+            {moveAutoCompleteToVerseView && <AutoCompleteButton onClick={() => onComplete(false, 100)} />}
+          </>
+        }
       >
         {showFallback ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
@@ -58,7 +74,7 @@ export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAc
                 {!speaking.isSecure ? "HTTPS required on mobile" : speaking.permissionDenied ? "Microphone access declined" : "Speech recognition unsupported"}
               </span>
             </div>
-            <p className="text-sm text-ink-muted dark:text-zinc-400">Switch back to typing in your review settings to keep going.</p>
+            <p className="text-sm text-ink-muted dark:text-zinc-400">Switch back to typing (the keyboard button) to keep going.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">

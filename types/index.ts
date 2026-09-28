@@ -338,6 +338,9 @@ export interface UserProgress {
   // review, or by fully relearning it (components/gamification/RelearnSession.tsx) — a
   // review that lands strictly between the two thresholds changes nothing either way.
   problemVerses: Record<string, ProblemVerseEntry>;
+  // The Mind Map's SRS review run left part-way (see lib/useSrsReviewRun.ts), so it can be picked
+  // up again. Optional: absent on profiles saved before this existed, and once a run finishes.
+  srsReviewRun?: SrsReviewRun | null;
   // Cumulative per-word SRS miss counts, keyed by lib/verseKey.ts's verseKey — see
   // lib/stumbleTracking.ts. Powers the Stumble Map heat-map view (surfaced from
   // ProblemVersesBin.tsx): which exact words in a verse are the reader's actual weak points,
@@ -399,6 +402,15 @@ export interface UserProgress {
 
 // One verse flagged into the Problem Verses bin — see UserProgress.problemVerses above for
 // the two ways out (a later strong review, or fully relearning it).
+// Where an unfinished Mind Map SRS review run stopped: the ranges it walks, which one it was on,
+// and how far into that range's first-letter typing (its next word, and the words missed so far).
+export interface SrsReviewRun {
+  entityIds: string[];
+  index: number;
+  wordIndex: number;
+  wrongWordIndices: number[];
+}
+
 export interface ProblemVerseEntry {
   book: string;
   chapter: number;

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { VerseSegment } from "@/types";
-import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
+import { playCorrectSfx } from "@/lib/audio";
 import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 
 export interface CombinedWord {
@@ -22,6 +22,15 @@ interface UseReviewChainOptions {
   // and just retries the SAME word. True (default) for LearnSection.tsx's own
   // type_cumulative_today check.
   restartOnMistake: boolean;
+  // Resume point — the next word to type and the words already missed (see lib/useSrsReviewRun.ts).
+  initialProgress?: ReviewChainProgress;
+  // Told the reader's place after every change, so it can be saved for later.
+  onProgress?: (progress: ReviewChainProgress) => void;
+}
+
+export interface ReviewChainProgress {
+  wordIndex: number;
+  wrongWordIndices: number[];
 }
 
 export interface ReviewChainTyping {
@@ -40,24 +49,26 @@ export interface ReviewChainTyping {
   revealCurrentWord: () => void;
   recordMistake: (notice?: string) => void;
   handleLetterChange: (value: string) => void;
-  // "Reveal word" hint's own non-restart path (restartOnMistake off) — the word's already
-  // shown, so just move on instead of retrying it.
-  markWrongAndAdvance: () => void;
 }
 
 // ReviewChain.tsx's own reveal/scoring state and logic, pulled into a hook so that component
 // stays render-only — the same "component receives data, hook owns behavior" split
 // lib/useFirstLetterTyping.ts already follows for FirstLetterTypeRep — and the only practical
 // way to keep ReviewChain.tsx itself under this codebase's own 200-line cap (see CLAUDE.md).
-export function useReviewChain({ verses, restartOnMistake }: UseReviewChainOptions): ReviewChainTyping {
+export function useReviewChain({ verses, restartOnMistake, initialProgress, onProgress }: UseReviewChainOptions): ReviewChainTyping {
   const combinedWords = useMemo(() => buildCombinedWords(verses), [verses]);
 
-  const [wordIndex, setWordIndex] = useState(0);
-  const [revealedWords, setRevealedWords] = useState<string[]>([]);
+  const startIndex = Math.min(initialProgress?.wordIndex ?? 0, Math.max(0, combinedWords.length - 1));
+  const [wordIndex, setWordIndex] = useState(startIndex);
+  const [revealedWords, setRevealedWords] = useState<string[]>(() => combinedWords.slice(0, startIndex).map((combined) => combined.word));
   const [letterInput, setLetterInput] = useState("");
   const [restartNotice, setRestartNotice] = useState<string | null>(null);
-  const [wrongWordIndices, setWrongWordIndices] = useState<Set<number>>(new Set());
+  const [wrongWordIndices, setWrongWordIndices] = useState<Set<number>>(() => new Set(initialProgress?.wrongWordIndices ?? []));
   const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    if (!finished) onProgress?.({ wordIndex, wrongWordIndices: [...wrongWordIndices] });
+  }, [wordIndex, wrongWordIndices, finished, onProgress]);
 
   const currentWord = combinedWords[wordIndex];
   const currentVerse = currentWord ? verses[currentWord.verseIndex] : null;
@@ -102,14 +113,9 @@ export function useReviewChain({ verses, restartOnMistake }: UseReviewChainOptio
       playCorrectSfx();
       revealCurrentWord();
     } else if (typed) {
-      playIncorrectSfx();
+      // Silent on a wrong letter — the red notice is enough, no penalty sound.
       recordMistake();
     }
-  }
-
-  function markWrongAndAdvance() {
-    setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
-    revealCurrentWord();
   }
 
   return {
@@ -126,6 +132,5 @@ export function useReviewChain({ verses, restartOnMistake }: UseReviewChainOptio
     revealCurrentWord,
     recordMistake,
     handleLetterChange,
-    markWrongAndAdvance,
   };
 }
