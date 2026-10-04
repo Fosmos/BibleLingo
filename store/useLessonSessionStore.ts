@@ -1,5 +1,16 @@
 import { create } from "zustand";
 
+// What the Mind Map lesson sheet's header shows (LessonSheetHeader.tsx): the stage's name, the
+// verse(s) it drills, and where it sits among its group of stages (the step bar).
+export interface SheetStage {
+  label: string;
+  reference: string;
+  step: number;
+  steps: number;
+  // No stage label — just the reference, beside the close button (spaced review).
+  compact?: boolean;
+}
+
 export interface LessonFocusVerse {
   book: string;
   chapter: number;
@@ -19,6 +30,8 @@ interface LessonSessionState {
   // A verse the Mind Map should bring into view once, then let go (see lib/useMindMapArrival.ts)
   // — Home's Needs Reviewing links land here. Unlike focusVerse, the view stays free afterwards.
   arrivalVerse: LessonFocusVerse | null;
+  // The sheet header's stage (see SheetStage) — null when nothing in the sheet reports one.
+  sheetStage: SheetStage | null;
   // The real DOM node lib/useMindMapSenseCardSlot.ts measures for PathOverviewScreen.tsx's own
   // in-place lesson sheet's dedicated "sense lines only" card (see LessonBottomSheet.tsx) —
   // LessonPageCard.tsx portals its card straight into this node instead of rendering inline
@@ -63,6 +76,7 @@ interface LessonSessionActions {
   setFocusVerse: (verse: LessonFocusVerse) => void;
   clearFocusVerse: () => void;
   setArrivalVerse: (verse: LessonFocusVerse | null) => void;
+  setSheetStage: (stage: SheetStage | null) => void;
   setSenseCardPortalNode: (node: HTMLDivElement | null) => void;
   setSenseCardFillHeightPx: (px: number | null) => void;
   setSenseCardColumnWidthPx: (px: number | null) => void;
@@ -90,6 +104,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   activeCount: 0,
   focusVerse: null,
   arrivalVerse: null,
+  sheetStage: null,
   senseCardPortalNode: null,
   senseCardFillHeightPx: null,
   senseCardColumnWidthPx: null,
@@ -104,6 +119,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   setFocusVerse: (verse) => set({ focusVerse: verse }),
   clearFocusVerse: () => set({ focusVerse: null }),
   setArrivalVerse: (verse) => set({ arrivalVerse: verse }),
+  setSheetStage: (stage) => set({ sheetStage: stage }),
   setSenseCardPortalNode: (node) => set({ senseCardPortalNode: node }),
   setSenseCardFillHeightPx: (px) => set({ senseCardFillHeightPx: px }),
   setSenseCardColumnWidthPx: (px) => set({ senseCardColumnWidthPx: px }),

@@ -98,7 +98,7 @@ export function MindMapPathPicker({ onChooseTopic }: MindMapPathPickerProps) {
         }}
         onClose={() => setTarget(null)}
       />
-      <LessonBottomSheet open={setupOpen} plain={setupTarget !== null}>
+      <LessonBottomSheet open={setupOpen} plain={setupTarget !== null} onClose={closeSheet}>
         {setupTarget ? (
           <MindMapPathSetup target={setupTarget} onClose={closeSheet} />
         ) : (

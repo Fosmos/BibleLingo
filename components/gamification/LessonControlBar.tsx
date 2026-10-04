@@ -141,7 +141,7 @@ export function LessonControlBar({ children, dockRef, verseText, verseViewExtra,
     // exactly however far the reading column's own centering had shifted it, without needing
     // `fixed`/`absolute` positioning at all — see OnScreenKeyboard.tsx's own doc comment on why
     // the keyboard needs true full width in the first place.
-    <div ref={dockRef} className="sticky bottom-0 z-20 ml-[calc(50%-50vw)] w-screen border-t border-line bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <div ref={dockRef} className="sticky bottom-0 z-20 ml-[calc(50%-50vw)] w-screen bg-paper dark:bg-zinc-950">
       {/* No bottom padding (just top) — whatever renders last here, ideally the on-screen
           keyboard's own final row, sits flush against the screen's true bottom edge, the same
           way a native keyboard docks with no gap beneath it, rather than floating just above it. */}
@@ -153,7 +153,7 @@ export function LessonControlBar({ children, dockRef, verseText, verseViewExtra,
         {children}
       </div>
       {hasMoreBelow && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-5 items-end justify-center bg-gradient-to-t from-white to-transparent dark:from-zinc-950">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-5 items-end justify-center bg-gradient-to-t from-paper to-transparent dark:from-zinc-950">
           <ChevronDown size={14} className="mb-0.5 animate-bounce text-ink-muted dark:text-zinc-500" />
         </div>
       )}

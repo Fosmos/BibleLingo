@@ -37,7 +37,7 @@ export function StreakMilestoneModal({ open, streakCount, onClose }: StreakMiles
             <motion.div
               {...MODAL_CARD}
               transition={{ duration: MOTION_DURATION.base }}
-              className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl bg-white p-6 text-center dark:bg-zinc-900"
+              className="flex w-full max-w-sm flex-col items-center gap-3 rounded-organic bg-paper p-6 shadow-organic-lg text-center dark:bg-zinc-900"
             >
               <Trophy size={40} className="text-gold-500" />
               <h2 id="streak-milestone-title" className="text-title text-gold-600">

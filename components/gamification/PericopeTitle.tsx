@@ -29,10 +29,10 @@ export function PericopeTitle({ book, chapter, verseNumber, heading }: PericopeT
   const span = pericope
     ? pericope.startVerse === pericope.endVerse
       ? `${pericope.chapter}:${pericope.startVerse}`
-      : `${pericope.chapter}:${pericope.startVerse}-${pericope.endVerse}`
+      : `${pericope.chapter}:${pericope.startVerse}–${pericope.endVerse}`
     : undefined;
   return (
-    <p className="mb-3 px-4 text-center font-serif text-base uppercase tracking-widest text-parchment-heading dark:text-zinc-400">
+    <p className="mb-3 px-4 text-center font-sans text-sm font-bold uppercase tracking-widest text-parchment-heading dark:text-zinc-400">
       {heading}
       {span ? ` (${span})` : ""}
     </p>

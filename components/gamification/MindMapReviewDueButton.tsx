@@ -96,11 +96,11 @@ export function MindMapReviewDueButton({ onStart }: MindMapReviewDueButtonProps)
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-label={due.length > 0 ? `${due.length} due for review` : "Continue your review"}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink-muted shadow-sm dark:bg-zinc-900 dark:text-zinc-300"
+        className="relative flex h-[34px] w-[34px] items-center justify-center rounded-full bg-sand-100 text-ink shadow-organic-sm dark:bg-zinc-900 dark:text-zinc-300"
       >
         <RotateCcw size={15} />
         {due.length > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-bold text-ink">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-paper">
             {due.length}
           </span>
         )}

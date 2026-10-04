@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
-import { Button } from "@/components/ui/Button";
+import { LessonCompleteScreen } from "@/components/gamification/LessonCompleteScreen";
+import { SHEKELS_PER_BOSS_BATTLE, SHEKELS_PER_VERSE_COMPLETED } from "@/lib/economy";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
 import { applyDayCompletion } from "@/lib/completeDayEffects";
@@ -71,7 +72,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
     const milestone = applyDayCompletion(pathKey, day, completingChapterVerses, allDays);
     if (milestone !== null) setMilestoneStreak(milestone);
     if (day.kind === "learn") {
-      celebrate(() => setDayComplete(true), "Todays lesson complete");
+      celebrate(() => setDayComplete(true), "Today's lesson complete");
     } else {
       setDayComplete(true);
     }
@@ -110,26 +111,28 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
               ? "Section boss battle complete!"
               : `Day ${day.dayNumber} complete!`;
     const continueLabel = day.kind === "section_boss_battle" ? "Continue" : "Back to path";
+    const first = day.newVerses[0];
+    const last = day.newVerses[day.newVerses.length - 1];
+    const learnedHeading =
+      day.kind === "learn" && first && last
+        ? first.verseNumber === last.verseNumber ? `Verse ${first.verseNumber} learned` : `Verses ${first.verseNumber}–${last.verseNumber} learned`
+        : completeHeading;
+    const shekelsEarned = day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED + (day.kind === "section_boss_battle" ? SHEKELS_PER_BOSS_BATTLE : 0);
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 p-8 text-center">
-        <h1 className="text-title text-brand-600">{completeHeading}</h1>
-        {onExit ? (
-          <button
-            type="button"
-            onClick={onExit}
-            className="inline-block rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(107,86,68,0.18)] transition-colors hover:bg-brand-600"
-          >
-            {continueLabel}
-          </button>
-        ) : (
-          <Button href={pathHref}>{continueLabel}</Button>
-        )}
+      <>
+        <LessonCompleteScreen
+          heading={learnedHeading}
+          shekelsEarned={shekelsEarned}
+          continueLabel={continueLabel}
+          onContinue={onExit}
+          continueHref={pathHref}
+        />
         <StreakMilestoneModal
           open={milestoneStreak !== null}
           streakCount={milestoneStreak ?? 0}
           onClose={() => setMilestoneStreak(null)}
         />
-      </div>
+      </>
     );
   }
 

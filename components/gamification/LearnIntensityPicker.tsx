@@ -50,7 +50,7 @@ export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onCon
       </h3>
 
       {!customize && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="flex flex-col gap-2 rounded-organic bg-sand-100 p-4 dark:bg-zinc-900">
           <input
             type="range"
             min={1}
@@ -84,7 +84,7 @@ export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onCon
       </div>
 
       {customize && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="flex flex-col gap-3 rounded-organic bg-sand-100 p-4 dark:bg-zinc-900">
           <ToggleSwitch
             checked={stages.fillInTheBlankStageEnabled}
             onChange={(value) => patchCustomStage("fillInTheBlankStageEnabled", value)}

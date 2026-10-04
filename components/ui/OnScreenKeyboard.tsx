@@ -23,20 +23,20 @@ interface OnScreenKeyboardProps {
 const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 // Inside the Mind Map lesson sheet's drill zone (LessonBottomSheet.tsx tags it
-// `lesson-sheet-controls`) the keyboard fills the zone instead: it grows to take all the height
-// the zone has, each row takes an equal share, and each key stretches to its row — no fixed key
-// height to either overflow a short zone or leave a tall one half empty.
+// `lesson-sheet-controls`) the keys are one fixed, larger size (48px tall, 22px letters) —
+// the keyboard never stretches or squashes with the zone, it just docks at its bottom.
+// The Organic restyle's keys: soft sand fills, 12px corners, bold 18px letters, no shadow.
 const KEY_CLASS =
-  "flex h-14 flex-1 items-center justify-center rounded-lg bg-mist text-xl font-semibold uppercase text-ink shadow-sm transition active:scale-95 active:bg-brand-100 disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-100 dark:active:bg-zinc-700 [.lesson-sheet-controls_&]:h-auto [.lesson-sheet-controls_&]:bg-white [.lesson-sheet-controls_&]:active:bg-brand-100 dark:[.lesson-sheet-controls_&]:bg-zinc-800";
+  "flex h-[42px] flex-1 items-center justify-center rounded-xl bg-sand-200 text-lg font-bold uppercase text-ink transition active:scale-95 active:bg-brand-200 disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-100 dark:active:bg-zinc-700 [.lesson-sheet-controls_&]:h-12 [.lesson-sheet-controls_&]:text-[22px]";
 
 export function OnScreenKeyboard({ onKey, onBackspace, onSubmit, disabled }: OnScreenKeyboardProps) {
   return (
-    <div className="flex w-full flex-col items-center gap-2 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:gap-1.5">
+    <div className="flex w-full flex-col items-center gap-[5px] [.lesson-sheet-controls_&]:gap-2">
       {KEYBOARD_ROWS.map((row, rowIndex) => (
         // gap-1 (not the row-group's own gap-2) — a narrower gap between keys hands that
         // saved space straight to each key's own flex-1 width instead, more tappable room
         // being the actual point of a key this size.
-        <div key={rowIndex} className="flex w-full justify-center gap-1 [.lesson-sheet-controls_&]:flex-1">
+        <div key={rowIndex} className="flex w-full justify-center gap-[5px]">
           {row.split("").map((letter) => (
             <button key={letter} type="button" disabled={disabled} onClick={() => onKey(letter)} aria-label={letter} className={KEY_CLASS}>
               {letter}
@@ -45,7 +45,7 @@ export function OnScreenKeyboard({ onKey, onBackspace, onSubmit, disabled }: OnS
         </div>
       ))}
       {(onBackspace || onSubmit) && (
-        <div className="flex w-full justify-center gap-1 [.lesson-sheet-controls_&]:flex-1">
+        <div className="flex w-full justify-center gap-1">
           {onBackspace && (
             <button type="button" disabled={disabled} onClick={onBackspace} aria-label="Backspace" className={`${KEY_CLASS} flex-[1.5]`}>
               ⌫
@@ -57,7 +57,7 @@ export function OnScreenKeyboard({ onKey, onBackspace, onSubmit, disabled }: OnS
               disabled={disabled}
               onClick={onSubmit}
               aria-label="Submit word"
-              className="flex h-14 flex-[3] items-center justify-center rounded-lg bg-brand-500 text-base font-semibold text-white shadow-sm transition active:scale-95 active:bg-brand-600 disabled:opacity-40 [.lesson-sheet-controls_&]:h-auto"
+              className="flex h-[42px] flex-[3] items-center justify-center rounded-xl bg-brand-500 text-base font-semibold text-paper transition active:scale-95 active:bg-brand-600 disabled:opacity-40 [.lesson-sheet-controls_&]:h-12"
             >
               Space / Enter
             </button>

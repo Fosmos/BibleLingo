@@ -13,6 +13,8 @@ import { usePericopeHeading } from "@/lib/usePericopeHeading";
 import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
 import { useLearnSteps } from "@/lib/useLearnSteps";
 import { usePriorLearnedVerse } from "@/lib/usePriorLearnedVerse";
+import { useReportSheetStage } from "@/lib/useReportSheetStage";
+import { learnSheetStage } from "@/lib/learnSheetStage";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
@@ -80,10 +82,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
     [day.newVerses],
   );
   const realVerses = useMemo(() => realVerseIndices.map((index) => day.newVerses[index]), [realVerseIndices, day.newVerses]);
-  // `verseOffsets` above is indexed against `day.newVerses` (it has to be — wordAnnotations is
-  // built against the whole-day joined text, gap verses included, so offsets stay aligned to
-  // that same indexing); the whole-day phases below render `realVerses` instead (no gap
-  // verses), so they need that same offset re-indexed to `realVerses`' own positions.
+  // `verseOffsets` re-indexed to `realVerses` (no gap verses), which the whole-day phases render.
   const realVerseOffsets = useMemo(() => realVerseIndices.map((index) => verseOffsets[index]), [realVerseIndices, verseOffsets]);
   const firstReal = realVerses[0];
   const lastReal = realVerses[realVerses.length - 1];
@@ -98,8 +97,8 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
 
   const steps = useLearnSteps(realVerseIndices, !!usePriorLearnedVerse(day));
-
   const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);
+  useReportSheetStage(learnSheetStage(steps, stepIndex, day), embeddedInMindMap);
   useRecordLearnedVerseCount(sessionKey, steps, stepIndex);
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
   const { pending, celebrate, finish } = useCelebration();

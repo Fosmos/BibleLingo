@@ -53,23 +53,23 @@ export function VespersPromptCard() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-vespers-bg p-5 text-vespers-ink shadow-sm">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-vespers-surface">
-          <MoonStar size={16} className="text-vespers-accent" />
-        </span>
-        <p className="text-sm font-semibold">Wind down with a review</p>
+    // The Organic restyle's dark evening card (warm neutral, terracotta accents).
+    <div className="relative flex flex-col gap-2.5 overflow-hidden rounded-organic bg-sand-900 p-[22px] text-brand-200">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-[30px] -top-[40px] h-[120px] w-[120px] rounded-full bg-sand-800" />
+      <div className="relative flex items-center gap-2.5">
+        <MoonStar size={20} strokeWidth={2.75} className="text-brand-400" />
+        <p className="font-serif text-xl text-brand-100">Wind down with a review</p>
       </div>
-      <p className="text-sm text-vespers-soft">Reviewing right before sleep tends to help it stick.</p>
-      <div className="flex gap-2">
+      <p className="relative text-[15px] leading-snug text-sand-300">Reviewing right before sleep tends to help it stick.</p>
+      <div className="relative flex gap-2">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex-1 rounded-full border border-vespers-soft/30 py-2 text-sm font-medium hover:bg-vespers-surface"
+          className="flex-1 rounded-full bg-brand-500 py-[11px] text-[15px] font-semibold text-paper hover:bg-brand-600"
         >
           Review now
         </button>
-        <button type="button" onClick={dismissToday} className="rounded-full px-3 py-2 text-sm text-vespers-soft hover:bg-vespers-surface">
+        <button type="button" onClick={dismissToday} className="rounded-full px-4 py-[11px] text-[15px] text-sand-300 hover:bg-sand-800">
           Not tonight
         </button>
       </div>

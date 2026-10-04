@@ -17,7 +17,7 @@ export function BeginFlow() {
     <div className="flex flex-1 flex-col">
       <Header />
       <div className="flex flex-1 flex-col items-center p-8">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-line p-6 text-left dark:border-zinc-800">
+        <div className="mx-auto w-full max-w-3xl rounded-organic bg-sand-100 p-6 text-left dark:bg-zinc-900">
           <h2 className="mb-1 text-title">Choose a topic</h2>
           <p className="mb-6 text-sm text-ink-muted">Verses gathered from across Scripture around one theme.</p>
           <TopicPicker onBack={() => setChoosingTopic(false)} />

@@ -44,6 +44,9 @@ interface MindMapVerseStreamProps {
 // directly below the card, continuing on to wherever the next pericope ends up. Tapping a chip
 // navigates straight to that exact verse (see BookMindMap.tsx's own onSelectVerse) — the
 // pericope card's own tap no longer does that itself now that it toggles this stream instead.
+// The Organic restyle's chip: the geometry's verse-length size plus 6px, at least 28px.
+const chipSize = (size: number | undefined) => Math.max(28, (size ?? VERSE_CHIP_SIZE_PX) + 6);
+
 export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips, hallNumber, pinVerseNumber, todayVerseKeys, onSelectVerse }: MindMapVerseStreamProps) {
   const color = verseChipColor(pericope);
   // Verses the reader had to peek at in review (see lib/flagPeekedVerse.ts) — read off one
@@ -73,9 +76,9 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
             whileTap={TAP_SCALE}
             whileHover={{ scale: 1.1 }}
             style={{
-              // Sized by the verse's length (see lib/mindMapHallGeometry.ts).
-              width: chip.size ?? VERSE_CHIP_SIZE_PX,
-              height: chip.size ?? VERSE_CHIP_SIZE_PX,
+              // Sized by the verse's length (see lib/mindMapHallGeometry.ts), never under 28px.
+              width: chipSize(chip.size),
+              height: chipSize(chip.size),
               x: "-50%",
               y: "-50%",
               ...mindMapNodeColorVars(color),
@@ -83,7 +86,7 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
             // Every chip is drawn solid; a memorized one also wears the green check — the same
             // comparison lib/mindMapPericopeSpine.ts uses to draw the trail beneath it dashed vs.
             // solid, so chip and trail always agree.
-            className="absolute flex items-center justify-center rounded-full border border-[var(--nodeBg)] bg-[var(--nodeBg)] text-[9px] font-semibold text-[var(--nodeText)] shadow-sm transition hover:z-10"
+            className={`absolute flex items-center justify-center rounded-full border-2 border-[var(--nodeBorder)] bg-[var(--nodeBg)] font-extrabold text-[var(--nodeText)] shadow-organic-sm transition hover:z-10 ${chipSize(chip.size) > 40 ? "text-xs" : "text-[11px]"}`}
           >
             {/* Today's verses to learn: a halo of the chip's own color swelling outward and fading,
                 over and over. Painted behind the label (negative z inside the chip's own stacking
@@ -91,7 +94,7 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
             {pulsing && (
               <motion.span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-[var(--nodeBg)]"
+                className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-brand-500"
                 // Starts AND ends invisible, so each loop's restart (back to scale 1) never shows —
                 // restarting from a visible halo read as a flicker at the chip's edge.
                 animate={{ scale: [1, 1.35, 1.9], opacity: [0, 0.6, 0] }}
@@ -101,7 +104,7 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
             {memorized(chip.verseNumber) && (
               <MindMapMemorizedCheck size="sm" reviewDue={reviewDueKeys?.has(`${pericope.book}:${pericope.chapter}:${chip.verseNumber}`)} />
             )}
-            {chip.verseNumber === pinVerseNumber && <MindMapActivePin />}
+            {chip.verseNumber === pinVerseNumber && <MindMapActivePin variant="chip" />}
             {problem && <MindMapProblemMark />}
             v{chip.verseNumber}
           </motion.button>

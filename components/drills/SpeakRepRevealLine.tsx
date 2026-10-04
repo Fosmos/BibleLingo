@@ -3,6 +3,8 @@ import { buildDrawTokens } from "@/lib/verseDrawTokens";
 import { firstWordCharacter, hiddenWordBlank } from "@/lib/verseWords";
 import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 
+const HINT_LETTER_CLASS = "font-bold tracking-[.08em] text-sage-900 dark:text-sage-200";
+
 interface SpeakRepRevealLineProps {
   text: string;
   // How many of this verse's own WORD tokens (punctuation/reference tokens don't count) have
@@ -49,9 +51,12 @@ export function SpeakRepRevealLine({ text, revealedCount, mode }: SpeakRepReveal
           if (ownerIndex >= revealedCount) display = mode === "blind" ? hiddenWordBlank(token.text) : "";
           endsLetterUnit = mode === "hint" && ownerIndex >= revealedCount;
         }
+        // A hint letter reads bold and spaced in deep sage (the Organic restyle), apart from the
+        // words already said.
+        const shown = endsLetterUnit && isWord ? <span className={HINT_LETTER_CLASS}>{display}</span> : display;
         return (
           <Fragment key={index}>
-            {endsLetterUnit && token.spaceAfter ? <span className={FIRST_LETTER_GAP_CLASS}>{display}</span> : display}
+            {endsLetterUnit && token.spaceAfter ? <span className={FIRST_LETTER_GAP_CLASS}>{shown}</span> : shown}
             {token.spaceAfter && " "}
           </Fragment>
         );

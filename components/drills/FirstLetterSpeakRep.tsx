@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { Mic, MicOff, Square } from "lucide-react";
-import { motion } from "framer-motion";
+import { MicOff } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import type { VerseAccuracy } from "@/lib/verseAccuracyBreakdown";
 import { useFirstLetterSpeaking } from "@/lib/useFirstLetterSpeaking";
-import { TAP_SCALE } from "@/lib/motionTokens";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { FirstLetterMultiVersePageCard } from "@/components/drills/FirstLetterMultiVersePageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { MicButton } from "@/components/ui/MicButton";
 import { flagPeekedVerse } from "@/lib/flagPeekedVerse";
 import { usePeekedVerses } from "@/lib/usePeekedVerses";
 
@@ -86,35 +85,12 @@ export function FirstLetterSpeakRep({ verse, onComplete, verseMarkers, onVerseAc
             <p className="text-sm text-ink-muted dark:text-zinc-400">Switch back to typing (the keyboard button) to keep going.</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            {!speaking.isListening ? (
-              <div className="flex items-center gap-3">
-                <motion.button
-                  type="button"
-                  whileTap={TAP_SCALE}
-                  onClick={speaking.start}
-                  aria-label="Start speaking"
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-500 text-white shadow-sm hover:bg-brand-600"
-                >
-                  <Mic size={26} />
-                </motion.button>
-                <span className="text-sm text-ink-muted">Tap to recite from memory</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <motion.button
-                  type="button"
-                  whileTap={TAP_SCALE}
-                  onClick={speaking.stop}
-                  aria-label="Done speaking"
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-heart-500 text-white shadow-sm animate-pulse"
-                >
-                  <Square size={22} />
-                </motion.button>
-                <span className="text-sm text-ink-muted">Listening — words fill in as you say them</span>
-              </div>
-            )}
-          </div>
+          <MicButton
+            listening={speaking.isListening}
+            onClick={speaking.isListening ? speaking.stop : speaking.start}
+            label={speaking.isListening ? "Done speaking" : "Start speaking"}
+            caption={speaking.isListening ? "Listening — words fill in as you say them" : "Tap to recite from memory"}
+          />
         )}
         {!moveAutoCompleteToVerseView && <AutoCompleteButton onClick={() => onComplete(false, 100)} />}
       </LessonControlBar>

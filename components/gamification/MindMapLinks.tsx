@@ -124,14 +124,15 @@ export function MindMapLinks({ layout, isOnFocusedBranch, activePath, nodeSizeBy
             const point = spine.points[index];
             // Drawn in the colour of the hall it leads into (see SpinePoint.stroke) — solid once
             // reached, dotted until then, so progress reads through the line's style, not its colour.
-            const stroke = spine.points[index + 1]?.stroke;
+            const next = spine.points[index + 1];
+            const stroke = point.completed ? next?.stroke : next?.trailStroke;
             return (
               <path
                 key={`${spine.parentId}-${index}`}
                 d={d}
                 fill="none"
                 stroke={stroke}
-                strokeWidth={point.completed ? 3 : 2.5}
+                strokeWidth={point.completed ? 3.5 : 2.5}
                 strokeLinecap="round"
                 strokeDasharray={point.completed ? undefined : "1 8"}
                 // A spine dims exactly when its own chapter isn't on the focused branch — see

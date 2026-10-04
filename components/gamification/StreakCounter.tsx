@@ -19,14 +19,15 @@ export function StreakCounter({ className, showInfo, pill }: StreakCounterProps)
 
   return (
     <div
-      className={`flex items-center gap-1 ${pill ? "rounded-full bg-crack-50 px-3 py-1.5 dark:bg-zinc-800" : ""} ${className ?? ""}`}
+      className={`flex items-center gap-1 ${pill ? "rounded-full bg-brand-100 px-[13px] py-2 text-brand-700 dark:bg-zinc-800" : ""} ${className ?? ""}`}
       aria-label="Current streak"
     >
       <Flame
-        size={pill ? 16 : 20}
-        className={currentStreak > 0 ? "fill-gold-500 text-gold-500" : "text-ink-muted dark:text-zinc-700"}
+        size={pill ? 17 : 20}
+        strokeWidth={2.75}
+        className={currentStreak > 0 ? "fill-brand-400 text-brand-700" : "text-ink-muted dark:text-zinc-700"}
       />
-      <span className="text-sm font-semibold text-ink-soft dark:text-zinc-300">{currentStreak}</span>
+      <span className={`font-bold ${pill ? "text-[15px] text-brand-700" : "text-sm text-ink-soft"} dark:text-zinc-300`}>{currentStreak}</span>
       {showInfo && <InfoTip text={INFO_TIPS.streakCounter} />}
     </div>
   );

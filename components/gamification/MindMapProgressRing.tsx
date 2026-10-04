@@ -39,7 +39,8 @@ export function MindMapProgressRing({ progress, size, shape, measuredSize, due }
   const hasProgress = progress !== undefined && progress > 0;
   if (!hasProgress && !due) return null;
   const filled = hasProgress ? Math.min(1, progress) : 1;
-  const strokeClass = due ? "stroke-yellow-400" : "stroke-green-500";
+  // Sage for progress, terracotta when something under it is due for review.
+  const strokeClass = due ? "stroke-brand-500" : "stroke-sage-600";
   const strokeWidth = STROKE_WIDTH_PX;
   const gap = GAP_PX;
 

@@ -20,18 +20,19 @@ export function SleepTimerCard() {
   if (open) return <SleepTimerView verses={verses} onDone={() => setOpen(false)} />;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-vespers-bg p-5 text-vespers-ink shadow-sm">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-vespers-surface">
-          <Moon size={16} className="text-vespers-accent" />
-        </span>
-        <p className="text-sm font-semibold">Sleep Timer</p>
+    // The Organic restyle's dark evening card (warm neutral, terracotta accents).
+    <div className="flex items-center gap-3.5 rounded-organic bg-sand-900 p-[22px]">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sand-800 text-brand-400">
+        <Moon size={19} strokeWidth={2.75} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="text-[15px] font-bold text-brand-100">Sleep Timer</p>
+        <p className="text-[13px] leading-snug text-sand-400">Drift off listening to your own memorized verses, read aloud on a loop.</p>
       </div>
-      <p className="text-sm text-vespers-soft">Drift off listening to your own memorized verses, read aloud on a loop.</p>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="self-start rounded-full border border-vespers-soft/30 px-4 py-2 text-sm font-medium hover:bg-vespers-surface"
+        className="shrink-0 rounded-full border-[1.5px] border-sand-700 px-4 py-[9px] text-sm text-brand-200 hover:bg-sand-800"
       >
         Start
       </button>

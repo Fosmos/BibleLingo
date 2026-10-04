@@ -110,10 +110,14 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
           return (
             <span key={index}>
               <span
-                className={`inline-block indent-0 whitespace-nowrap border-b-2 font-medium leading-none ${
+                // Filled: sage, underlined. The next blank: a solid terracotta underline. Later
+                // blanks: a dashed neutral one (the Organic restyle).
+                className={`inline-block indent-0 whitespace-nowrap leading-none ${
                   isFilled
-                    ? "border-brand-500 text-brand-700 dark:text-brand-300"
-                    : "border-dashed border-line dark:border-zinc-700"
+                    ? "border-b-[3px] border-sage-500 font-semibold text-sage-800 dark:text-sage-300"
+                    : slotPosition === placedCount
+                      ? "border-b-[3px] border-brand-500"
+                      : "border-b-2 border-dashed border-sand-400 dark:border-zinc-700"
                 }`}
               >
                 <span className={isFilled ? "" : "invisible"} aria-hidden={isFilled ? undefined : true}>
@@ -142,16 +146,22 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
         {/* Inside the Mind Map sheet's drill zone (tagged `lesson-sheet-controls` — see
             LessonBottomSheet.tsx) the options aren't boxed at all: they spread straight across
             the whole zone, centered in whatever height it has. */}
-        <div className="flex w-full flex-wrap justify-center gap-2 rounded-xl bg-mist p-3 dark:bg-zinc-900 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:content-center [.lesson-sheet-controls_&]:bg-transparent [.lesson-sheet-controls_&]:p-0 dark:[.lesson-sheet-controls_&]:bg-transparent">
+        <div className="flex w-full flex-wrap justify-center gap-2 rounded-organic bg-sand-100 p-3 dark:bg-zinc-900 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:content-center [.lesson-sheet-controls_&]:bg-transparent [.lesson-sheet-controls_&]:p-0 dark:[.lesson-sheet-controls_&]:bg-transparent">
           {tray.map((entry) => (
             <motion.button
               key={entry.tileId}
               type="button"
               whileTap={TAP_SCALE}
               onClick={() => handleTileClick(entry.tileId, entry.word)}
-              className={`rounded-lg px-3 py-2 text-base font-medium text-white [.lesson-sheet-controls_&]:py-1.5 ${
-                wrongTileId === entry.tileId ? "bg-heart-500" : "bg-brand-500"
-              } ${usedTileIds.has(entry.tileId) ? "invisible" : ""}`}
+              // Word tiles as pills; a used one stays as a dashed outline so the row never jumps.
+              disabled={usedTileIds.has(entry.tileId)}
+              className={`rounded-full border-2 px-3.5 py-[9px] text-[15px] font-bold ${
+                usedTileIds.has(entry.tileId)
+                  ? "border-dashed border-sand-300 bg-transparent text-sand-500"
+                  : wrongTileId === entry.tileId
+                    ? "border-transparent bg-brand-300 text-ink"
+                    : "border-transparent bg-sand-200 text-ink dark:bg-zinc-800 dark:text-zinc-100"
+              }`}
             >
               {stripPunctuation(entry.word)}
             </motion.button>

@@ -102,23 +102,23 @@ export function ProfileAdvancedSettings() {
             value={srsPromotionThreshold}
             onChange={setSrsPromotionThreshold}
             label="SRS promotion threshold"
-            description="How high a review's accuracy must be to move a verse group up a Sword of the Spirit box instead of dropping it back one box"
+            description="How high a review's accuracy must be to move a verse group up a box instead of dropping it back one box"
           />
         </div>
         <InfoTip text={INFO_TIPS.srsPromotionThresholdSlider} />
       </div>
       <div className="flex items-start gap-1.5">
         <div className="flex-1">
-          <p className="text-sm font-medium text-ink dark:text-zinc-200">Weekly rest day</p>
-          <p className="mb-2 text-xs text-ink-muted">A day off streaks and SRS due-dates don&apos;t pressure you on</p>
+          <p className="text-[15px] font-semibold text-ink dark:text-zinc-200">Weekly rest day</p>
+          <p className="mb-2 text-[13px] text-ink-muted">A day off streaks and SRS due-dates don&apos;t pressure you on</p>
           <RestDayPicker value={restDayOfWeek} onChange={setRestDayOfWeek} />
         </div>
         <InfoTip text={INFO_TIPS.restDayPicker} />
       </div>
       <div className="flex items-start gap-1.5">
         <div className="flex-1">
-          <p className="text-sm font-medium text-ink dark:text-zinc-200">Evening Vespers mode</p>
-          <p className="mb-2 text-xs text-ink-muted">A quiet, warm-toned home-screen prompt to review before bed</p>
+          <p className="text-[15px] font-semibold text-ink dark:text-zinc-200">Evening Vespers mode</p>
+          <p className="mb-2 text-[13px] text-ink-muted">A quiet, warm-toned home-screen prompt to review before bed</p>
           <VespersHourPicker value={vespersHour} onChange={setVespersHour} />
         </div>
         <InfoTip text={INFO_TIPS.vespersHourPicker} />

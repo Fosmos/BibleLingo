@@ -4,6 +4,8 @@ import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
 import { tokenizeVerseWords } from "@/lib/verseWords";
+import { findBook } from "@/lib/bibleBooks";
+import { getChapterVerseNumbers } from "@/lib/chapterVerseIndex";
 
 function tokenCount(text: string): number {
   return tokenizeVerseWords(text).length;
@@ -92,6 +94,7 @@ export function getMemorizedEntityVerses(entities: MemorizedEntity[]): VerseSegm
 }
 
 export interface MemorizedStats {
+  books: number;
   chapters: number;
   verses: number;
   words: number;
@@ -117,36 +120,44 @@ export interface MemorizedStats {
 // isn't, this undercounts by however many gap verses fall in that range until it's fetched
 // again, the exact same accepted tradeoff word count already makes.
 //
-// A "chapter," to the reader, means the WHOLE chapter is memorized — the stat's own icon and
-// label promise that, not "touches this chapter at all." A single manually-added verse (or
-// any partial range) used to inflate this the same as a genuinely complete chapter; now each
-// chapter's own entities are unioned and checked against that chapter's real verse count
-// (skipping any translation gap verse, the same as the word/verse counts above) before it
-// counts. A chapter whose content isn't cached is left out entirely (undercounts rather than
-// guesses) — the same tradeoff every other figure here already makes.
+// Books and chapters count only when memorized end to end: a chapter once its spaced-review
+// ranges cover every verse in it (a translation's gap verses aside), a book once every one of its
+// chapters does. A chapter's verse numbers come from its cached text, or — when the text isn't
+// cached (the ESV license only lets half a book's text stay on the device) — from
+// lib/chapterVerseIndex.ts, which remembers every chapter's verse numbers once loaded. A chapter
+// never loaded on this device can't be checked and is left out until it is (see
+// useMemorizedChaptersLoaded.ts, which fetches them for the Memorized page).
 function isChapterFullyCovered(entities: MemorizedEntity[]): boolean {
   const { book, chapter } = entities[0];
-  const chapterVerses = getChapterVerses(book, chapter);
-  if (!chapterVerses || chapterVerses.length === 0) return false;
+  const cached = getChapterVerses(book, chapter);
+  const verseNumbers = cached?.length
+    ? cached.filter((verse) => verse.text.trim().length > 0).map((verse) => verse.verseNumber)
+    : getChapterVerseNumbers(book, chapter);
+  if (!verseNumbers || verseNumbers.length === 0) return false;
   const covered = new Set<number>();
   for (const entity of entities) {
-    if (getCachedChapterVersion(entity.book, entity.chapter) !== entity.version) continue;
     for (let verseNumber = entity.startVerse; verseNumber <= entity.endVerse; verseNumber++) covered.add(verseNumber);
   }
-  return chapterVerses.every((verse) => verse.text.trim().length === 0 || covered.has(verse.verseNumber));
+  return verseNumbers.every((verseNumber) => covered.has(verseNumber));
 }
 
 export function computeMemorizedStats(memorizedEntities: MemorizedEntity[]): MemorizedStats {
   const entitiesByChapter = new Map<string, MemorizedEntity[]>();
   for (const entity of memorizedEntities) {
     const key = `${entity.book}|${entity.chapter}`;
-    const group = entitiesByChapter.get(key);
-    if (group) group.push(entity);
-    else entitiesByChapter.set(key, [entity]);
+    entitiesByChapter.set(key, [...(entitiesByChapter.get(key) ?? []), entity]);
   }
   let chapters = 0;
+  const fullChaptersByBook = new Map<string, number>();
   for (const entities of entitiesByChapter.values()) {
-    if (isChapterFullyCovered(entities)) chapters++;
+    if (!isChapterFullyCovered(entities)) continue;
+    chapters++;
+    fullChaptersByBook.set(entities[0].book, (fullChaptersByBook.get(entities[0].book) ?? 0) + 1);
+  }
+  let books = 0;
+  for (const [book, count] of fullChaptersByBook) {
+    const chapterCount = findBook(book)?.chapterCount;
+    if (chapterCount !== undefined && count >= chapterCount) books++;
   }
 
   const cachedVerses = getMemorizedEntityVerses(memorizedEntities);
@@ -155,5 +166,5 @@ export function computeMemorizedStats(memorizedEntities: MemorizedEntity[]): Mem
   const verses = Math.max(rawVerseCount - cachedEmptyCount, 0);
   const words = cachedVerses.reduce((sum, verse) => sum + tokenCount(verse.text), 0);
 
-  return { chapters, verses, words };
+  return { books, chapters, verses, words };
 }

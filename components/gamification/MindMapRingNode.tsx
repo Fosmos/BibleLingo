@@ -1,6 +1,7 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
+import { ringLabelSize } from "@/lib/mindMapRingLabelSize";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Bookmark, DoorOpen, DoorClosed, type LucideIcon } from "lucide-react";
 import { TOGGLE_BADGE_CLASS, mindMapNodeColorVars, type MindMapNodeColor } from "@/lib/mindMapGenreColor";
@@ -92,12 +93,12 @@ interface MindMapRingNodeProps {
 // A node's own resting elevation, purely by depth — broader groupings cast a deeper shadow,
 // layered on top of the size taper RING_SIZE_PX above already provides.
 const RING_SHADOW_CLASS: Record<"testament" | "genre" | "subgenre" | "book" | "theme" | "chapter", string> = {
-  testament: "shadow-lg",
-  genre: "shadow-lg",
-  subgenre: "shadow-md",
-  book: "shadow-md",
-  theme: "shadow-md",
-  chapter: "shadow-sm",
+  testament: "shadow-organic-md",
+  genre: "shadow-organic-md",
+  subgenre: "shadow-organic-sm",
+  book: "shadow-organic-sm",
+  theme: "shadow-organic-sm",
+  chapter: "shadow-organic-sm",
 };
 
 // Shared circle (or, for `pill`, capsule) chrome for every toggleable ring (chapter, genre,
@@ -145,7 +146,7 @@ export function MindMapRingNode({ nodeId, kind, style, size, label, caption, col
       // positioned to overhang this circle's own edge, and a parent's overflow-hidden clips ANY
       // child that pokes past its box, badges included. The label's own overflow-hidden (paired
       // with line-clamp-2) already contains long text on its own.
-      className={`absolute flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full border-2 border-[var(--nodeBg)] bg-[var(--nodeBg)] text-[var(--nodeText)] text-center hover:z-10 ${RING_SHADOW_CLASS[kind]} ${pill ? "min-w-[72px] max-w-[118px] px-3 py-1.5" : "p-1"}`}
+      className={`absolute flex cursor-pointer flex-col items-center justify-center gap-px rounded-full bg-[var(--nodeBg)] text-[var(--nodeText)] text-center hover:z-10 ${RING_SHADOW_CLASS[kind]} ${pill ? "min-w-[72px] max-w-[118px] px-3 py-1.5" : "p-1"}`}
     >
       <MindMapProgressRing progress={progress} size={size} shape={pill ? "pill" : undefined} measuredSize={measuredSize} due={srsDue} />
       {lastReviewPct !== undefined && <MindMapReviewBadge percent={lastReviewPct} size="md" />}
@@ -155,22 +156,36 @@ export function MindMapRingNode({ nodeId, kind, style, size, label, caption, col
         </span>
       )}
       {Emblem && (
-        <span aria-hidden="true" className="absolute -top-3 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[var(--nodeBg)] bg-parchment text-[#8B6B57] shadow-sm dark:bg-zinc-900">
-          <Emblem size={13} strokeWidth={2.5} />
+        <span aria-hidden="true" className="absolute -top-3 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[var(--nodeBg)] bg-parchment text-[#8C491A] shadow-organic-sm dark:bg-zinc-900">
+          <Emblem size={12} strokeWidth={2.75} />
         </span>
       )}
-      <span className="line-clamp-2 overflow-hidden font-serif text-[13px] font-bold leading-tight">{label}</span>
-      {caption && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide opacity-70">{caption}</span>}
+      {kind === "chapter" ? (
+        // A tiny "CH" kicker over the chapter number in the heading face.
+        <>
+          <span className="text-[8px] font-extrabold tracking-[.1em] opacity-75">CH</span>
+          <span className="font-serif text-lg leading-none">{label.replace(/^Ch\s*/i, "")}</span>
+        </>
+      ) : (
+        <span
+          // Sized so the longest word fits the circle (9–13px); theme pills read at 12px.
+          style={{ "--label-size": `${pill ? 12 : ringLabelSize(size, label)}px` } as CSSProperties}
+          className="line-clamp-2 overflow-hidden text-balance font-sans text-[length:var(--label-size)] font-extrabold leading-[1.1]"
+        >
+          {label}
+        </span>
+      )}
+      {caption && <span className="shrink-0 text-[9px] font-bold uppercase tracking-[.06em] opacity-75">{caption}</span>}
       {/* This badge is the one visual cue for what tapping the circle does. A door glyph (open
           when expanded, closed when not), not a plain +/-, leans into the canvas's own "memory
           palace" metaphor (see MindMapPericopeGateway.tsx's own doorway styling). */}
       <span
         aria-hidden="true"
-        className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 text-white shadow ${TOGGLE_BADGE_CLASS}`}
+        className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 text-sand-100 shadow-organic-sm ${TOGGLE_BADGE_CLASS}`}
       >
-        {toggleGlyph === "open" ? <ArrowUpRight size={13} strokeWidth={3} /> : expanded ? <DoorOpen size={13} strokeWidth={2.5} /> : <DoorClosed size={13} strokeWidth={2.5} />}
+        {toggleGlyph === "open" ? <ArrowUpRight size={12} strokeWidth={2.75} /> : expanded ? <DoorOpen size={12} strokeWidth={2.75} /> : <DoorClosed size={12} strokeWidth={2.75} />}
       </span>
-      {pinned && <MindMapActivePin raised={!!Emblem} />}
+      {pinned && <MindMapActivePin raised={!!Emblem} variant="ring" />}
       {celebrating && <Confetti />}
       {celebrating && bookTier && (
         <span className="absolute inset-0 translate-x-2 translate-y-2">

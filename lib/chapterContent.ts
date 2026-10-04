@@ -37,7 +37,7 @@ export function buildVerseSegments(book: string, chapter: number, verses: string
 // which store book/chapter/startVerse/endVerse rather than a VerseSegment[].
 export function formatVerseSpanLabel(book: string, chapter: number, startVerse: number, endVerse: number): string {
   const label = formatChapterLabel(book, chapter);
-  return startVerse === endVerse ? `${label}:${startVerse}` : `${label}:${startVerse}-${endVerse}`;
+  return startVerse === endVerse ? `${label}:${startVerse}` : `${label}:${startVerse}–${endVerse}`;
 }
 
 // Labels a contiguous run of verses for display, e.g. "Genesis 1:1-5" when they share a
@@ -48,7 +48,7 @@ export function formatVerseRangeLabel(verses: VerseSegment[]): string {
   const last = verses[verses.length - 1];
   if (verses.length === 1) return first.reference;
   if (first.chapter === last.chapter) {
-    return `${formatChapterLabel(first.book, first.chapter)}:${first.verseNumber}-${last.verseNumber}`;
+    return `${formatChapterLabel(first.book, first.chapter)}:${first.verseNumber}–${last.verseNumber}`;
   }
   return `${first.reference}–${last.reference}`;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Compass, MoonStar, RotateCcw } from "lucide-react";
+import { ArrowRight, BookOpen, Compass, MoonStar, RotateCcw, Zap } from "lucide-react";
 import { useTodaysDay } from "@/lib/useTodaysDay";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
 import { resolvePathLabel } from "@/lib/memorizationContent";
@@ -35,6 +35,9 @@ interface TodayVersesCardProps {
   pathKey?: string;
 }
 
+// A rough lesson length for the card's "about N min" — a few minutes a verse, never under 3.
+const lessonMinutes = (verseCount: number) => Math.max(3, verseCount * 3);
+
 export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
   const { activePathKey, plan, currentDay, restingUntilTomorrow, lastCompletedDay, error, retry } = useTodaysDay(pathKey);
   const label = activePathKey ? resolvePathLabel(activePathKey) : undefined;
@@ -43,12 +46,15 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
     // A warm-tinted "hero" card, not a plain white one — the one thing on Home actually
     // worth memorizing right now, so it gets more visual weight than everything below it
     // (see ReviewNeededCard.tsx, which deliberately stays plain/secondary by comparison).
-    <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+    <div className="relative overflow-hidden rounded-organic bg-sage-200 p-[22px] text-sage-900 dark:bg-zinc-900 dark:text-zinc-100">
+      {/* The Organic restyle's soft decorative circle in the card's top-right corner. */}
+      <div aria-hidden="true" className="pointer-events-none absolute -right-[60px] -top-[70px] h-[190px] w-[190px] rounded-full bg-sage-300 dark:bg-zinc-800" />
+      <div className="relative flex flex-col gap-3.5">
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
-          <BookOpen size={16} />
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-sage-600 text-sage-100">
+          <BookOpen size={17} strokeWidth={2.75} />
         </span>
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Today&apos;s Verses</p>
+        <p className="text-[13px] font-bold uppercase tracking-[.06em] text-sage-800 dark:text-sage-300">Today&apos;s Verses</p>
       </div>
       {currentDay && activePathKey && plan ? (
         <>
@@ -59,16 +65,18 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
             // not the muted sans label treatment — the verse text is the actual point of this
             // card, so it reads as the loudest thing in it, same editorial-contrast principle
             // this app already uses for headings (see globals.css).
-            <div>
-              <p className="text-sm font-semibold text-ink-soft dark:text-zinc-300">{formatVerseRangeLabel(currentDay.newVerses)}</p>
+            <div className="flex flex-col gap-1.5">
+              <p className="font-serif text-[22px] leading-tight">{formatVerseRangeLabel(currentDay.newVerses)}</p>
               {/* No line-clamp — this card grows to fit however many verses today's lesson
                   holds instead of cropping a longer one mid-sentence. */}
-              <p className="font-serif text-lg font-semibold leading-snug text-ink dark:text-zinc-100">
-                {currentDay.newVerses.map((verse) => verse.text).join(" ")}
+              <p className="font-reading text-lg font-medium leading-normal">{currentDay.newVerses.map((verse) => verse.text).join(" ")}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold text-sage-800 dark:text-sage-300">
+                <Zap size={14} strokeWidth={2.75} />
+                Day {currentDay.dayNumber} · about {lessonMinutes(currentDay.newVerses.length)} min
               </p>
             </div>
           ) : (
-            <p className="text-sm text-ink-muted">{DAY_KIND_LABELS[currentDay.kind] ?? "Continue your path"}</p>
+            <p className="text-sm text-sage-800 dark:text-zinc-400">{DAY_KIND_LABELS[currentDay.kind] ?? "Continue your path"}</p>
           )}
           <Button
             // The version query param is what the path overview page treats as the source
@@ -76,9 +84,9 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
             // silently overwrite an already-selected translation via PathOverviewScreen's
             // sync effect.
             href={pathHref(activePathKey, plan.version)}
-            className="self-start"
+            fullWidth
           >
-            Go to your path
+            Go to your path <ArrowRight size={18} strokeWidth={2.75} />
           </Button>
         </>
       ) : error ? (
@@ -97,18 +105,18 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
         <>
           {lastCompletedDay.newVerses.length > 0 ? (
             <div>
-              <p className="text-sm font-semibold text-ink-soft dark:text-zinc-300">
+              <p className="text-sm font-semibold text-sage-800 dark:text-zinc-300">
                 Completed today · {formatVerseRangeLabel(lastCompletedDay.newVerses)}
               </p>
-              <p className="font-serif text-lg font-semibold leading-snug text-ink dark:text-zinc-100">
+              <p className="font-reading text-lg font-medium leading-normal">
                 {lastCompletedDay.newVerses.map((verse) => verse.text).join(" ")}
               </p>
             </div>
           ) : (
-            <p className="text-sm text-ink-muted">Completed today.</p>
+            <p className="text-sm text-sage-800 dark:text-zinc-400">Completed today.</p>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-ink-muted">
+            <p className="text-xs text-sage-800 dark:text-zinc-400">
               <MoonStar size={13} className="mr-1 inline -translate-y-px text-brand-400 dark:text-brand-600" />
               Come back tomorrow for more.
             </p>
@@ -135,22 +143,23 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
         // a stuck spinner, which the next branch down would otherwise show forever.
         <div className="flex flex-col items-center gap-2 py-2 text-center">
           <MoonStar size={28} strokeWidth={1.5} className="text-brand-300 dark:text-brand-700" />
-          <p className="text-sm text-ink-muted">You&apos;ve completed today&apos;s verses. Come back tomorrow for more.</p>
+          <p className="text-sm text-sage-800 dark:text-zinc-400">You&apos;ve completed today&apos;s verses. Come back tomorrow for more.</p>
         </div>
       ) : activePathKey && plan ? (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-          <p className="text-sm text-ink-muted">Loading {label ?? "your path"}…</p>
+          <p className="text-sm text-sage-800 dark:text-zinc-400">Loading {label ?? "your path"}…</p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
           <Compass size={28} strokeWidth={1.5} className="text-brand-300 dark:text-brand-700" />
-          <p className="text-sm text-ink-muted">You haven&apos;t chosen a path yet.</p>
+          <p className="text-sm text-sage-800 dark:text-zinc-400">You haven&apos;t chosen a path yet.</p>
           <Button href="/begin" className="mt-1">
             Choose your path
           </Button>
         </div>
       )}
+      </div>
     </div>
   );
 }

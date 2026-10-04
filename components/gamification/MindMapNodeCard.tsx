@@ -186,10 +186,10 @@ export function MindMapNodeCard({ datum, x, y, expanded, dimmed, sizeScale, meas
       animate={style}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.enter }}
       style={{ x: "-50%", y: "-50%", ...mindMapNodeColorVars(ROOT_COLOR) }}
-      className="absolute flex h-20 w-20 items-center justify-center rounded-full border-2 border-[var(--nodeBg)] bg-[var(--nodeBg)] text-[var(--nodeText)] px-1.5 text-center font-serif text-sm font-bold shadow-md"
+      className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-[var(--nodeBg)] text-[var(--nodeText)] px-1.5 text-center font-sans text-[13px] font-extrabold leading-[1.1] shadow-organic-md"
     >
       <span className="line-clamp-3">{datum.label}</span>
-      {pinned && <MindMapActivePin />}
+      {pinned && <MindMapActivePin variant="ring" />}
     </motion.div>
   );
 }

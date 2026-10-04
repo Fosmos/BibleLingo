@@ -31,7 +31,7 @@ export function buildBrowsedChapters(
       children: pericopes.map((info, index) => ({
         kind: "pericope",
         id: `pericope:${bookName}:${chapterNumber}:${index}`,
-        label: info.heading || (info.startVerse === info.endVerse ? `Verse ${info.startVerse}` : `Verses ${info.startVerse}-${info.endVerse}`),
+        label: info.heading || (info.startVerse === info.endVerse ? `Verse ${info.startVerse}` : `Verses ${info.startVerse}–${info.endVerse}`),
         verseRange: info.startVerse === info.endVerse ? `v${info.startVerse}` : `v${info.startVerse}–${info.endVerse}`,
         tagLabel: info.label,
         status,

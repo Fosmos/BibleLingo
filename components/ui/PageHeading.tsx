@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 interface PageHeadingProps {
-  // A small tracked-out label above the headline (e.g. "YOUR PATH") — optional, since not
+  // A small label above the headline (e.g. "Your progress", or Home's date) — optional, since not
   // every headline needs the extra framing (see app/profile/page.tsx's plain "Profile").
   kicker?: string;
   children: ReactNode;
@@ -15,8 +15,8 @@ interface PageHeadingProps {
 export function PageHeading({ kicker, children, className }: PageHeadingProps) {
   return (
     <div className={className}>
-      {kicker && <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">{kicker}</p>}
-      <h1 className="font-serif text-3xl font-semibold leading-tight text-ink dark:text-zinc-100">{children}</h1>
+      {kicker && <p className="mb-1 text-[13px] font-semibold text-ink-muted dark:text-zinc-400">{kicker}</p>}
+      <h1 className="font-serif text-[34px] leading-[1.05] text-ink dark:text-zinc-100">{children}</h1>
     </div>
   );
 }

@@ -131,7 +131,7 @@ export function RhythmRep({ verse, verseMarkers, annotations, layout, onComplete
         <LessonPageCard layout={layout} activeVerse={verse} activeWordIndex={wordIndex} renderActiveVerse={renderActiveVerseRange} />
       ) : (
         <LessonParchmentCard>
-          <p className="font-serif text-lg leading-loose">{activeVerseWords}</p>
+          <p className="font-reading text-lg font-medium leading-loose">{activeVerseWords}</p>
         </LessonParchmentCard>
       )}
 

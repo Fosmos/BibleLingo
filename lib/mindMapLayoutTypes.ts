@@ -40,6 +40,8 @@ export interface SpinePoint extends LayoutPoint {
   // hallPathStroke) — the stretch of path INTO this point is drawn in it, so the corridor changes
   // colour hall by hall. Undefined for the chapter's own starting point.
   stroke?: string;
+  // The same hall's colour for the dashed stretch not yet walked (its ramp's 500, a step lighter).
+  trailStroke?: string;
   // Set on a hall card's own point — which hall it is, so its gate can be placed where the path
   // arrives at the card (see MindMapLinks.tsx).
   hallId?: string;

@@ -1,43 +1,67 @@
 "use client";
 
-import { Flame } from "lucide-react";
+import type { ReactNode } from "react";
+import { Coins, Flame, Snowflake } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
-import { StreakCounter } from "@/components/gamification/StreakCounter";
-import { StreakFreezeBadge } from "@/components/gamification/StreakFreezeBadge";
-import { ShekelCounter } from "@/components/gamification/ShekelCounter";
+import { InfoTip } from "@/components/ui/InfoTip";
+import { INFO_TIPS } from "@/lib/infoTipCopy";
 
-// Split out of app/profile/page.tsx purely to keep that file under this codebase's 200-line
-// cap. The at-a-glance numbers row — current streak, longest streak, shekels.
+interface StatCardProps {
+  label: string;
+  info?: string;
+  className: string;
+  labelClassName: string;
+  children: ReactNode;
+}
+
+function StatCard({ label, info, className, labelClassName, children }: StatCardProps) {
+  return (
+    <div className={`flex min-w-0 flex-col gap-1.5 rounded-organic px-3 py-3.5 ${className}`}>
+      <span className={`flex items-center gap-1 text-xs font-semibold ${labelClassName}`}>
+        {label} {info && <InfoTip text={info} />}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+// Split out of app/profile/page.tsx to keep it under the 200-line cap. The at-a-glance numbers
+// (the Organic restyle): current streak with its freezes, longest streak, shekels.
 export function ProfileStatsCard() {
+  const currentStreak = useProgressStore((state) => state.streak.currentStreak);
   const longestStreak = useProgressStore((state) => state.streak.longestStreak);
+  const freezes = useProgressStore((state) => state.streak.freeze.inventory);
+  const shekels = useProgressStore((state) => state.shekels);
 
   return (
-    <div className="rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
-      <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
-          <Flame size={15} />
+    <div className="grid grid-cols-3 gap-2">
+      <StatCard
+        label="Current streak"
+        className="bg-brand-100 dark:bg-zinc-900"
+        labelClassName="text-brand-800 dark:text-brand-300"
+      >
+        <span className="flex items-center gap-1">
+          <Flame size={18} strokeWidth={2.75} className={currentStreak > 0 ? "fill-brand-400 text-brand-700" : "text-ink-muted"} />
+          <span className="font-heading text-[22px] leading-none text-ink dark:text-zinc-100">{currentStreak}</span>
         </span>
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Stats</p>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-ink-muted">Current streak</span>
-          <div className="flex items-center gap-2">
-            <StreakCounter showInfo />
-            <StreakFreezeBadge showInfo />
-          </div>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-ink-muted">Longest streak</span>
-          <span className="font-serif text-sm font-semibold text-ink dark:text-zinc-100">
-            {longestStreak} {longestStreak === 1 ? "day" : "days"}
+        {freezes > 0 && (
+          <span className="flex items-center gap-1 text-xs text-ink-muted">
+            <Snowflake size={12} strokeWidth={2.75} />
+            {freezes} freeze{freezes === 1 ? "" : "s"}
           </span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-ink-muted">Shekels</span>
-          <ShekelCounter showInfo />
-        </div>
-      </div>
+        )}
+      </StatCard>
+      <StatCard label="Longest streak" className="bg-sand-100 dark:bg-zinc-900" labelClassName="text-ink-muted">
+        <span className="font-heading text-[22px] leading-none text-ink dark:text-zinc-100">
+          {longestStreak} {longestStreak === 1 ? "day" : "days"}
+        </span>
+      </StatCard>
+      <StatCard label="Shekels" info={INFO_TIPS.shekelCounter} className="bg-sand-100 dark:bg-zinc-900" labelClassName="text-ink-muted">
+        <span className="flex items-center gap-1">
+          <Coins size={18} strokeWidth={2.75} className="text-brand-600" />
+          <span className="font-heading text-[22px] leading-none text-ink dark:text-zinc-100">{shekels.toLocaleString()}</span>
+        </span>
+      </StatCard>
     </div>
   );
 }

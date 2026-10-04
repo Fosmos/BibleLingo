@@ -6,7 +6,7 @@ import type { LayoutPoint } from "@/lib/mindMapLayoutTypes";
 import { useProgressStore } from "@/store/useProgressStore";
 import { landmarkIconById } from "@/lib/landmarkIcons";
 import { autoHallEmblem, hallEmblemKey } from "@/lib/hallEmblems";
-import { hallPathStroke } from "@/lib/mindMapGenreColor";
+import { hallEmblemColor } from "@/lib/mindMapGenreColor";
 import { mindMapTagKey } from "@/lib/mindMapTagKey";
 import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
 import { MindMapHallEditor } from "@/components/gamification/MindMapHallEditor";
@@ -41,10 +41,10 @@ export function MindMapHallEmblem({ pericope, hallNumber, point }: MindMapHallEm
           setEditing(true);
         }}
         aria-label={chosen ? `${pericope.label} landmark: ${chosen.label} (edit hall)` : `Choose a landmark for ${pericope.label}`}
-        style={{ left: point.x, top: point.y, width: point.size, height: point.size, "--emblem": hallPathStroke(pericope) } as CSSProperties}
-        className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-[var(--emblem)] drop-shadow-sm ${chosen ? "" : "opacity-60"}`}
+        style={{ left: point.x, top: point.y, width: point.size, height: point.size, "--emblem": hallEmblemColor(pericope) } as CSSProperties}
+        className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-[var(--emblem)] ${chosen ? "opacity-[.55]" : "opacity-40"}`}
       >
-        {shown && <shown.Icon size={point.size} strokeWidth={Math.max(1.25, 56 / point.size)} />}
+        {shown && <shown.Icon size={point.size} strokeWidth={Math.max(1.5, 60 / point.size)} />}
       </button>
       {editing && (
         <MindMapHallEditor pericope={pericope} hallNumber={hallNumber} tagKey={mindMapTagKey(pericope, locationTagLevels)} onClose={() => setEditing(false)} />

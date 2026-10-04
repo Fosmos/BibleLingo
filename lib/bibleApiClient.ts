@@ -4,6 +4,7 @@ import { getCachedChapter, getCachedChapterVersion, setCachedChapter, removeCach
 import { getEsvBookVerseCap } from "@/lib/esvUsageLimits";
 import { getEsvCachedVerseCount, touchEsvChapter, evictLeastRecentlyUsedEsvChapter } from "@/lib/esvCacheTracker";
 import { findBook } from "@/lib/bibleBooks";
+import { recordChapterVerses } from "@/lib/chapterVerseIndex";
 import { mapWithConcurrency } from "@/lib/fetchWithConcurrency";
 import { parsePathKey, resolvePath } from "@/lib/memorizationContent";
 
@@ -45,6 +46,7 @@ async function fetchChapter(book: string, chapter: number, version: string): Pro
   }
 
   const verses = buildVerseSegments(book, chapter, json.verses as string[]);
+  recordChapterVerses(book, chapter, verses);
 
   // Crossway's free ESV API terms cap locally stored text at 500 verses or half of any
   // book, whichever is less (https://api.esv.org/docs/) — checked here, the one place

@@ -2,16 +2,16 @@
 @config "../tailwind.config.ts";
 
 :root {
-  --background: #ffffff;
-  --foreground: #2c2724;
+  --background: #f5ead8;
+  --foreground: #201e1d;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-jakarta);
-  --font-serif: var(--font-playfair);
-  --font-reading: var(--font-source-serif);
+  --font-sans: var(--font-figtree);
+  --font-serif: var(--font-caprasimo);
+  --font-reading: var(--font-figtree);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,10 +46,20 @@ body {
 
   .text-title {
     font-family: var(--font-serif), Georgia, serif;
-    font-weight: 700;
+    font-weight: 400;
+  }
+
+  /* Caprasimo ships one weight — never let the browser fake a bold version of it. */
+  h1,
+  h2,
+  h3,
+  .text-title,
+  .font-serif,
+  .font-heading {
+    font-synthesis: none;
   }
 
   .text-caption {
-    color: var(--color-ink-muted, #8a8178);
+    color: var(--color-ink-muted, #645c50);
   }
 }

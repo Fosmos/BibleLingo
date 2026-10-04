@@ -1,9 +1,7 @@
 import { findBook } from "@/lib/bibleBooks";
 import { bookGenre, type GenreId } from "@/lib/canonTree";
 import type { MindMapDatum } from "@/lib/mindMapHierarchy";
-import { bookColor, chapterColor, genreColor, hslToHex, lighten } from "@/lib/mindMapPlaceColor";
-
-type Hsl = [number, number, number];
+import { bookPlace, chapterPlace, genrePlace, rampHex, type Place } from "@/lib/mindMapPlaceColor";
 
 // Every id in this tree is built as "kind:bookName[:...]" (see lib/mindMapHierarchy.ts) except
 // genre/subgenre's own "kind:testament:genreId[:subgenreId]" shape — this pulls the book-name
@@ -43,66 +41,49 @@ export function genreIdForNode(datum: MindMapDatum): GenreId | undefined {
 export interface MindMapNodeColor {
   bg: string;
   text: string;
+  // A step deeper than `bg` — a verse chip's ring (see verseChipColor).
+  border?: string;
 }
 
-const DARK_TEXT = "#2C2724";
-const WHITE_TEXT = "#FFFFFF";
-
-// The "artisanal, muted" palette — every value below is a specific hex, not a Tailwind named
-// color, so nodes render them via a CSS custom property + a `bg-[var(--x)]` arbitrary-value
-// class (see mindMapNodeColorVars below) rather than a Tailwind utility.
-export const ROOT_COLOR: MindMapNodeColor = { bg: "#4A3B32", text: WHITE_TEXT };
-export const TOGGLE_BADGE_CLASS = "bg-[#8B6B57] border-white";
-// Same warm bronze TOGGLE_BADGE_CLASS already wears, split out as its own class for surfaces
-// that need just the fill (no border) — a pericope gateway's own brass plaque strip
-// (MindMapPericopeGateway.tsx), rather than a corner badge.
-export const BRASS_PLAQUE_CLASS = "bg-[#8B6B57]";
-export const CANVAS_BG_CLASS = "!bg-[#e8e6e1] dark:!bg-zinc-950";
-export const LINK_STROKE_CLASS = "stroke-[#bcaaa4] dark:stroke-brand-700";
-// Same brass tone as TOGGLE_BADGE_CLASS/BRASS_PLAQUE_CLASS, as a stroke — a chapter spine
-// segment (MindMapLinks.tsx) once the verse/pericope it leads FROM is actually memorized, tying
-// the "filled in" line to the same "Room Gateway" plaque color rather than inventing a new hue.
-export const SPINE_SOLID_BROWN_CLASS = "stroke-[#8B6B57] dark:stroke-[#a3856c]";
-
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// Perceptual-ish luminance (plain, not gamma-corrected — good enough for a light/dark text pick,
-// not for color-accurate reproduction) — decides whether a given fill needs dark or white text.
-function textForBackground(rgb: [number, number, number]): string {
-  const luminance = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-  return luminance > 150 ? DARK_TEXT : WHITE_TEXT;
-}
+// The Organic restyle's map chrome. Every value is a specific hex, rendered through a CSS custom
+// property + a `bg-[var(--x)]` arbitrary-value class (see mindMapNodeColorVars below).
+export const ROOT_COLOR: MindMapNodeColor = { bg: "#2E2B25", text: "#F9F4ED" };
+// Door badges, hall plaques and gates: terracotta 700, with a ground-coloured rim.
+export const TOGGLE_BADGE_CLASS = "bg-[#8C491A] border-[#F5EAD8] dark:border-zinc-950";
+export const BRASS_PLAQUE_CLASS = "bg-[#8C491A]";
+export const CANVAS_BG_CLASS = "!bg-[#F5EAD8] dark:!bg-zinc-950";
+export const LINK_STROKE_CLASS = "stroke-[#C0B6A5] dark:stroke-brand-700";
+export const SPINE_SOLID_BROWN_CLASS = "stroke-[#8C491A] dark:stroke-[#a3856c]";
 
 // Testament sits ABOVE the genre split (it spans several genres at once), so it has no single
-// place colour of its own — this shared neutral, also the fallback for anything unresolvable.
-const NEUTRAL: MindMapNodeColor = { bg: "#B0BEC5", text: DARK_TEXT };
+// place of its own — neutral 300, also the fallback for anything unresolvable.
+const NEUTRAL: MindMapNodeColor = { bg: rampHex("neutral", 300), text: rampHex("neutral", 900) };
 
-
-function fromHsl(hsl: Hsl | undefined): MindMapNodeColor {
-  if (!hsl) return NEUTRAL;
-  const bg = hslToHex(hsl);
-  return { bg, text: textForBackground(hexToRgb(bg)) };
+// Text on a place fill: its ramp's 900 — except on the deep sage fills (500 and up), which take
+// the neutral 100 the design pairs with them.
+function fromPlace(place: Place | undefined): MindMapNodeColor {
+  if (!place) return NEUTRAL;
+  const lightText = place.ramp === "sage" ? place.step >= 500 : place.step >= 600;
+  return { bg: rampHex(place.ramp, place.step), text: lightText ? rampHex("neutral", 100) : rampHex(place.ramp, 900) };
 }
 
-// The place colour of a node's own location (see lib/mindMapPlaceColor.ts): genre hue, book
-// variant, chapter shade, hall step. Fixed for good — never changed by progress, focus or what's
-// due (those are small marks, not fills).
-export function mindMapPlaceHsl(datum: MindMapDatum): Hsl | undefined {
+// The place of a node's own location (see lib/mindMapPlaceColor.ts): genre ramp, book step,
+// chapter shade, hall step. Fixed for good — never changed by progress, focus or what's due
+// (those are small marks, not fills).
+export function mindMapPlace(datum: MindMapDatum): Place | undefined {
   switch (datum.kind) {
     case "genre":
+      return genrePlace(datum.id.split(":")[2] as GenreId);
     case "subgenre":
-      return genreColor(datum.id.split(":")[2] as GenreId);
+      return genrePlace(datum.id.split(":")[2] as GenreId, true);
     case "book":
-      return bookColor(datum.name);
+      return bookPlace(datum.name);
     case "theme":
-      return bookColor(bookNameFromId(datum.id));
+      return bookPlace(bookNameFromId(datum.id));
     case "chapter":
-      return chapterColor(datum.book, datum.chapter);
+      return chapterPlace(datum.book, datum.chapter);
     case "pericope":
-      return chapterColor(datum.book, datum.chapter);
+      return chapterPlace(datum.book, datum.chapter);
     default:
       return undefined;
   }
@@ -110,33 +91,45 @@ export function mindMapPlaceHsl(datum: MindMapDatum): Hsl | undefined {
 
 export function mindMapNodeColor(datum: MindMapDatum): MindMapNodeColor {
   if (datum.kind === "root") return ROOT_COLOR;
-  return fromHsl(mindMapPlaceHsl(datum));
+  return fromPlace(mindMapPlace(datum));
 }
 
-// A hall's verse chips — a lighter cut of the hall's own colour.
+// A hall's verse chips — one step lighter than the hall (never under 100), ringed a step deeper
+// than the chip itself.
 export function verseChipColor(pericope: MindMapDatum): MindMapNodeColor {
-  const hsl = mindMapPlaceHsl(pericope);
-  return fromHsl(hsl ? lighten(hsl, 9) : undefined);
+  const place = mindMapPlace(pericope);
+  if (!place) return NEUTRAL;
+  const chip = { ramp: place.ramp, step: Math.max(100, place.step - 100) };
+  return { ...fromPlace(chip), border: rampHex(chip.ramp, chip.step + 100) };
 }
 
-// A hall's stretch of path — a deeper cut of the hall's colour, so the corridor changes colour
-// from one hall to the next.
+// A hall's stretch of path — its ramp's 700 once walked (the dashed, unwalked stretch is drawn
+// at 500 — see hallPathTrailStroke), so the corridor carries its genre's colour.
 export function hallPathStroke(pericope: MindMapDatum): string {
-  const hsl = mindMapPlaceHsl(pericope);
-  return hsl ? hslToHex(lighten([hsl[0], hsl[1] + 8, hsl[2]], -18)) : "#8B6B57";
+  const place = mindMapPlace(pericope);
+  return place ? rampHex(place.ramp, 700) : "#8C491A";
+}
+
+export function hallPathTrailStroke(pericope: MindMapDatum): string {
+  const place = mindMapPlace(pericope);
+  return place ? rampHex(place.ramp, 500) : "#C0B6A5";
+}
+
+// A hall's emblem — its ramp's 400 (drawn at 55% opacity).
+export function hallEmblemColor(pericope: MindMapDatum): string {
+  const place = mindMapPlace(pericope);
+  return place ? rampHex(place.ramp, 400) : "#C0B6A5";
 }
 
 // The CSS custom properties a node's own `style` sets so its className can reference them via
-// `bg-[var(--nodeBg)]`/`text-[var(--nodeText)]` — the sanctioned "dynamic value via CSS variable"
-// pattern for colors that aren't one of a small fixed set of Tailwind utility classes.
+// `bg-[var(--nodeBg)]`/`text-[var(--nodeText)]`/`border-[var(--nodeBorder)]` — the sanctioned
+// "dynamic value via CSS variable" pattern for colors that aren't a fixed Tailwind utility.
 export function mindMapNodeColorVars(color: MindMapNodeColor): Record<string, string> {
-  return { "--nodeBg": color.bg, "--nodeText": color.text };
+  return { "--nodeBg": color.bg, "--nodeText": color.text, "--nodeBorder": color.border ?? color.bg };
 }
 
-// The place colour of the chapter a verse sits in (its halls share it) — the Mind Map lesson
-// sheet's top edge while that verse is on it (see LessonBottomSheet.tsx), tying the text being
-// recited to its place on the map.
+// The place colour of the chapter a verse sits in (its halls share it).
 export function verseHallAccent(book: string, chapter: number): string | undefined {
-  const hsl = chapterColor(book, chapter);
-  return hsl ? hslToHex(hsl) : undefined;
+  const place = chapterPlace(book, chapter);
+  return place ? rampHex(place.ramp, place.step) : undefined;
 }

@@ -9,7 +9,7 @@ import { findSpotlightTargets } from "@/lib/verseSpotlightTargets";
 // The share of the canvas (from the top) left in view above the floating lesson card — the canvas
 // itself runs full-screen behind the card (so the map shows all round its edges), and a focused
 // verse is framed in this visible strip.
-const VISIBLE_TOP_FRACTION = 0.4;
+const VISIBLE_TOP_FRACTION = 0.3;
 // How long the canvas takes to glide from one verse chip to the next while the sheet stays open.
 const GLIDE_MS = 450;
 

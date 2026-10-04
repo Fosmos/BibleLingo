@@ -1,5 +1,34 @@
 import type { Config } from "tailwindcss";
 
+// Organic ramps (see the colours below), with a 50 and 950 so they can stand in for Tailwind's
+// own full-range palettes.
+const TERRACOTTA = {
+  50: "#FFF8F3",
+  100: "#FFF2EB",
+  200: "#FFE1D0",
+  300: "#FFC6A5",
+  400: "#F6A06B",
+  500: "#C67139",
+  600: "#B2622D",
+  700: "#8C491A",
+  800: "#643312",
+  900: "#402310",
+  950: "#2A170A",
+};
+const SAGE = {
+  50: "#F7FCEF",
+  100: "#F0FAE1",
+  200: "#E1EECC",
+  300: "#CCDBB2",
+  400: "#AEBF92",
+  500: "#8FA073",
+  600: "#728157",
+  700: "#56633F",
+  800: "#3D472B",
+  900: "#272E1B",
+  950: "#191E11",
+};
+
 const config: Config = {
   theme: {
     extend: {
@@ -14,49 +43,67 @@ const config: Config = {
         // as its own token rather than a bare `bg-white` since a few surfaces (a fullscreen
         // drawing canvas, a keyboard key) reference it by name for "matches the page," not
         // "is a white card."
-        paper: "#FFFFFF",
-        mist: "#E2DCD5",
-        line: "#C8BEB3",
-        // The physical "page" the Path view's chapter text sits on (see ChapterReadingView.tsx)
-        // — a soft warm ivory, distinct from the app's own plain white `paper` background but
-        // deliberately much less saturated/yellow than an "aged manila folder" tan — a refined
-        // stationery feel rather than a costume-y old-scroll one. heading is the pericope
-        // section-title tint. A completed verse's own number/checkmark uses a plain Tailwind
-        // green instead of a parchment-family tint — "done" reads as its own universal color,
-        // not a variation on the page's own palette.
+        // The Organic restyle (design_handoff_organic_restyle): a cream ground, a terracotta accent
+        // (`brand` — buttons, active states, focus), a sage second accent (`sage`) and a warm neutral
+        // ramp (`sand`). The older names below are kept and re-pointed so every existing class
+        // picks the new palette up without per-file edits.
+        paper: "#F5EAD8",
+        mist: "#EEE7DB",
+        line: "#DCD3C4",
         parchment: {
-          DEFAULT: "#F5F1E8",
-          heading: "#5C4D41",
+          DEFAULT: "#F5EAD8",
+          heading: "#474238",
         },
         ink: {
-          DEFAULT: "#2C2724",
-          soft: "#5A5450",
-          muted: "#8A8178",
+          DEFAULT: "#201E1D",
+          soft: "#474238",
+          muted: "#645C50",
         },
         brand: {
-          50: "#F5F1EC",
-          100: "#E8DFD3",
-          200: "#D3C4B0",
-          300: "#B79E82",
-          400: "#96795D",
-          500: "#6B5644",
-          600: "#574434",
-          700: "#453529",
-          800: "#33271E",
-          900: "#221A14",
+          50: "#FFF8F3",
+          100: "#FFF2EB",
+          200: "#FFE1D0",
+          300: "#FFC6A5",
+          400: "#F6A06B",
+          500: "#C67139",
+          600: "#B2622D",
+          700: "#8C491A",
+          800: "#643312",
+          900: "#402310",
         },
-        gold: {
-          50: "#fffbeb",
-          100: "#fef3c7",
-          200: "#fde68a",
-          300: "#fcd34d",
-          400: "#fbbf24",
-          500: "#f59e0b",
-          600: "#d97706",
-          700: "#b45309",
-          800: "#92400e",
-          900: "#78350f",
+        sage: {
+          DEFAULT: "#7A8A5E",
+          50: "#F7FCEF",
+          100: "#F0FAE1",
+          200: "#E1EECC",
+          300: "#CCDBB2",
+          400: "#AEBF92",
+          500: "#8FA073",
+          600: "#728157",
+          700: "#56633F",
+          800: "#3D472B",
+          900: "#272E1B",
         },
+        sand: {
+          100: "#F9F4ED",
+          200: "#EEE7DB",
+          300: "#DCD3C4",
+          400: "#C0B6A5",
+          500: "#A19786",
+          600: "#82796A",
+          700: "#645C50",
+          800: "#474238",
+          900: "#2E2B25",
+        },
+        // Rewards and "due" marks share the terracotta accent in the Organic restyle — `gold`, and
+        // Tailwind's own amber/yellow/orange, are re-pointed at it; its green (done, correct) at
+        // sage. Red (`heart`, errors) is left as it was.
+        gold: TERRACOTTA,
+        amber: TERRACOTTA,
+        yellow: TERRACOTTA,
+        orange: TERRACOTTA,
+        crack: TERRACOTTA,
+        green: SAGE,
         heart: {
           50: "#fef2f2",
           100: "#fee2e2",
@@ -81,18 +128,6 @@ const config: Config = {
           800: "#6b21a8",
           900: "#581c87",
         },
-        crack: {
-          50: "#fff7ed",
-          100: "#ffedd5",
-          200: "#fed7aa",
-          300: "#fdba74",
-          400: "#fb923c",
-          500: "#f97316",
-          600: "#ea580c",
-          700: "#c2410c",
-          800: "#9a3412",
-          900: "#7c2d12",
-        },
         // Evening Vespers mode's own palette (see VespersView.tsx) — deliberately its OWN
         // fixed colors, not the app's usual light/dark theme pair: warm amber text on a near-
         // black ground, chosen specifically to cut blue light before bed, so it stays this
@@ -107,14 +142,26 @@ const config: Config = {
         },
       },
       fontFamily: {
+        // Caprasimo — headings, verse references, hall titles, stat numbers (one weight only).
         serif: ["var(--font-serif)", "Georgia", "serif"],
+        heading: ["var(--font-serif)", "Georgia", "serif"],
+        // Figtree — body text and controls.
         sans: ["var(--font-sans)", "Arial", "sans-serif"],
         // The Bible verse text's own reading serif (see ChapterPageContent.tsx) — a plain,
         // quiet OLD-STYLE text serif (Source Serif 4, the closest free match to YouVersion's
         // own paid Untitled Serif), distinct from `serif` above (Playfair Display), which is a
         // high-contrast DISPLAY face this app's headings/titles keep using — long-form verse
         // reading wants the workhorse, not the headline face.
-        reading: ["var(--font-reading)", "Georgia", "serif"],
+        // Verse text — Figtree too in the Organic restyle (it was a separate reading serif).
+        reading: ["var(--font-reading)", "Arial", "sans-serif"],
+      },
+      borderRadius: {
+        organic: "28px",
+      },
+      boxShadow: {
+        "organic-sm": "0 1px 2px rgba(46,43,37,.14)",
+        "organic-md": "0 3px 10px rgba(46,43,37,.16)",
+        "organic-lg": "0 12px 32px rgba(46,43,37,.22)",
       },
       spacing: {
         18: "4.5rem",
@@ -122,12 +169,12 @@ const config: Config = {
         88: "22rem",
       },
       fontSize: {
-        display: ["2.75rem", { lineHeight: "1.1", fontWeight: "700" }],
+        display: ["2.75rem", { lineHeight: "1.1", fontWeight: "400" }],
         // Bumped up from 1.5rem/600 — this app's one shared "screen headline" scale (see
         // globals.css's own `.text-title` weight override), used everywhere from page
         // headers down to a lesson's own stage title and a drill's verse reference, so
         // sizing it up here reaches every one of those at once.
-        title: ["1.875rem", { lineHeight: "1.2", fontWeight: "700" }],
+        title: ["1.875rem", { lineHeight: "1.2", fontWeight: "400" }],
         caption: ["0.75rem", { lineHeight: "1.4", fontWeight: "500" }],
       },
     },

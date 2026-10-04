@@ -7,7 +7,7 @@ import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 // card's real DOM node, publishes it (and its own real measured width/height) to
 // store/useLessonSessionStore.ts so LessonPageCard.tsx (mounted deep inside whichever drill is
 // currently active, with no prop path back up to this sheet) can portal its card straight into
-// it. Re-measures on resize (the card's own `h-[40dvh]` tracks the real viewport) so a rotate/
+// it. Re-measures on resize (the sheet's own dvh height tracks the real viewport) so a rotate/
 // resize keeps `senseCardFillHeightPx`/`senseCardColumnWidthPx` — and so pagination — correct.
 export function useMindMapSenseCardSlot(): RefObject<HTMLDivElement | null> {
   const slotRef = useRef<HTMLDivElement>(null);
@@ -21,10 +21,9 @@ export function useMindMapSenseCardSlot(): RefObject<HTMLDivElement | null> {
     if (!el) return;
     function measure() {
       if (!el) return;
-      // The whole sheet's height, not this zone's: the zone now sizes itself to its content (see
-      // LessonBottomSheet.tsx), so its own height would feed pagination a moving, often tiny,
-      // target. The sheet only ever shows a stage's own verses anyway (never a paginated page).
-      setSenseCardFillHeightPx(el.parentElement?.clientHeight ?? el.clientHeight);
+      // The zone's own height: it fills the sheet between the header and the fixed drill zone
+      // (see LessonBottomSheet.tsx), so this is exactly the room a verse has.
+      setSenseCardFillHeightPx(el.clientHeight);
       setSenseCardColumnWidthPx(el.clientWidth);
     }
     measure();

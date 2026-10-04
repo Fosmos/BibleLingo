@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { MindMapLayout } from "@/lib/mindMapTreeLayout";
 import type { GenreId } from "@/lib/canonTree";
-import { GENRE_BASE_HEX } from "@/lib/mindMapPlaceColor";
+import { territoryFill } from "@/lib/mindMapPlaceColor";
 
 interface MindMapTerritoriesProps {
   layout: MindMapLayout;
@@ -78,8 +78,8 @@ export function MindMapTerritories({ layout, parentMap }: MindMapTerritoriesProp
           width={territory.width}
           height={territory.height}
           rx={56}
-          fill={GENRE_BASE_HEX[territory.genre]}
-          className="opacity-20 transition-all duration-300 dark:opacity-15"
+          fill={territoryFill(territory.genre)}
+          className="opacity-55 transition-all duration-300 dark:opacity-15"
         />
       ))}
     </svg>

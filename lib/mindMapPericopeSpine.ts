@@ -2,7 +2,7 @@ import type { MindMapDatum, MindMapPericopeDatum } from "@/lib/mindMapHierarchy"
 import type { MindMapLayoutNode, MindMapSpine, MindMapVerseChip } from "@/lib/mindMapLayoutTypes";
 import { verseStreamNumbers, verseStreamPoints, verseStreamHeightPx, hallExtraHeightPx } from "@/lib/mindMapVerseStream";
 import { isVerseLearned } from "@/lib/pericopeLearned";
-import { hallPathStroke } from "@/lib/mindMapGenreColor";
+import { hallPathStroke, hallPathTrailStroke } from "@/lib/mindMapGenreColor";
 import { hallEmblemPoint, seededRandom } from "@/lib/mindMapHallGeometry";
 
 // Split out of lib/mindMapTreeLayout.ts purely to keep that file under this codebase's own
@@ -86,12 +86,13 @@ export function placePericopes(
     bounds.maxX = Math.max(bounds.maxX, childX);
     bounds.maxY = Math.max(bounds.maxY, childY);
     const stroke = hallPathStroke(datum);
+    const trailStroke = hallPathTrailStroke(datum);
     const numbers = verseStreamNumbers(datum);
     // Each stretch of path is styled by the point it leaves from, so the hall's own point counts as
     // reached once its FIRST verse is learned — the line from the hall card into that verse turns
     // solid with it, not only when the whole hall is done.
     const reached = datum.status === "completed" || (numbers.length > 0 && isVerseLearned(datum, numbers[0]));
-    points.push({ x: childX, y: childY, completed: reached, stroke, hallId: pericope.id });
+    points.push({ x: childX, y: childY, completed: reached, stroke, trailStroke, hallId: pericope.id });
     const chipOffsets = verseStreamPoints(datum, numbers, index + 1);
     const emblem = hallEmblemPoint(chipOffsets);
     if (emblem) nodes[nodes.length - 1].emblem = { x: childX + emblem.x, y: childY + emblem.y, size: emblem.size };
@@ -103,7 +104,7 @@ export function placePericopes(
       bounds.minX = Math.min(bounds.minX, chipX);
       bounds.maxX = Math.max(bounds.maxX, chipX);
       bounds.maxY = Math.max(bounds.maxY, chipY);
-      points.push({ x: chipX, y: chipY, completed: isVerseLearned(datum, verseNumber), stroke });
+      points.push({ x: chipX, y: chipY, completed: isVerseLearned(datum, verseNumber), stroke, trailStroke });
     }
     pushDownY += verseStreamHeightPx(datum, index + 1);
   });

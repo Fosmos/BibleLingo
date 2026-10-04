@@ -45,7 +45,7 @@ export function AuthGate({ children }: AuthGateProps) {
   return (
     <>
       <ProgressInitializer />
-      <main className={`flex flex-1 flex-col ${lessonSessionActive ? "" : "pb-20"}`}>{children}</main>
+      <main className={`flex flex-1 flex-col ${lessonSessionActive ? "" : "pb-28"}`}>{children}</main>
       {!lessonSessionActive && <BottomTabBar />}
       <PathCompleteCelebration />
     </>

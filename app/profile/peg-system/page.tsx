@@ -61,7 +61,7 @@ export default function PegSystemPage() {
       )}
 
       {mode === "result" && result && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-brand-50 p-6 text-center shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+        <div className="flex flex-col items-center gap-3 rounded-organic bg-sand-100 p-6 text-center dark:bg-zinc-900">
           <p className="text-title text-brand-600">
             {result.score} / {result.total}
           </p>

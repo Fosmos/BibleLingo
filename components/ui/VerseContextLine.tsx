@@ -11,7 +11,7 @@ interface VerseContextLineProps {
 // showing on its own, outside a full LessonVerseContext run.
 export function VerseContextLine({ verse }: VerseContextLineProps) {
   return (
-    <p className="font-serif text-lg leading-loose text-ink-muted dark:text-zinc-500">
+    <p className="font-reading text-lg font-medium leading-loose text-ink-muted dark:text-zinc-500">
       <PlainVerseWords verse={verse} />
     </p>
   );

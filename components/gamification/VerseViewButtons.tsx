@@ -22,7 +22,7 @@ interface VerseViewButtonsProps {
 const PILL_CLASS =
   "flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:bg-mist dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800";
 const ICON_CLASS =
-  "flex h-8 w-8 items-center justify-center rounded-full border border-line text-ink-muted hover:bg-mist dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800";
+  "flex h-[38px] w-[38px] items-center justify-center rounded-full bg-parchment text-ink hover:bg-sand-200 dark:bg-zinc-800 dark:text-zinc-300";
 
 // A neutral, always-available "look up the verse" pair — "View First Letters" opens a read-only
 // overlay showing just the first letters, one real clause per line (lib/verseFirstLetters.ts's
@@ -64,7 +64,7 @@ export function VerseViewButtons({ text, extra, compact, onPeek }: VerseViewButt
       {open !== "none" && (
         <BodyPortal>
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={() => setOpen("none")}>
-            <div onClick={(event) => event.stopPropagation()} className="flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-900">
+            <div onClick={(event) => event.stopPropagation()} className="flex w-full max-w-md flex-col gap-4 rounded-organic bg-paper p-6 shadow-organic-lg dark:bg-zinc-900">
               {open === "full" ? (
                 <p className="text-lg leading-relaxed">{text}</p>
               ) : (

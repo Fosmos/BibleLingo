@@ -40,10 +40,10 @@ export function SectionCompleteOverlay({ text, onDone }: SectionCompleteOverlayP
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="relative flex flex-col items-center gap-2 rounded-3xl border border-line bg-white px-8 py-6 dark:border-zinc-700 dark:bg-zinc-900"
+          className="relative flex flex-col items-center gap-2 rounded-organic bg-paper px-8 py-6 shadow-organic-lg dark:bg-zinc-900"
         >
-          <Sparkles size={40} className="text-gold-500" />
-          {text && <p className="text-title text-center text-brand-600">{text}</p>}
+          <Sparkles size={40} strokeWidth={2.75} className="text-brand-500" />
+          {text && <p className="text-center font-heading text-2xl text-ink dark:text-zinc-100">{text}</p>}
         </motion.div>
       </div>
     </BodyPortal>

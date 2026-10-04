@@ -14,5 +14,5 @@ interface ParchmentHeadingCaptionProps {
 // duplicate of this same markup.
 export function ParchmentHeadingCaption({ heading }: ParchmentHeadingCaptionProps) {
   if (!heading) return null;
-  return <p className="py-3 text-center font-serif text-xs uppercase tracking-widest text-parchment-heading dark:text-zinc-400">{heading}</p>;
+  return <p className="py-3 text-center font-sans text-xs font-bold uppercase tracking-widest text-parchment-heading dark:text-zinc-400">{heading}</p>;
 }

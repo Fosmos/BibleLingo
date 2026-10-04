@@ -1,34 +1,36 @@
 "use client";
 
-import { BookOpen, ScrollText, Quote, type LucideIcon } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { computeMemorizedStats } from "@/lib/progressSummary";
+import { useMemorizedChaptersLoaded } from "@/lib/useMemorizedChaptersLoaded";
 
-interface StatTileProps {
+interface StatCircleProps {
   label: string;
   value: number;
-  icon: LucideIcon;
+  className: string;
 }
 
-function StatTile({ label, value, icon: Icon }: StatTileProps) {
+function StatCircle({ label, value, className }: StatCircleProps) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-brand-50 p-4 dark:bg-zinc-900">
-      <Icon size={18} strokeWidth={1.5} className="text-brand-400 dark:text-brand-600" />
-      <span className="text-title text-brand-600">{value}</span>
-      <span className="text-caption uppercase tracking-wide text-ink-muted">{label}</span>
+    <div className={`flex aspect-square flex-1 flex-col items-center justify-center gap-0.5 rounded-full ${className}`}>
+      <span className="font-heading text-[30px] leading-none">{value.toLocaleString()}</span>
+      <span className="text-xs font-bold">{label}</span>
     </div>
   );
 }
 
+// The Memorized page's three totals — books, chapters and verses fully memorized — as soft circles.
 export function MemorizedStats() {
   const memorizedEntities = useProgressStore((state) => state.memorizedEntities);
+  // Re-renders as missing chapters load in, so a hand-added book counts once its text is here.
+  useMemorizedChaptersLoaded(memorizedEntities);
   const stats = computeMemorizedStats(memorizedEntities);
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      <StatTile label="Chapters" value={stats.chapters} icon={BookOpen} />
-      <StatTile label="Verses" value={stats.verses} icon={ScrollText} />
-      <StatTile label="Words" value={stats.words} icon={Quote} />
+    <div className="flex gap-2.5">
+      <StatCircle label={stats.books === 1 ? "Book" : "Books"} value={stats.books} className="bg-sage-200 text-sage-800 dark:bg-sage-900 dark:text-sage-200" />
+      <StatCircle label={stats.chapters === 1 ? "Chapter" : "Chapters"} value={stats.chapters} className="bg-brand-200 text-brand-800 dark:bg-brand-900 dark:text-brand-200" />
+      <StatCircle label={stats.verses === 1 ? "Verse" : "Verses"} value={stats.verses} className="bg-sand-300 text-sand-900 dark:bg-zinc-800 dark:text-zinc-200" />
     </div>
   );
 }

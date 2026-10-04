@@ -25,7 +25,7 @@ export function VerseStumbleHeatMap({ text, counts }: VerseStumbleHeatMapProps) 
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="font-serif text-base leading-relaxed">
+      <p className="font-reading text-base font-medium leading-relaxed">
         {words.map((word, index) => (
           <span key={index} className={HEAT_CLASS[noStumbles ? "none" : stumbleHeat(counts[index])]}>
             {word}{" "}

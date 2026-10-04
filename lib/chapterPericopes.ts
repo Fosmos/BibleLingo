@@ -55,7 +55,7 @@ function buildPericopeInfo(pericopes: Pericope[], index: number, book: string, c
   const endVerse = next ? next.startVerse - 1 : lastVerseInChapter;
 
   const chapterLabel = formatChapterLabel(book, chapter);
-  const label = covering.startVerse === endVerse ? `${chapterLabel}:${covering.startVerse}` : `${chapterLabel}:${covering.startVerse}-${endVerse}`;
+  const label = covering.startVerse === endVerse ? `${chapterLabel}:${covering.startVerse}` : `${chapterLabel}:${covering.startVerse}–${endVerse}`;
 
   return { label, heading: covering.heading, book, chapter, startVerse: covering.startVerse, endVerse };
 }

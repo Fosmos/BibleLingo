@@ -18,10 +18,10 @@ export const VERSE_CHIP_SIZE_PX = 24;
 
 // A hall's heading wraps onto more lines once it's longer than its card allows (see
 // MindMapPericopeGateway.tsx's HALL_TITLE_MAX_WIDTH_CLASS) — estimated here, word by word, at a
-// conservative ~7px per character of its 13px serif, so the layout makes room for every extra
+// conservative ~7px per character of its 14px heading face, so the layout makes room for every extra
 // line without measuring the DOM. Erring on the side of more lines only adds a little air.
 const HALL_TITLE_CHARS_PER_LINE = 20;
-const HALL_TITLE_LINE_PX = 18;
+const HALL_TITLE_LINE_PX = 17;
 
 export function hallTitleLines(label: string): number {
   let lines = 1;

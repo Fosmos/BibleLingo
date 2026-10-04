@@ -40,14 +40,14 @@ export function MindMapPathsMenu() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+        className="flex h-[34px] items-center gap-1 rounded-full bg-sand-100 px-3.5 text-[13px] font-bold text-ink shadow-organic-sm dark:bg-zinc-900 dark:text-zinc-100"
       >
         {focused ? resolvePathLabel(focused) : "Your paths"}
         <span className="font-normal text-ink-muted">· {keys.length} paths</span>
         <ChevronDown size={14} className={open ? "rotate-180" : ""} />
       </button>
       {open && (
-        <ul className="flex min-w-48 flex-col overflow-hidden rounded-xl border border-line bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+        <ul className="flex min-w-48 flex-col overflow-hidden rounded-3xl bg-sand-100 shadow-organic-lg dark:bg-zinc-900">
           {keys.map((key) => (
             <li key={key} className="flex items-center border-b border-line last:border-b-0 dark:border-zinc-800">
               <button

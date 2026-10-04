@@ -45,9 +45,9 @@ export function PathCompleteCelebration() {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="relative flex max-h-[85dvh] w-full max-w-md flex-col items-center gap-3 rounded-3xl bg-parchment p-6 text-center shadow-2xl dark:bg-zinc-900"
+        className="relative flex max-h-[85dvh] w-full max-w-md flex-col items-center gap-3 rounded-organic bg-paper p-6 text-center shadow-organic-lg dark:bg-zinc-900"
       >
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-md">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sage-600 text-white">
           <Check size={30} strokeWidth={3} />
         </span>
         <p className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Path complete</p>
@@ -56,9 +56,9 @@ export function PathCompleteCelebration() {
           You memorized {verses.length} {verses.length === 1 ? "verse" : "verses"} — {verses.length === 1 ? "it's" : "they're"} now in your spaced review.
         </p>
         {verses.length > 0 && (
-          <ul className="w-full min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl bg-white/70 p-3 text-left dark:bg-zinc-800/70">
+          <ul className="w-full min-h-0 flex-1 space-y-2 overflow-y-auto rounded-2xl bg-sand-100 p-3 text-left dark:bg-zinc-800/70">
             {verses.map((verse) => (
-              <li key={verse.id} className="font-serif text-sm leading-snug text-ink dark:text-zinc-200">
+              <li key={verse.id} className="font-reading text-sm leading-snug text-ink dark:text-zinc-200">
                 <span className="mr-1 text-xs font-bold text-brand-600">
                   {verse.book} {verse.chapter}:{verse.verseNumber}
                 </span>
@@ -67,7 +67,7 @@ export function PathCompleteCelebration() {
             ))}
           </ul>
         )}
-        <motion.button type="button" whileTap={TAP_SCALE} onClick={done} className="w-full rounded-full bg-brand-500 px-4 py-3 font-semibold text-white">
+        <motion.button type="button" whileTap={TAP_SCALE} onClick={done} className="w-full rounded-full bg-brand-500 px-4 py-3.5 font-semibold text-paper hover:bg-brand-600">
           {nextKey ? "Continue" : "Choose what's next"}
         </motion.button>
       </motion.div>

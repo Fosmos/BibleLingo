@@ -20,8 +20,9 @@ export interface HallChip {
   size: number;
 }
 
-// First verse's distance below the hall card's center — clears a one-line card.
-const CARD_CLEARANCE_PX = 44;
+// First verse's distance below the hall card's center — clears a one-line card (the Organic
+// card, with its plaque and taller heading).
+const CARD_CLEARANCE_PX = 62;
 // Room after a hall's last verse before the next hall, with a gate between them (see
 // MindMapLinks.tsx's thresholds).
 export const HALL_EXIT_PADDING_PX = 44;

@@ -15,7 +15,7 @@ interface MindMapZoomControlsProps {
   hideZoomButtons?: boolean;
 }
 
-const ZOOM_BUTTON_CLASS = "flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold text-ink shadow-sm dark:bg-zinc-900 dark:text-zinc-100";
+const ZOOM_BUTTON_CLASS = "flex h-[34px] w-[34px] items-center justify-center rounded-full bg-sand-100 text-[13px] font-bold text-ink shadow-organic-sm dark:bg-zinc-900 dark:text-zinc-100";
 
 // The pan/zoom canvas's own +/-/Reset controls, plus a way back to the path picker (see
 // app/begin/page.tsx's own GuidedPathFlow) — split out of BookMindMap.tsx purely to keep that
@@ -28,11 +28,11 @@ export function MindMapZoomControls({ onZoomIn, onZoomOut, onReset, onLocate, hi
           browsing-only) — this one is always here, and reopens the FULL path picker rather
           than switching straight to whichever book happens to be currently browsed. */}
       <Link href="/begin" aria-label="Switch path" className={ZOOM_BUTTON_CLASS}>
-        <Shuffle size={14} />
+        <Shuffle size={15} strokeWidth={2.75} />
       </Link>
       {onLocate && (
         <button type="button" onClick={onLocate} aria-label="Back to my place" title="Back to my place" className={ZOOM_BUTTON_CLASS}>
-          <LocateFixed size={15} />
+          <LocateFixed size={15} strokeWidth={2.75} />
         </button>
       )}
       {!hideZoomButtons && (

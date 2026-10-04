@@ -5,6 +5,8 @@ import type { MemorizationDay, ReviewStage } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useCelebration } from "@/lib/useCelebration";
 import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
+import { useReportSheetStage } from "@/lib/useReportSheetStage";
+import { formatVerseRangeLabel } from "@/lib/chapterContent";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { ReviewChain } from "@/components/drills/ReviewChain";
 import { LessonChrome } from "@/components/gamification/LessonChrome";
@@ -63,6 +65,11 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   const [stageIndex, setStageIndex] = useCheckpointField(sessionKey, `reviewStageIndex:${phase}`, 0);
   const { pending, celebrate, finish } = useCelebration();
   const reportVerse = useReportFocusVerse(embeddedInMindMap);
+  const shownStage = stages[stageIndex];
+  useReportSheetStage(
+    shownStage ? { label: shownStage.label, reference: formatVerseRangeLabel(shownStage.verses), step: stageIndex, steps: stages.length } : null,
+    embeddedInMindMap,
+  );
 
   // Nothing to review (e.g. a path's very first lesson) skips straight past this section
   // instead of showing a placeholder the user has to click through — same "no stage the user

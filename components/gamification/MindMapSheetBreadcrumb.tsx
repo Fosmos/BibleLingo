@@ -34,20 +34,21 @@ export function MindMapSheetBreadcrumb({ book, chapter, verseNumber, onExit }: M
   const lessonProgress = useLessonSessionStore((state) => state.lessonProgress);
 
   return (
-    <div className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b border-line bg-white/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+    <div className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 bg-sand-100/95 px-3 pb-2.5 pt-[calc(0.5rem+env(safe-area-inset-top))] shadow-organic-sm backdrop-blur dark:bg-zinc-950/95">
       <button
         type="button"
         onClick={onExit}
-        className="flex shrink-0 items-center gap-1 text-sm font-medium text-ink-muted hover:text-brand-600"
+        aria-label="Back to the map"
+        className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-parchment text-ink hover:bg-sand-200 dark:bg-zinc-800 dark:text-zinc-200"
       >
-        <ChevronLeft size={16} /> Back
+        <ChevronLeft size={18} strokeWidth={2.75} />
       </button>
-      <p className="flex-1 truncate text-center text-xs font-medium uppercase tracking-wide text-ink-muted dark:text-zinc-500">
+      <p className="flex-1 truncate text-center text-xs font-bold uppercase tracking-[.06em] text-ink-muted dark:text-zinc-500">
         {trail.join(" → ")}
       </p>
       <div ref={verseViewSlotRef} className="flex shrink-0 items-center gap-2" />
       {lessonProgress !== null && (
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-line/60 dark:bg-zinc-800" aria-hidden="true">
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-sand-300 dark:bg-zinc-800" aria-hidden="true">
           <motion.div
             className="h-full bg-brand-500"
             initial={false}

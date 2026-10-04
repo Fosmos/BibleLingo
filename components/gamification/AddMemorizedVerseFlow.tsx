@@ -65,7 +65,7 @@ export function AddMemorizedVerseFlow() {
         type="button"
         whileTap={TAP_SCALE}
         onClick={() => setStep("mode")}
-        className="rounded-2xl border border-dashed border-brand-300 bg-brand-500/5 p-4 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-500/10 dark:border-brand-800 dark:text-brand-300"
+        className="rounded-organic border-2 border-dashed border-sand-400 p-4 text-center text-[15px] font-semibold text-ink-soft transition-colors hover:bg-sand-100 dark:border-brand-800 dark:text-brand-300"
       >
         + Add a verse you already know
       </motion.button>
@@ -79,7 +79,7 @@ export function AddMemorizedVerseFlow() {
       : "";
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-5 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+    <div className="flex flex-col gap-3 rounded-organic bg-sand-100 p-5 dark:bg-zinc-900">
       <div className="flex items-center gap-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
           <Plus size={15} />

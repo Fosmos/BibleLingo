@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { TAP_SCALE } from "@/lib/motionTokens";
+import { useReportSheetStage } from "@/lib/useReportSheetStage";
+import { formatVerseSpanLabel } from "@/lib/chapterContent";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useExpandedVerseZone } from "@/lib/useExpandedVerseZone";
 import { useElementWidth } from "@/lib/useElementWidth";
@@ -40,6 +42,10 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
   const drillZone = useLessonSessionStore((state) => state.drillPortalNode);
   useExpandedVerseZone();
   const [columnRef, columnWidthPx] = useElementWidth<HTMLDivElement>();
+  useReportSheetStage(
+    verse ? { label: learned ? "Learned" : "Preview", reference: formatVerseSpanLabel(verse.book, verse.chapter, verse.verseNumber, verse.verseNumber), step: 0, steps: 1 } : null,
+    true,
+  );
 
   return (
     <>
@@ -69,7 +75,7 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
               type="button"
               whileTap={TAP_SCALE}
               onClick={onAction}
-              className="w-full rounded-full bg-brand-500 py-3.5 text-base font-semibold text-white shadow-[0_8px_24px_rgba(107,86,68,0.18)] hover:bg-brand-600"
+              className="w-full rounded-full bg-brand-500 py-3.5 text-base font-semibold text-paper hover:bg-brand-600 active:bg-brand-700"
             >
               {actionLabel}
             </motion.button>

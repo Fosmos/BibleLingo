@@ -24,7 +24,7 @@ export function MindMapLeitnerButton() {
         onClick={() => setOpen(true)}
         aria-label="Leitner boxes"
         title="Leitner boxes"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink-muted shadow-sm dark:bg-zinc-900 dark:text-zinc-300"
+        className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-sand-100 text-ink shadow-organic-sm dark:bg-zinc-900 dark:text-zinc-300"
       >
         <Archive size={15} />
       </motion.button>
@@ -33,7 +33,7 @@ export function MindMapLeitnerButton() {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-2 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
             <div
               onClick={(event) => event.stopPropagation()}
-              className="flex max-h-[85dvh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-2xl bg-brand-50 p-4 shadow-xl dark:bg-zinc-900"
+              className="flex max-h-[85dvh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-organic bg-paper p-4 shadow-organic-lg dark:bg-zinc-900"
             >
               <div className="flex items-center justify-between">
                 <p className="text-caption font-semibold uppercase tracking-wide text-brand-500">Leitner boxes</p>

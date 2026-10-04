@@ -47,17 +47,20 @@ export function BottomTabBar() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950">
+    // A floating pill over the page (the Organic restyle), not a full-width bar.
+    <nav className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-full bg-sand-100 p-1.5 shadow-organic-md dark:bg-zinc-900">
       <ul className="flex items-stretch justify-around">
         {items.map(({ href, label, icon: Icon, isActive }) => (
           <li key={label} className="flex-1">
             <Link
               href={href}
-              className={`flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${
-                isActive ? "text-ink dark:text-zinc-100" : "text-ink-muted hover:text-ink-soft dark:hover:text-zinc-300"
+              className={`flex flex-col items-center gap-0.5 rounded-full py-2 text-xs ${
+                isActive
+                  ? "bg-brand-200 font-bold text-brand-800 dark:bg-zinc-800 dark:text-zinc-100"
+                  : "font-semibold text-sand-700 hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
-              <Icon size={22} />
+              <Icon size={21} strokeWidth={2.75} />
               {label}
             </Link>
           </li>

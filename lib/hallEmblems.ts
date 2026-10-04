@@ -94,11 +94,11 @@ export function hallEmblemKey(pericope: MindMapPericopeDatum): string {
 // is inset to clear them), cycling through five by hall number — so neighbouring halls always
 // look different, and a given hall always looks the same.
 const HALL_SHAPES = [
-  { card: "rounded-t-[18px] rounded-b-md", plaque: "px-3" }, // arched door
-  { card: "rounded-md", plaque: "px-1.5" }, // square gate
-  { card: "rounded-[22px]", plaque: "px-4" }, // round portal
-  { card: "rounded-t-lg rounded-b-none border-b-4 border-b-black/20", plaque: "px-2" }, // tower on a plinth
-  { card: "rounded-t-md rounded-b-[18px]", plaque: "px-1.5" }, // vaulted hall
+  { card: "rounded-t-full rounded-b-[10px]", plaque: "px-3" }, // arched door
+  { card: "rounded-[10px]", plaque: "px-3" }, // square gate
+  { card: "rounded-[24px]", plaque: "px-4" }, // round portal
+  { card: "rounded-t-[14px] rounded-b-[4px]", plaque: "px-3" }, // tower
+  { card: "rounded-t-[8px] rounded-b-[22px]", plaque: "px-3" }, // vault
 ];
 
 export function hallShape(hallNumber: number | undefined): { card: string; plaque: string } {

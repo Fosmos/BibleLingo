@@ -27,7 +27,6 @@ import { MindMapVerseTargetPreview } from "@/components/gamification/MindMapVers
 import { isCoveredByActivePath, pathTargetOfKey, type PathTarget } from "@/lib/mindMapPathTarget";
 import { startLessonSheet } from "@/lib/singleVersePath";
 import { versePreviewSecondary } from "@/lib/versePreviewSecondary";
-import { verseHallAccent } from "@/lib/mindMapGenreColor";
 import type { SheetState } from "@/lib/mindMapSheetState";
 import type { RelearnTarget } from "@/lib/relearnTarget";
 import { InPlaceRelearnSession } from "@/components/gamification/InPlaceRelearnSession";
@@ -56,7 +55,7 @@ export function BookMindMapWithLessonSheet({ pathKey, label, days, verses, versi
   // The map draws the broadest active path around this one (see lib/useMindMapData.ts).
   const mapData = useMindMapData(pathKey);
   const review = useMindMapReviewOffer(mapData.status === "ready" ? mapData.days : days);
-  useReviewArrival(review.offerVerse);
+  useReviewArrival(review.offerVerse, startReview);
   const activeKeys = useActivePathKeys();
   const setStoreFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const clearStoreFocusVerse = useLessonSessionStore((state) => state.clearFocusVerse);
@@ -157,7 +156,7 @@ export function BookMindMapWithLessonSheet({ pathKey, label, days, verses, versi
       <LessonBottomSheet
         open={isOpen}
         plain={sheet?.kind === "setup"}
-        accentColor={breadcrumbVerse ? verseHallAccent(breadcrumbVerse.book, breadcrumbVerse.chapter) : undefined}
+        onClose={closeSheet}
       >
         {sheet?.kind === "versePick" ? (
           <MindMapVerseTargetPreview target={sheet.target} version={version} onMemorize={() => startSetup(sheet.target)} />

@@ -23,8 +23,8 @@ export function RestDayPicker({ value, onChange }: RestDayPickerProps) {
             onClick={() => onChange(active ? null : day)}
             aria-pressed={active}
             aria-label={`Rest day: ${DAY_NAMES[day]}`}
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-              active ? "bg-brand-500 text-white" : "bg-mist text-ink-soft dark:bg-zinc-800 dark:text-zinc-300"
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold transition-colors ${
+              active ? "bg-brand-500 text-paper" : "bg-sand-200 text-ink-soft dark:bg-zinc-800 dark:text-zinc-300"
             }`}
           >
             {label}

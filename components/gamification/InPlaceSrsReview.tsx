@@ -10,6 +10,7 @@ import { useCelebration } from "@/lib/useCelebration";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
 import { useSrsReviewRun } from "@/lib/useSrsReviewRun";
+import { useReportSheetStage } from "@/lib/useReportSheetStage";
 import type { ReviewChainProgress } from "@/lib/useReviewChain";
 import { useWholeChapterReadingLayout } from "@/lib/useWholeChapterReadingLayout";
 import { ReviewChain } from "@/components/drills/ReviewChain";
@@ -91,6 +92,20 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
     finishRun();
     onExit();
   }, [entity, pending, onExit, finishRun]);
+
+  // The header shows only the verse being recited right now (reported as the reader moves on —
+  // see reportVerse), the range's first verse until then.
+  const focusVerse = useLessonSessionStore((state) => state.focusVerse);
+  const currentVerseNumber =
+    entity && focusVerse && focusVerse.book === entity.book && focusVerse.chapter === entity.chapter && focusVerse.verseNumber >= entity.startVerse && focusVerse.verseNumber <= entity.endVerse
+      ? focusVerse.verseNumber
+      : entity?.startVerse;
+  useReportSheetStage(
+    entity && currentVerseNumber !== undefined
+      ? { label: "Spaced review", reference: formatVerseSpanLabel(entity.book, entity.chapter, currentVerseNumber, currentVerseNumber), step: current, steps: entityIds.length, compact: true }
+      : null,
+    true,
+  );
 
   if (pending) return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
   if (!entity) return null;

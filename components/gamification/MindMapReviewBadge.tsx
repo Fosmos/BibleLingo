@@ -4,18 +4,17 @@ interface MindMapReviewBadgeProps {
   size: "md";
 }
 
-const SIZE_CLASS = { md: "-right-2 -top-2 px-1 py-px text-[8px]" };
+const SIZE_CLASS = { md: "-right-2.5 -top-1.5 px-1.5 py-0.5 text-[10px]" };
 
-// The "last review %" tag on the top-right corner of a Mind Map chapter holding SRS verses —
-// green once the score is solid, amber below that, so a shaky review stands out. The parent must
+// The "last review %" tag on the top-right corner of a Mind Map chapter holding SRS verses. The parent must
 // be positioned and must not clip its own overflow.
 export function MindMapReviewBadge({ percent, size }: MindMapReviewBadgeProps) {
   const rounded = Math.round(percent);
-  const tone = rounded >= 90 ? "bg-green-600 text-white" : "bg-amber-500 text-amber-950";
+  // The Organic restyle: a quiet cream pill with terracotta text, whatever the score.
   return (
     <span
       aria-label={`Last review ${rounded}%`}
-      className={`pointer-events-none absolute z-10 rounded-full border border-white font-sans font-bold leading-tight shadow-sm dark:border-zinc-900 ${tone} ${SIZE_CLASS[size]}`}
+      className={`pointer-events-none absolute z-10 rounded-full bg-sand-100 font-sans font-extrabold leading-tight text-brand-800 shadow-organic-sm dark:bg-zinc-900 ${SIZE_CLASS[size]}`}
     >
       {rounded}%
     </span>

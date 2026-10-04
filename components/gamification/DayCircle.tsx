@@ -28,7 +28,7 @@ export function dayLabel(day: MemorizationDay): string {
   if (day.kind === "section_boss_battle") {
     const first = day.reviewVerses[0];
     const last = day.reviewVerses[day.reviewVerses.length - 1];
-    return first && last ? `Ch. ${first.chapter}-${last.chapter} Boss Battle` : "Section Boss Battle";
+    return first && last ? `Ch. ${first.chapter}–${last.chapter} Boss Battle` : "Section Boss Battle";
   }
   if (day.kind === "weekly_review") return "Weekly Review";
   return "Monthly Review";

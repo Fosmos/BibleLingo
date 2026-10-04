@@ -49,8 +49,8 @@ const MIN_LINES_PER_PAGE = 3;
 // fills its box instead of the standalone route's generous reading gutter. Exported so
 // lib/useChapterPagination.ts's own fixed-column override and that component can never drift
 // out of sync on what "compact" actually measures.
-export const COMPACT_HORIZONTAL_PADDING_PX = 48; // SheetVerseZone.tsx `pl-8 pr-4`
-export const COMPACT_VERTICAL_PADDING_PX = 20; // SheetVerseZone.tsx `pt-3 pb-2`
+export const COMPACT_HORIZONTAL_PADDING_PX = 72; // SheetVerseZone.tsx `mx-3` + `pl-8 pr-4`
+export const COMPACT_VERTICAL_PADDING_PX = 28; // SheetVerseZone.tsx `mb-1` + `pt-3 pb-3`
 
 export interface PageBudget {
   // How many lines of verse text fit in the available height, at the fixed font size.

@@ -33,7 +33,7 @@ export function FirstLetterTypingControls({ typing, showLabel, allowPeekHint, hi
           onMistake={typing.recordMistake}
         />
       ) : (
-        <div className="flex w-full flex-col items-center gap-2 [.lesson-sheet-controls_&]:flex-1">
+        <div className="flex w-full flex-col items-center gap-2 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:justify-end">
           {/* Visually hidden, not removed — the on-screen keyboard below is the one visible way
               to type now (no more redundant box to tap into first), but a real physical
               keyboard and screen readers still need a focusable text input to type into. */}

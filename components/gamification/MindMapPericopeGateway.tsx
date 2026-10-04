@@ -14,10 +14,17 @@ import { useShrinkWrapText } from "@/lib/useShrinkWrapText";
 // Every room is drawn in its solid color, unchanged by progress (its verses' own checks and trail
 // show that); once every verse is memorized it earns the same green check its memorized verse
 // chips wear (MindMapMemorizedCheck.tsx).
-const CARD_CLASS = "border-[var(--nodeBg)] bg-[var(--nodeBg)] shadow-sm";
+const CARD_CLASS = "bg-[var(--nodeBg)] shadow-organic-md";
 // A long heading wraps onto more lines past this width rather than stretching the hall ever wider
 // — lib/mindMapVerseStream.ts's hallTitleLines estimates the wrap to leave room for it.
-const HALL_TITLE_MAX_WIDTH_CLASS = "max-w-[150px]";
+const HALL_TITLE_MAX_WIDTH_CLASS = "max-w-[146px]";
+
+// The plaque's address, "1:1–8": chapter and verse range.
+function hallAddress(pericope: MindMapPericopeDatum): string | undefined {
+  const { chapter, rangeStartVerse: start, rangeEndVerse: end } = pericope;
+  if (start === undefined || end === undefined) return pericope.verseRange;
+  return start === end ? `${chapter}:${start}` : `${chapter}:${start}–${end}`;
+}
 
 interface MindMapPericopeGatewayProps {
   pericope: MindMapPericopeDatum;
@@ -91,7 +98,7 @@ export function MindMapPericopeGateway({ pericope, style, hallNumber, tagKey, pr
       {/* Content-sized. The heading is one fixed font size on every card and always shown in FULL
           (a heading is itself a recall cue) — never ellipsized; a long one wraps onto more lines
           (see HALL_TITLE_MAX_WIDTH_CLASS), which the layout makes room for. */}
-      <div className={`relative flex min-h-10 min-w-20 flex-col overflow-hidden border text-center text-[var(--nodeText)] ${shape.card} ${CARD_CLASS}`}>
+      <div className={`relative flex min-h-10 min-w-[84px] max-w-[170px] flex-col overflow-hidden text-center text-[var(--nodeText)] ${shape.card} ${CARD_CLASS}`}>
         {/* The room's own brass plaque — its address ("which hall, which verses"), a fixed warm
             bronze regardless of this card's own genre color, the same convention the canvas's
             other corner badges already share (TOGGLE_BADGE_CLASS). When Memory Palace Tags is on
@@ -111,17 +118,17 @@ export function MindMapPericopeGateway({ pericope, style, hallNumber, tagKey, pr
             }}
             onKeyDown={(event) => event.stopPropagation()}
             aria-label={`Edit ${hallName}`}
-            className={`relative flex shrink-0 items-center justify-between gap-1 ${shape.plaque} py-0.5 text-[8px] font-semibold uppercase tracking-wide text-white ${BRASS_PLAQUE_CLASS}`}
+            className={`relative flex shrink-0 items-center justify-center gap-1 whitespace-nowrap ${shape.plaque} py-[3px] text-[9px] font-extrabold uppercase tracking-[.08em] text-sand-100 ${BRASS_PLAQUE_CLASS}`}
           >
             <span className="flex min-w-0 shrink items-center gap-0.5">
               <span className="min-w-0 shrink truncate">{hallName}</span>
-              {pericope.verseRange && <span className="shrink-0">• {pericope.verseRange}</span>}
+              {hallAddress(pericope) && <span className="shrink-0">• {hallAddress(pericope)}</span>}
             </span>
             {tagKey && <span className="min-w-0 shrink-0 truncate">{placeTag ?? "+ tag"}</span>}
           </button>
         )}
-        <span className="relative flex grow items-center justify-center gap-1.5 py-0.5 pl-2 pr-3">
-          <span ref={titleRef} className={`${HALL_TITLE_MAX_WIDTH_CLASS} w-[var(--shrink-wrap-width,auto)] text-balance font-serif text-[13px] font-bold leading-snug`}>
+        <span className="relative flex grow items-center justify-center px-3 pb-[7px] pt-[5px]">
+          <span ref={titleRef} className={`${HALL_TITLE_MAX_WIDTH_CLASS} w-[var(--shrink-wrap-width,auto)] text-balance font-serif text-sm leading-[1.2]`}>
             {pericope.label}
           </span>
         </span>

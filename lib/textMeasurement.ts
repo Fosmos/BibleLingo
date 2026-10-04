@@ -8,7 +8,7 @@
 
 let cachedFontFamily: string | null = null;
 
-// Resolves `font-serif`'s real computed font-family (Playfair Display's own generated local
+// Resolves `font-reading`'s real computed font-family (the verse text's own face, via next/font's generated local
 // name, via next/font — a CSS custom property canvas's own `font` string can't reliably read
 // itself) once, off a throwaway probe element, rather than hand-duplicating the Tailwind
 // class's fallback chain here.
@@ -16,7 +16,7 @@ function resolveSerifFontFamily(): string {
   if (cachedFontFamily) return cachedFontFamily;
   if (typeof document === "undefined") return "Georgia, serif";
   const probe = document.createElement("span");
-  probe.className = "font-serif";
+  probe.className = "font-reading";
   probe.style.position = "absolute";
   probe.style.visibility = "hidden";
   probe.style.pointerEvents = "none";

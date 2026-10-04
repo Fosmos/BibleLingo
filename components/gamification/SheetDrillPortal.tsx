@@ -40,7 +40,7 @@ export function SheetDrillPortal({ node, children }: SheetDrillPortalProps) {
   return createPortal(
     <div
       ref={contentRef}
-      className="flex min-h-full flex-col items-center justify-end gap-2 px-3 pb-3 pt-2"
+      className="flex min-h-full flex-col items-center justify-end gap-2 px-2 pb-2 pt-1.5"
       // Scaled about its top centre at its normal width. It used to widen by 1/scale to keep the
       // scaled result full-width, but wider content wraps onto fewer lines and gets shorter: right
       // at the fit limit that made it fit, drop the scale, re-wrap taller, and scale again — a

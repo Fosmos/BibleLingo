@@ -78,7 +78,7 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
           <p className="mb-1 flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-brand-500">
             Listen &amp; Repeat <InfoTip text={INFO_TIPS.listenVerseRep} />
           </p>
-          <div className="flex flex-col font-serif text-lg leading-loose">
+          <div className="flex flex-col font-reading text-lg font-medium leading-loose">
             {lr.ranges.map((range) => (
               <p key={range.startIndex}>{renderWords(range.startIndex, range.endIndex)}</p>
             ))}
