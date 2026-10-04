@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { AccountRecord, UserProgress } from "@/types";
 import { generateSalt, hashPassword } from "@/lib/auth";
 import { getDefaultProgress } from "@/lib/storage";
-import { readAccounts, writeAccounts, writeServerProgress } from "@/lib/serverStore";
+import { getAccountByUsername, createAccount, writeServerProgress } from "@/lib/serverStore";
 
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Password must be at least 4 characters." }, { status: 400 });
   }
 
-  const accounts = await readAccounts();
-  if (accounts.some((account) => account.username === normalized)) {
+  const existingAccount = await getAccountByUsername(normalized);
+  if (existingAccount) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  await writeAccounts([...accounts, account]);
+  await createAccount(account);
   await writeServerProgress(account.id, seedProgress ?? getDefaultProgress());
 
   return NextResponse.json({ id: account.id, username: account.username, createdAt: account.createdAt });

@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   // under the old IP become invisible, not actually lost. Prefer the .local hostname on any
   // device that can resolve it (this never changes), and keep this array as a fallback for
   // ones that can't.
-  allowedDevOrigins: ["192.168.2.27", "192.168.2.11", "Aidens-MacBook-Pro.local"],
+  allowedDevOrigins: ["192.168.2.27", "192.168.2.11", "Aidens-MacBook-Pro.local", "10.0.0.194"],
 };
 
 export default nextConfig;

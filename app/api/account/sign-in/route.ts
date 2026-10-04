@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPassword } from "@/lib/auth";
-import { readAccounts } from "@/lib/serverStore";
+import { getAccountByUsername } from "@/lib/serverStore";
 
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
   const password = typeof body?.password === "string" ? body.password : "";
 
   const normalized = normalizeUsername(username);
-  const accounts = await readAccounts();
-  const account = accounts.find((candidate) => candidate.username === normalized);
+  const account = await getAccountByUsername(normalized);
 
   if (!account || !(await verifyPassword(password, account.salt, account.passwordHash))) {
     return NextResponse.json({ error: "Incorrect username or password." }, { status: 401 });
