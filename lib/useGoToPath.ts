@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { pathKey } from "@/lib/memorizationContent";
 import { useProgressStore } from "@/store/useProgressStore";
 
@@ -20,6 +20,8 @@ export type GoToPath = (
 // codebase's 200-line cap — builds the URL and navigates to a freshly (re-)started path.
 export function useGoToPath(): GoToPath {
   const router = useRouter();
+  // Started from the Mind Map tab, the new path opens there too.
+  const onMap = usePathname().endsWith("/map");
   const resetPathProgress = useProgressStore((state) => state.resetPathProgress);
   return (identifier, kind, version, versesPerDay, priorKnownVerseCount) => {
     const key = pathKey(kind, identifier);
@@ -30,6 +32,6 @@ export function useGoToPath(): GoToPath {
     const query = new URLSearchParams({ version });
     if (versesPerDay) query.set("versesPerDay", String(versesPerDay));
     if (priorKnownVerseCount) query.set("priorKnownVerseCount", String(priorKnownVerseCount));
-    router.push(`/path/${encodeURIComponent(key)}?${query}`);
+    router.push(`/path/${encodeURIComponent(key)}${onMap ? "/map" : ""}?${query}`);
   };
 }

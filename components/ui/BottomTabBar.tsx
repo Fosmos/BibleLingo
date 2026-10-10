@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Award, User, type LucideIcon } from "lucide-react";
+import { Home, Map, Award, User, FlaskConical, type LucideIcon } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 
 interface TabItem {
@@ -20,9 +20,11 @@ export function BottomTabBar() {
   // The version query param is what the path overview page treats as the source of truth
   // (see app/path/[key]/page.tsx) — omitting it here would default to KJV and silently
   // overwrite an already-selected translation via PathOverviewScreen's sync effect.
-  const pathHref = activePathKey
-    ? `/path/${encodeURIComponent(activePathKey)}${activePlan ? `?version=${encodeURIComponent(activePlan.version)}` : ""}`
-    : "/begin";
+  const versionQuery = activePlan ? `?version=${encodeURIComponent(activePlan.version)}` : "";
+  const pathHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}${versionQuery}` : "/begin";
+  // The Mind Map lives in its own experimental tab (app/path/[key]/map).
+  const mapHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/map${versionQuery}` : "/begin";
+  const onMap = pathname.startsWith("/path") && pathname.endsWith("/map");
 
   const items: TabItem[] = [
     { href: "/", label: "Home", icon: Home, isActive: pathname === "/" },
@@ -30,8 +32,9 @@ export function BottomTabBar() {
       href: pathHref,
       label: "Path",
       icon: Map,
-      isActive: pathname.startsWith("/path") || pathname === "/begin",
+      isActive: (pathname.startsWith("/path") && !onMap) || pathname === "/begin",
     },
+    { href: mapHref, label: "Mind Map", icon: FlaskConical, isActive: onMap },
     {
       href: "/memorized",
       label: "Memorized",

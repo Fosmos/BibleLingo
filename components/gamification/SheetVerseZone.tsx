@@ -11,10 +11,11 @@ interface SheetVerseZoneProps {
 // pr-4 (16px) inside it; mb-1 (4px) + pt-3/pb-3 (24px) vertically — must keep matching
 // lib/pageBudget.ts's COMPACT_HORIZONTAL_PADDING_PX (72) / COMPACT_VERTICAL_PADDING_PX (28). The
 // wider LEFT side is room for verse numbers, which hang outside the text column (see SenseLineRow.tsx).
+// On the chapter path the verse's own card is the zone (`path-lesson-verse`), so the box steps aside.
 export function SheetVerseZone({ children }: SheetVerseZoneProps) {
   return (
-    <div className="mx-3 mb-1">
-      <div className="rounded-organic bg-sage-100 pb-3 pl-8 pr-4 pt-3 text-ink dark:bg-zinc-800 dark:text-zinc-100">{children}</div>
+    <div className="mx-3 mb-1 [.path-lesson-verse_&]:m-0">
+      <div className="rounded-organic bg-sage-100 pb-3 pl-8 pr-4 pt-3 text-ink dark:bg-zinc-800 dark:text-zinc-100 [.path-lesson-verse_&]:rounded-none [.path-lesson-verse_&]:bg-transparent [.path-lesson-verse_&]:p-0 [.path-lesson-verse_&]:pl-6 [.path-lesson-verse_&]:dark:bg-transparent">{children}</div>
     </div>
   );
 }

@@ -39,3 +39,23 @@ export function chunkVersesRespectingChapters(verses: VerseSegment[], size: numb
 
   return chunks;
 }
+
+// Book mode's lessons: `size` real verses each, running straight on across a chapter boundary
+// (the end of Genesis 1 and the start of Genesis 2 in one lesson) instead of cutting the lesson
+// short there — never across a book boundary. Gap verses ride along uncounted, as above.
+export function chunkVersesAcrossChapters(verses: VerseSegment[], size: number): VerseSegment[][] {
+  const chunks: VerseSegment[][] = [];
+  let piece: VerseSegment[] = [];
+  let realCount = 0;
+  for (const verse of verses) {
+    if (realCount >= size || (piece.length > 0 && piece[0].book !== verse.book)) {
+      chunks.push(piece);
+      piece = [];
+      realCount = 0;
+    }
+    piece.push(verse);
+    if (verse.text.trim().length > 0) realCount += 1;
+  }
+  if (piece.length > 0) chunks.push(piece);
+  return chunks;
+}

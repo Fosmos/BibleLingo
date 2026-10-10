@@ -34,12 +34,14 @@ export function pathTargetForDatum(datum: MindMapDatum): PathTarget | undefined 
 
 // The book/chapter/verse a path key covers — its identifier split back apart. Undefined for a
 // topic path (or none), which covers nothing on the map.
-export function activePathScope(activeKey: string | null): { kind: string; book: string; chapter?: number; verse?: number } | undefined {
+// A verse path may be a run ("5-7"): `verse` is its first, `endVerse` its last.
+export function activePathScope(activeKey: string | null): { kind: string; book: string; chapter?: number; verse?: number; endVerse?: number } | undefined {
   if (!activeKey) return undefined;
   const { kind, identifier } = parsePathKey(activeKey);
   if (kind !== "book" && kind !== "chapter" && kind !== "verse") return undefined;
-  const [book, chapter, verse] = identifier.split("|");
-  return { kind, book, chapter: chapter ? Number(chapter) : undefined, verse: verse ? Number(verse) : undefined };
+  const [book, chapter, verses] = identifier.split("|");
+  const [verse, endVerse] = verses ? verses.split("-").map(Number) : [];
+  return { kind, book, chapter: chapter ? Number(chapter) : undefined, verse, endVerse: endVerse ?? verse };
 }
 
 // Whether `target` already sits inside the active path — a chapter of the book being memorized,
@@ -51,7 +53,7 @@ export function isCoveredByActivePath(target: PathTarget, activeKey: string | nu
   if (scope.kind === "book") return true;
   if (target.kind === "book") return false;
   if (scope.kind === "chapter") return scope.chapter === target.chapter;
-  return target.kind === "verse" && scope.chapter === target.chapter && scope.verse === target.verse;
+  return target.kind === "verse" && scope.chapter === target.chapter && scope.verse !== undefined && target.verse >= scope.verse && target.verse <= (scope.endVerse ?? scope.verse);
 }
 
 // The book name a book/chapter/verse path key belongs to (its identifier's first part).

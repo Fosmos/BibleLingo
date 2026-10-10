@@ -16,6 +16,7 @@ import { todaysDayNumber } from "@/lib/dayRollover";
 import { activePathScope, mapHostPathKey, pathBookName } from "@/lib/mindMapPathTarget";
 import { useActivePathKeys } from "@/lib/useActivePathKeys";
 import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
+import { daysInChapter, planChapters } from "@/lib/chapterScopedDays";
 
 export interface ChapterNode {
   chapter: number;
@@ -155,13 +156,11 @@ export function useMindMapData(focusedKey: string | null): MindMapData {
     // Book paths tag every day with its chapter; a chapter/verse path's days all sit in the one
     // chapter its key names.
     const days = planDays.map((day) => (day.chapterGroup === undefined && scope?.chapter !== undefined ? { ...day, chapterGroup: scope.chapter } : day));
-    const chapterNumbers = Array.from(
-      new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
-    ).sort((a, b) => a - b);
+    const chapterNumbers = planChapters(days);
 
     const todaysDay = todaysDayNumber(plan, new Date());
     const chapters: ChapterNode[] = chapterNumbers.map((chapter) => {
-      const chapterDays = days.filter((day) => day.chapterGroup === chapter);
+      const chapterDays = daysInChapter(days, chapter);
       // A standalone review day (a chapter/verse path's weekly or monthly review) has no verses of
       // its own to learn, so it isn't a hall on the map.
       const zones = buildPathZones(chapterDays).filter((zone) => zone.days.some((day) => day.kind === "learn"));

@@ -1,4 +1,5 @@
 import type { MemorizationDay, PathKind, PathProgress } from "@/types";
+import { daysInChapter, planChapters } from "@/lib/chapterScopedDays";
 
 export interface BookChapterView {
   visibleDays: MemorizationDay[];
@@ -29,12 +30,10 @@ export function resolveBookChapterView(
     return { visibleDays: days, title: label };
   }
 
-  const chapterGroups = Array.from(
-    new Set(days.map((day) => day.chapterGroup).filter((group): group is number => group !== undefined)),
-  ).sort((a, b) => a - b);
+  const chapterGroups = planChapters(days);
   const nextDay = days.find((day) => day.dayNumber === todaysDay);
   const group = chapterOverride ?? nextDay?.chapterGroup;
-  const visibleDays = days.filter((day) => day.chapterGroup === group);
+  const visibleDays = group === undefined ? [] : daysInChapter(days, group);
 
   if (group === undefined) {
     // Past every chapter (at the whole-book capstone) — still offer a way back into the

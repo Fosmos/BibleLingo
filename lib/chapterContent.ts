@@ -41,7 +41,7 @@ export function formatVerseSpanLabel(book: string, chapter: number, startVerse: 
 }
 
 // Labels a contiguous run of verses for display, e.g. "Genesis 1:1-5" when they share a
-// chapter, or "Genesis 1:28–Genesis 2:3" when a book-mode chunk crosses a chapter boundary.
+// chapter, or "Genesis 1:28–2:3" when a book-mode lesson crosses a chapter boundary.
 export function formatVerseRangeLabel(verses: VerseSegment[]): string {
   if (verses.length === 0) return "";
   const first = verses[0];
@@ -50,7 +50,7 @@ export function formatVerseRangeLabel(verses: VerseSegment[]): string {
   if (first.chapter === last.chapter) {
     return `${formatChapterLabel(first.book, first.chapter)}:${first.verseNumber}–${last.verseNumber}`;
   }
-  return `${first.reference}–${last.reference}`;
+  return `${first.reference}–${last.chapter}:${last.verseNumber}`;
 }
 
 // Optionally prefixes each verse's text with its "chapter:verse " reference, e.g.

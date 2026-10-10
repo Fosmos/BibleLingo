@@ -60,8 +60,10 @@ function getMemorizedBookVerses(verses: VerseSegment[], days: MemorizationDay[],
   const lastLearnDayByChapter = new Map<number, number>();
   for (const day of days) {
     if (day.kind !== "learn" || day.chapterGroup === undefined) continue;
-    const current = lastLearnDayByChapter.get(day.chapterGroup) ?? 0;
-    lastLearnDayByChapter.set(day.chapterGroup, Math.max(current, day.dayNumber));
+    // Every chapter the lesson has verses in — a lesson can run across a chapter boundary.
+    for (const chapter of new Set(day.newVerses.map((verse) => verse.chapter))) {
+      lastLearnDayByChapter.set(chapter, Math.max(lastLearnDayByChapter.get(chapter) ?? 0, day.dayNumber));
+    }
   }
 
   const completedChapters = new Set(

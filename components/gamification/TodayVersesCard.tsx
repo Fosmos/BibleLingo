@@ -3,7 +3,8 @@
 import { ArrowRight, BookOpen, Compass, MoonStar, RotateCcw, Zap } from "lucide-react";
 import { useTodaysDay } from "@/lib/useTodaysDay";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
-import { resolvePathLabel } from "@/lib/memorizationContent";
+import { parsePathKey, resolvePathLabel } from "@/lib/memorizationContent";
+import { practiceArrivalHref } from "@/lib/usePracticeArrival";
 import { Button } from "@/components/ui/Button";
 
 const DAY_KIND_LABELS: Record<string, string> = {
@@ -22,11 +23,12 @@ function pathHref(activePathKey: string, version: string): string {
   return `/path/${encodeURIComponent(activePathKey)}?version=${encodeURIComponent(version)}&today=1`;
 }
 
-// The standalone practice route (app/path/[key]/day/[dayNumber]/practice) — same first-letter
-// recall drill PathBottomDock.tsx's own "Review" button opens in-place from the Path screen,
-// reachable directly from Home too now that today's lesson is done here.
-function practiceHref(activePathKey: string, dayNumber: number): string {
-  return `/path/${encodeURIComponent(activePathKey)}/day/${dayNumber}/practice`;
+// Review today's finished lesson: book, chapter and verse paths run it on the Path tab, in place
+// on the verse like a spaced review (lib/usePracticeArrival.ts); a topic path has no chapter view,
+// so it keeps the standalone practice route.
+function practiceHref(activePathKey: string, version: string, dayNumber: number): string {
+  if (parsePathKey(activePathKey).kind === "topic") return `/path/${encodeURIComponent(activePathKey)}/day/${dayNumber}/practice`;
+  return practiceArrivalHref(activePathKey, version, dayNumber);
 }
 
 interface TodayVersesCardProps {
@@ -128,7 +130,7 @@ export function TodayVersesCard({ pathKey }: TodayVersesCardProps) {
                 the card. */}
             <div className="flex shrink-0 items-center gap-2">
               {lastCompletedDay.kind === "learn" && (
-                <Button href={practiceHref(activePathKey, lastCompletedDay.dayNumber)} variant="secondary">
+                <Button href={practiceHref(activePathKey, plan.version, lastCompletedDay.dayNumber)} variant="secondary">
                   <RotateCcw size={14} className="mr-1 inline -translate-y-px" />
                   Review
                 </Button>

@@ -16,8 +16,7 @@ import { activeDayNumber, todaysDayNumber } from "@/lib/dayRollover";
 import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
 import { BookMindMapWithLessonSheet } from "@/components/gamification/BookMindMapWithLessonSheet";
-// TEMPORARILY DISABLED along with its own usage below — see that comment.
-// import { DailyChapterReviewGate } from "@/components/gamification/DailyChapterReviewGate";
+import { ChapterPathScreen } from "@/components/gamification/ChapterPathScreen";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface PathOverviewScreenProps {
@@ -26,15 +25,14 @@ interface PathOverviewScreenProps {
   version: string;
   versesPerDay?: number;
   startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
-  // See GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once, at
-  // creation. See PathProgress.priorKnownVerseCount.
+  // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once (PathProgress.priorKnownVerseCount).
   priorKnownVerseCount?: number;
+  // "map" — the Mind Map tab (app/path/[key]/map); otherwise the Path tab's chapter path view.
+  view?: "path" | "map";
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount }: PathOverviewScreenProps) {
-  // `verses` below is lazily seeded from the localStorage-backed content cache, which may
-  // already be populated on the client's first render but is always empty during SSR —
-  // gating on `mounted` keeps the first paint a stable FetchLoading placeholder either way.
+export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount, view = "path" }: PathOverviewScreenProps) {
+  // `verses` is seeded from the localStorage cache (empty during SSR) — gating on `mounted` keeps the first paint stable.
   const mounted = useHasMounted();
   const plan = useProgressStore((state) => state.paths[key]);
   const setPath = useProgressStore((state) => state.setPath);
@@ -55,9 +53,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     setLastVersionCheckKey(versionCheckKey);
     if (verses && !pathContentMatchesVersion(key, version)) setVerses(null);
   }
-  // Book mode's own nav between its two screens: null shows the Mind Map (see render below);
-  // a chapter number shows that chapter's parchment view, optionally with a specific verse to
-  // open straight to (see lib/useMindMapSelection.ts). Never persisted.
+  // The Mind Map's own nav: null shows the map; a chapter number shows that chapter's parchment view (lib/useMindMapSelection.ts).
   const { chapterOverride, targetVerse, setChapterOverride, selectPericope, reset: resetMindMapSelection } = useMindMapSelection();
   // A lesson/practice session, rendered right here instead of navigating away (InPlaceLessonSession.tsx) — null means none running.
   const [lessonDay, setLessonDay] = useState<{ dayNumber: number; mode: "select" | "practice" } | null>(null);
@@ -88,9 +84,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     };
   }, [key, version, label, verses, retryToken]);
 
-  // Also re-runs when an EXISTING plan's version/versesPerDay doesn't match what was just
-  // selected, so re-picking either doesn't leave an already-started path stuck at the
-  // original choice. priorKnownVerseCount arrives once.
+  // Also re-runs when an existing plan's version/versesPerDay doesn't match what was just picked.
   useEffect(() => {
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
@@ -146,12 +140,24 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
 
-  // Book, chapter and verse paths open on the Mind Map — a pan/zoom canon view centered on this
-  // path's book. Tapping a pericope sets chapterOverride/targetVerse; a verse CHIP instead opens
-  // an in-place lesson bottom sheet over the still-visible canvas (see
-  // BookMindMapWithLessonSheet.tsx, keyed on `key` so switching paths resets its own sheet state
-  // automatically). Only topic paths (verses from all over) skip this.
+  // Book, chapter and verse paths: the Path tab's chapter path view (ChapterPathScreen.tsx), or
+  // the Mind Map tab's canon view (BookMindMapWithLessonSheet.tsx). Topic paths get the day list.
   const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
+  if (onMindMap && view === "path") {
+    return (
+      <ChapterPathScreen
+        key={key}
+        pathKey={key}
+        label={label}
+        days={days}
+        verses={verses}
+        version={version}
+        completedDays={plan.completedDays}
+        todaysDay={todaysDay}
+        autoStartLesson={startLesson}
+      />
+    );
+  }
   if (onMindMap && chapterOverride === null) {
     return (
       <BookMindMapWithLessonSheet
@@ -189,6 +195,5 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     />
   );
 
-  // TEMPORARILY DISABLED — DailyChapterReviewGate; see git history to re-enable.
   return diagram;
 }

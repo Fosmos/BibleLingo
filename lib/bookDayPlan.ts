@@ -1,6 +1,6 @@
 import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
 import { computeBucketStatesPerLesson } from "@/lib/bookReviewSchedule";
-import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
+import { chunkVersesAcrossChapters, chunkVersesRespectingChapters } from "@/lib/chapterChunking";
 import { pericopeAnchoredPreviousVerses } from "@/lib/previousVerseReview";
 
 export const DEFAULT_VERSES_PER_DAY = 5;
@@ -22,10 +22,11 @@ function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSeg
 }
 
 // Book mode only: chunks verses into versesPerDay-sized lessons, grouped by the chapter
-// each lesson is anchored in (chapterGroup) so the path can be displayed one chapter at a
-// time. A lesson always gets the full versesPerDay verses requested — it can freely span
-// multiple pericopes now, but never a chapter boundary (see lib/chapterChunking.ts), so
-// chapterGroup stays unambiguous.
+// each lesson is anchored in (chapterGroup — its first verse's chapter). A lesson always gets
+// the full versesPerDay verses requested, running on across pericope AND chapter boundaries (a
+// lesson ending a chapter carries straight into the next one — see lib/chapterChunking.ts), so
+// anything shown per chapter splits a day by its verses' chapters (lib/chapterScopedDays.ts's
+// daysInChapter), not by chapterGroup alone.
 //
 // A chapter's own recall check (the old per-lesson daily-rotation review and the per-chapter
 // boss battle) isn't in the path at all — once a chapter's last lesson completes, that
@@ -37,7 +38,7 @@ function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSeg
 // same Full Review + Boss Battle capstone every other path kind uses.
 export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number, usePericopeAnchor = false, priorKnownVerseCount = 0): MemorizationDay[] {
   const effectiveVersesPerDay = Math.max(1, versesPerDay);
-  const chunks = chunkVersesRespectingChapters(verses.slice(priorKnownVerseCount), effectiveVersesPerDay);
+  const chunks = chunkVersesAcrossChapters(verses.slice(priorKnownVerseCount), effectiveVersesPerDay);
   const bucketStates = computeBucketStatesPerLesson(chunks);
 
   const days: MemorizationDay[] = [];

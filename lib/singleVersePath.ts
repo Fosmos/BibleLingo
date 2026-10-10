@@ -7,9 +7,14 @@ import { findVerseLessonDay } from "@/lib/verseLessonAction";
 // that one verse as its own single-verse path — added alongside the reader's other paths — opened
 // straight into its lesson (`startLesson`, see startLessonSheet below).
 export function singleVersePathHref(book: string, chapter: number, verse: number, version: string): string {
-  const key = pathKey("verse", `${book}|${chapter}|${verse}`);
-  return `/path/${encodeURIComponent(key)}?version=${encodeURIComponent(version)}&startLesson=1`;
+  return verseRunPathHref(verseRunPathKey(book, chapter, verse, verse), version);
 }
+
+// A run of verses chosen on the Path tab ("Learn N chosen") as its own verse path — "Book|8|5-7".
+export const verseRunPathKey = (book: string, chapter: number, start: number, end: number): string =>
+  pathKey("verse", `${book}|${chapter}|${start === end ? start : `${start}-${end}`}`);
+
+export const verseRunPathHref = (key: string, version: string): string => `/path/${encodeURIComponent(key)}?version=${encodeURIComponent(version)}&startLesson=1`;
 
 // The sheet a path opened with `startLesson` begins in: already inside the lesson for its own
 // verse, rather than on the map waiting for a tap. Only a single-verse path names one verse to

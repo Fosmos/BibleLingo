@@ -115,7 +115,7 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
     const last = day.newVerses[day.newVerses.length - 1];
     const learnedHeading =
       day.kind === "learn" && first && last
-        ? first.verseNumber === last.verseNumber ? `Verse ${first.verseNumber} learned` : `Verses ${first.verseNumber}–${last.verseNumber} learned`
+        ? first.verseNumber === last.verseNumber && first.chapter === last.chapter ? `Verse ${first.verseNumber} learned` : first.chapter !== last.chapter ? `Verses ${first.chapter}:${first.verseNumber}–${last.chapter}:${last.verseNumber} learned` : `Verses ${first.verseNumber}–${last.verseNumber} learned`
         : completeHeading;
     const shekelsEarned = day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED + (day.kind === "section_boss_battle" ? SHEKELS_PER_BOSS_BATTLE : 0);
     return (

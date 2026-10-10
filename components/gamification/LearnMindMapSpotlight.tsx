@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import type { MemorizationDay } from "@/types";
-import { chapterScopedDays } from "@/lib/chapterScopedDays";
+import { daysInChapter } from "@/lib/chapterScopedDays";
 import { buildVerseSpotlightLayout } from "@/lib/learnVerseSpotlightLayout";
 import { findSpotlightTargets } from "@/lib/verseSpotlightTargets";
 import { useMindMapCompactCenter } from "@/lib/useMindMapCompactCenter";
@@ -48,7 +48,7 @@ export function LearnMindMapSpotlight({ book, chapter, verseNumber, allDays, day
   // scratch). `allDays`/`day` are still read inside the memo body (React just can't statically
   // verify that's safe from a narrower dep list, hence the disable below).
   const layout = useMemo(
-    () => buildVerseSpotlightLayout(book, chapter, chapterScopedDays(allDays, day), completedDays, todaysDay),
+    () => buildVerseSpotlightLayout(book, chapter, daysInChapter(allDays, chapter), completedDays, todaysDay),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above: allDays/day's own CONTENT is already fully determined by book+chapter+completedDays+todaysDay
     [book, chapter, completedDays, todaysDay, day.chapterGroup],
   );

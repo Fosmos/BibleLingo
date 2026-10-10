@@ -179,8 +179,9 @@ export function resolvePathLabel(key: string): string | undefined {
   }
 
   if (kind === "verse") {
+    // One verse ("5"), or a run chosen on the Path tab ("5-7").
     const [book, chapterStr, verseStr] = identifier.split("|");
-    return findBook(book) ? `${formatChapterLabel(book, Number(chapterStr))}:${verseStr}` : undefined;
+    return findBook(book) ? `${formatChapterLabel(book, Number(chapterStr))}:${verseStr.replace("-", "–")}` : undefined;
   }
 
   if (kind === "topic") {
@@ -215,9 +216,9 @@ export function resolvePath(key: string): ResolvedPath | undefined {
 
   if (kind === "verse") {
     const [book, chapterStr, verseStr] = identifier.split("|");
-    const verses = getChapterVerses(book, Number(chapterStr));
-    const verse = verses?.[Number(verseStr) - 1];
-    return verse ? { verses: [verse], label } : undefined;
+    const [start, end = start] = verseStr.split("-").map(Number);
+    const run = getChapterVerses(book, Number(chapterStr))?.filter((verse) => verse.verseNumber >= start && verse.verseNumber <= end) ?? [];
+    return run.length ? { verses: run, label } : undefined;
   }
 
   if (kind === "topic") {

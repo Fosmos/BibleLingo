@@ -5,15 +5,12 @@ import type { MemorizationDay, VerseSegment } from "@/types";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
 import { ReviewChain } from "@/components/drills/ReviewChain";
-import { PRIOR_VERSE_INDEX } from "@/lib/learnSteps";
-import { usePriorLearnedVerse } from "@/lib/usePriorLearnedVerse";
+import { usePriorLearnedVerses } from "@/lib/usePriorLearnedVerse";
 
 interface LearnCumulativeStageProps {
   day: MemorizationDay;
-  // The explicit verse list buildSteps already worked out for this exact check — either a
-  // group's own so-far (a split day's per-half interim check) or every real verse learned
-  // today (the split day's own final combine stage, right before Pray) — each led by the verse
-  // just before it (PRIOR_VERSE_INDEX for the one before today's lesson).
+  // The rolling window buildSteps worked out for this check — a verse and the two before it, the
+  // negative indices standing for the learned verses just before today's lesson (PRIOR_VERSE_INDICES).
   cumulativeVerseIndices: number[];
   layout: ChapterReadingLayout;
   topBar: ReactNode;
@@ -21,15 +18,15 @@ interface LearnCumulativeStageProps {
   onAdvance: () => void;
 }
 
-// LearnSection.tsx's own "type everything learned today so far" step — split out purely to
+// LearnSection.tsx's rolling "type this verse with the two before it" step — split out purely to
 // keep that file under this codebase's own 200-line cap (see CLAUDE.md), no behavior
 // difference from having it inline there.
 export function LearnCumulativeStage({ day, cumulativeVerseIndices, layout, topBar, embeddedInMindMap, onAdvance }: LearnCumulativeStageProps) {
   const reportVerse = useReportFocusVerse(embeddedInMindMap);
-  // PRIOR_VERSE_INDEX stands for the learned verse just before today's lesson (see learnSteps.ts).
-  const priorVerse = usePriorLearnedVerse(day);
+  // -1 is the learned verse right before today's lesson, -2 the one before it (nearest last).
+  const priorVerses = usePriorLearnedVerses(day);
   const versesLearnedSoFar = cumulativeVerseIndices
-    .map((index) => (index === PRIOR_VERSE_INDEX ? priorVerse : day.newVerses[index]))
+    .map((index) => (index < 0 ? priorVerses[priorVerses.length + index] : day.newVerses[index]))
     .filter((verse): verse is VerseSegment => verse !== undefined);
   return (
     <>
