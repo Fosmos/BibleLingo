@@ -32,12 +32,14 @@ interface ChapterPathScreenProps {
   todaysDay: number;
   // Open straight into the next lesson (a single-verse path's "Learn just vN").
   autoStartLesson?: boolean;
+  // The chapter to open on, when not the path's own (the /review screen has no path of its own).
+  startAt?: { book: string; chapter: number };
 }
 
 // The Path tab for book, chapter and verse paths (shelf_path): shelves of book spines, and each
-// chapter as pericope cards opening into the path view, starting on your next verse's chapter. A
-// verse's lesson, review or preview runs in its own card, controls docked below (ChapterPathLesson).
-export function ChapterPathScreen({ pathKey, label, days, verses, version, completedDays, todaysDay, autoStartLesson }: ChapterPathScreenProps) {
+// chapter as pericope cards opening into the path view, starting on your next verse's chapter. Its
+// lessons, reviews and previews run in the verse's own card, controls docked below.
+export function ChapterPathScreen({ pathKey, label, days, verses, version, completedDays, todaysDay, autoStartLesson, startAt }: ChapterPathScreenProps) {
   const router = useRouter();
   const memory = useVerseMemory();
   const entities = useProgressStore((state) => state.memorizedEntities);
@@ -50,7 +52,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   const nextDay = days.find((day) => day.kind === "learn" && day.dayNumber > completedDays);
   const current = nextDay?.newVerses[0];
   const pathBook = verses[0]?.book ?? "";
-  const zoom = useBibleZoom({ book: pathBook, chapter: current?.chapter ?? verses[0]?.chapter ?? 1 });
+  const zoom = useBibleZoom(startAt ?? { book: pathBook, chapter: current?.chapter ?? verses[0]?.chapter ?? 1 });
   const [selected, setSelected] = useState<number | null>(current?.verseNumber ?? null);
   const [sheet, setSheet] = useState<ChapterLesson | null>(() =>
     autoStartLesson && nextDay && current ? { kind: "lesson", verseNumber: current.verseNumber, dayNumber: nextDay.dayNumber, mode: "select" } : null,
@@ -130,8 +132,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
     if (ids.size) startReview([...ids]);
   }
 
-  // "Learn N chosen": each run of chosen verses becomes a verse path of its own (Romans 8:5–7), all
-  // added to your active paths, and the first opens straight into its lesson.
+  // "Learn N chosen": each run of chosen verses becomes its own active verse path; the first opens.
   function learnVerses(picked: number[]) {
     const keys = verseRuns(picked).map(([start, end]) => verseRunPathKey(book, chapter, start, end));
     if (!keys.length) return;
@@ -142,8 +143,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
     router.push(verseRunPathHref(keys[0], version));
   }
 
-  // Every lesson or review (not a read-ahead preview) blanks the verses after the one being drilled,
-  // and a review its whole range too, so nothing on the path gives the answer away.
+  // Lessons and reviews (not previews) blank every verse after the drilled one; a review, its range.
   const hidesAhead = sheet !== null && sheet.kind !== "preview";
   const reviewedHere = new Set<number>();
   if (sheet?.kind === "srs") {

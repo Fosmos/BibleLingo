@@ -7,7 +7,7 @@ import type { MemorizedEntity } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { dueEntitiesInOrder } from "@/lib/srsReviewQueue";
 import { formatVerseSpanLabel, getChapterVerses } from "@/lib/chapterContent";
-import { reviewArrivalHref } from "@/lib/useReviewArrival";
+import { useReviewHref } from "@/lib/useReviewHref";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A rough review length for the header's "about N min" — a little over a minute a range.
@@ -23,13 +23,12 @@ function openingWords(entity: MemorizedEntity): string | undefined {
 }
 
 // Home's Needs reviewing box (the Organic restyle): every range due for spaced review, most
-// overdue first. A row, or "Review all", starts reviewing on the Mind Map (lib/useReviewArrival.ts);
-// each row's pin instead just takes you to that verse on the map, its review tab ready. Without an
-// active path (no map to open) everything points to the Memorized tab. Hidden when nothing is due.
+// overdue first. A row, or "Review all", starts reviewing in place on the path that range was
+// memorized on (lib/useReviewHref.ts); each row's pin instead just lands on its first verse. With no
+// path to open, everything points to the Memorized tab. Hidden when nothing is due.
 export function NeedsReviewingCard() {
   const entities = useProgressStore((state) => state.memorizedEntities);
-  const activePathKey = useProgressStore((state) => state.activePathKey);
-  const pathVersion = useProgressStore((state) => (state.activePathKey ? state.paths[state.activePathKey]?.version : undefined));
+  const reviewHref = useReviewHref();
   // When Home opened — "days late" doesn't need to tick over while it's on screen.
   const [now] = useState(() => Date.now());
   const due = useMemo(() => {
@@ -39,7 +38,8 @@ export function NeedsReviewingCard() {
   }, [entities, now]);
   if (due.length === 0) return null;
 
-  const href = (ids: string[], start: boolean) => (activePathKey && pathVersion ? reviewArrivalHref(activePathKey, pathVersion, ids, start) : "/memorized");
+  // Each range reviews in place on the path it was memorized on (lib/useReviewHref.ts).
+  const href = (ids: string[], start: boolean) => reviewHref(ids, start) ?? "/memorized";
 
   return (
     <div className="flex flex-col gap-3">

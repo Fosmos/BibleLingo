@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProgressStore } from "@/store/useProgressStore";
 import { groupHealth, type HealthSort, type HealthTone } from "@/lib/memorizedHealth";
-import { reviewArrivalHref } from "@/lib/useReviewArrival";
+import { useReviewHref } from "@/lib/useReviewHref";
 import { HealthCard } from "@/components/gamification/HealthCard";
 
 const SORTS: { id: HealthSort; label: string }[] = [
@@ -26,13 +26,13 @@ const DOT_CLASS: Record<HealthTone, string> = {
 // active path. Moving ranges between boxes by hand lives in the Mind Map's Leitner panel.
 export function MemorizedHealthList() {
   const entities = useProgressStore((state) => state.memorizedEntities);
-  const activePathKey = useProgressStore((state) => state.activePathKey);
-  const pathVersion = useProgressStore((state) => (state.activePathKey ? state.paths[state.activePathKey]?.version : undefined));
+  const reviewHref = useReviewHref();
   const [sort, setSort] = useState<HealthSort>("due");
   const [now] = useState(() => new Date());
   const groups = useMemo(() => groupHealth(entities, sort, now), [entities, sort, now]);
 
-  const href = (id: string) => (activePathKey && pathVersion ? reviewArrivalHref(activePathKey, pathVersion, [id], true) : "/memorized/review");
+  // Reviewed in place on the path it was memorized on (lib/useReviewHref.ts).
+  const href = (id: string) => reviewHref([id], true) ?? "/memorized/review";
 
   return (
     <section className="flex flex-col gap-3.5">
