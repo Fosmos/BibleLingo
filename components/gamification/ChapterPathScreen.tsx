@@ -142,9 +142,9 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
     router.push(verseRunPathHref(keys[0], version));
   }
 
-  // A review — spaced, or a finished lesson's — leaves its own verses empty, and every verse after
-  // the one being recited, so nothing on the path gives the answer away.
-  const reviewing = sheet?.kind === "srs" || (sheet?.kind === "lesson" && sheet.mode === "practice");
+  // Every lesson or review (not a read-ahead preview) blanks the verses after the one being drilled,
+  // and a review its whole range too, so nothing on the path gives the answer away.
+  const hidesAhead = sheet !== null && sheet.kind !== "preview";
   const reviewedHere = new Set<number>();
   if (sheet?.kind === "srs") {
     for (const entity of entities.filter((candidate) => sheet.entityIds.includes(candidate.id) && candidate.book === book && candidate.chapter === chapter)) {
@@ -156,7 +156,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
     }
   }
   const lessonVerse = sheet ? (followed?.verseNumber ?? sheet.verseNumber) : null;
-  const isHidden = (verseNumber: number) => reviewedHere.has(verseNumber) || (reviewing && lessonVerse !== null && verseNumber > lessonVerse);
+  const isHidden = (verseNumber: number) => reviewedHere.has(verseNumber) || (hidesAhead && lessonVerse !== null && verseNumber > lessonVerse);
 
   return (
     <div className={`flex h-[100dvh] w-full flex-col ${sheet ? "" : "-mb-28"}`}>
@@ -180,7 +180,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
               pathVerses={verses}
               statusOf={statusOf}
               selected={selected}
-              onSelect={setSelected}
+              onSelect={(verseNumber) => setSelected((prev) => (prev === verseNumber ? null : verseNumber))}
               onAction={handleAction}
               onLearn={learnVerses}
               onReview={reviewVerses}

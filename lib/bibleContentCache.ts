@@ -1,4 +1,5 @@
 import type { VerseSegment } from "@/types";
+import { hasEditorialNote, stripEditorialNotes } from "@/lib/editorialNotes";
 
 // Separate from verses:progress on purpose — this is a content cache (fetched Bible
 // text), not user progress, so it isn't versioned/reset alongside the progress schema.
@@ -69,7 +70,11 @@ function writeCache(cache: ChapterCache): void {
 // returning it as-is — makes every caller's existing "not cached, go fetch it" fallback
 // path double as a self-heal for any chapter that was cached before that fix shipped.
 function isWellFormedChapter(verses: VerseSegment[] | undefined): verses is VerseSegment[] {
-  return Array.isArray(verses) && verses.every((verse) => typeof verse?.text === "string");
+  if (!Array.isArray(verses) || !verses.every((verse) => typeof verse?.text === "string")) return false;
+  // Text cached before the ESV parser dropped translators' notes (lib/editorialNotes.ts) is
+  // cleaned in place, so Mark 16:8 reads right without a re-fetch.
+  for (const verse of verses) if (hasEditorialNote(verse.text)) verse.text = stripEditorialNotes(verse.text);
+  return true;
 }
 
 export function getCachedChapter(book: string, chapter: number): VerseSegment[] | undefined {

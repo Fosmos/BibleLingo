@@ -1,11 +1,12 @@
 import { Check, RotateCw } from "lucide-react";
-import { NODE_LANE_CLASSES } from "@/lib/chapterPathPalette";
 
 export type VerseStatus = "rooted" | "growing" | "due" | "current" | "open";
 
+// What a verse's action does, by state — on the chapter's bottom bar (VerseActionBar.tsx).
+export const ACTION_WORD: Record<VerseStatus, string> = { due: "Review", rooted: "Practise", growing: "Practise", current: "Learn", open: "Preview" };
+
 interface ChapterPathVerseNodeProps {
   verseNumber: number;
-  index: number;
   status: VerseStatus;
   selected: boolean;
   chosen: boolean;
@@ -22,9 +23,9 @@ const STATUS_CLASS: Record<VerseStatus, string> = {
   open: "border-dashed border-ink-muted bg-paper text-ink dark:bg-zinc-950 dark:text-zinc-200",
 };
 
-// A verse's node on the Chapter Path View's road — dark while selected, filled ink with a ✓ once
-// chosen to learn, a ↻ badge while its review is due.
-export function ChapterPathVerseNode({ verseNumber, index, status, selected, chosen, onSelect }: ChapterPathVerseNodeProps) {
+// A verse's node on the Chapter Path View's road — every node in one column, so the road runs
+// straight down. Dark while selected, filled ink with a ✓ once chosen, a ↻ badge while due.
+export function ChapterPathVerseNode({ verseNumber, status, selected, chosen, onSelect }: ChapterPathVerseNodeProps) {
   const look = selected
     ? "border-ink bg-ink text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
     : chosen
@@ -37,8 +38,12 @@ export function ChapterPathVerseNode({ verseNumber, index, status, selected, cho
         type="button"
         data-path-node
         aria-label={`Verse ${verseNumber}${chosen ? ", chosen" : ""}`}
-        onClick={onSelect}
-        className={`relative z-[4] flex h-[34px] w-[34px] items-center justify-center rounded-full border-[3px] p-0 font-heading text-[15px] leading-none ${NODE_LANE_CLASSES[index % NODE_LANE_CLASSES.length]} ${look}`}
+        onClick={(event) => {
+          // The row around it selects on tap too — once, not twice (selecting again deselects).
+          event.stopPropagation();
+          onSelect();
+        }}
+        className={`relative z-[4] flex h-[34px] w-[34px] items-center justify-center rounded-full border-[3px] p-0 font-heading text-[15px] leading-none ml-[15px] ${look}`}
       >
         {verseNumber}
         {badge && (

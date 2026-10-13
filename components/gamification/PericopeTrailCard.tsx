@@ -2,7 +2,6 @@
 
 import type { CSSProperties } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { VerseSegment } from "@/types";
 import type { ChapterPathGroup } from "@/lib/useChapterPathGroups";
 import { useNodeCentres } from "@/lib/useNodeCentres";
 import { cardAction, formatRuns, type MemoryState } from "@/lib/verseMemoryState";
@@ -18,8 +17,6 @@ interface PericopeTrailCardProps {
   onToggleOpen: () => void;
   selected: number | null;
   onSelect: (verseNumber: number) => void;
-  onAction: (verse: VerseSegment, status: VerseStatus) => void;
-  onToggleChosen: (verseNumber: number) => void;
   onChooseAll: (verses: number[]) => void;
   onLearn: (verses: number[]) => void;
   onReview: (verses: number[]) => void;
@@ -36,7 +33,7 @@ const PRIMARY = `${BUTTON} bg-brand-500 text-paper hover:bg-brand-600 active:bg-
 // verses; expanded, the path view's road and verse rows for just its verses. Its footer tallies the
 // verses and offers the one next step — review what's due, choose what's open, learn what's chosen.
 export function PericopeTrailCard(props: PericopeTrailCardProps) {
-  const { group, statusOf, chosen, open, onToggleOpen, selected, onSelect, onAction, onToggleChosen, onChooseAll, onLearn, onReview, lessonVerse, isHidden } = props;
+  const { group, statusOf, chosen, open, onToggleOpen, selected, onSelect, onChooseAll, onLearn, onReview, lessonVerse, isHidden } = props;
   const states = group.verses.map((verse) => [verse.verseNumber, asMemory(statusOf(verse.verseNumber))] as [number, MemoryState]);
   const tally = (state: MemoryState) => states.filter(([, s]) => s === state).length;
   const action = cardAction(states, chosen);
@@ -72,7 +69,7 @@ export function PericopeTrailCard(props: PericopeTrailCardProps) {
       {!open && <PericopeTrail verses={states} chosen={chosen} onTap={onToggleOpen} />}
 
       {open && (
-        <div ref={wrapperRef} className="relative -ml-2.5 flex flex-col gap-1">
+        <div ref={wrapperRef} className="relative -ml-2.5 flex flex-col gap-3">
           <ChapterPathRoad
             centres={centres}
             nodes={states.map(([verseNumber, state], index) => ({
@@ -81,20 +78,17 @@ export function PericopeTrailCard(props: PericopeTrailCardProps) {
               walked: index > 0 && state !== "open" && states[index - 1][1] !== "open",
             }))}
           />
-          {group.verses.map((verse, index) => {
+          {group.verses.map((verse) => {
             const status = statusOf(verse.verseNumber);
             return (
               <ChapterPathVerseRow
                 key={verse.verseNumber}
                 verse={verse}
-                index={index}
                 status={status}
                 selected={!lessonRunning && verse.verseNumber === selected}
                 inSelectedPericope
                 chosen={(status === "open" || status === "current") && chosen.has(verse.verseNumber)}
                 onSelect={() => onSelect(verse.verseNumber)}
-                onAction={() => onAction(verse, status)}
-                onChoose={() => onToggleChosen(verse.verseNumber)}
                 hostsLesson={lessonVerse === verse.verseNumber}
                 duringLesson={lessonRunning}
                 hidden={isHidden(verse.verseNumber)}

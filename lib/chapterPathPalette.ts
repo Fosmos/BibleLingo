@@ -28,6 +28,3 @@ export function firstLettersOnly(line: string): string {
     .map((word) => word.replace(/^([^A-Za-z]*)([A-Za-z])[A-Za-z’']*/, "$1$2"))
     .join(" ");
 }
-
-// The path's regular wave: each verse node's left offset in the 64px gutter, by verse index.
-export const NODE_LANE_CLASSES = ["ml-[2px]", "ml-[16px]", "ml-[30px]", "ml-[16px]"];

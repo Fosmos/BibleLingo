@@ -9,6 +9,7 @@ import { useVerseMemory, STATE_FILL } from "@/lib/useVerseMemory";
 import { heldCount } from "@/lib/verseMemoryState";
 import { PericopeTrailCard } from "@/components/gamification/PericopeTrailCard";
 import { ChapterActionBar } from "@/components/gamification/ChapterActionBar";
+import { VerseActionBar } from "@/components/gamification/VerseActionBar";
 import type { VerseStatus } from "@/components/gamification/ChapterPathVerseRow";
 
 interface ChapterPericopeLevelProps {
@@ -80,6 +81,8 @@ export function ChapterPericopeLevel(props: ChapterPericopeLevelProps) {
   const counts = memory.chapter(book, chapter);
   const due = memory.dueVerses(book, chapter, verses[verses.length - 1]?.verseNumber ?? 0);
   // A chosen verse that's since been learned drops out.
+  // The selected verse, while its card is open on screen — its actions float in the bottom bar.
+  const selectedVerse = groups.find((group) => group.key === openKey)?.verses.find((verse) => verse.verseNumber === selected);
   const chosenOpen = [...chosen].filter((verse) => statusOf(verse) === "open" || statusOf(verse) === "current").sort((a, b) => a - b);
 
   return (
@@ -110,8 +113,6 @@ export function ChapterPericopeLevel(props: ChapterPericopeLevelProps) {
             onToggleOpen={() => toggleOpen(group.key)}
             selected={selected}
             onSelect={onSelect}
-            onAction={onAction}
-            onToggleChosen={toggleChosen}
             onChooseAll={chooseAll}
             onLearn={onLearn}
             onReview={onReview}
@@ -120,7 +121,19 @@ export function ChapterPericopeLevel(props: ChapterPericopeLevelProps) {
           />
         ))}
       </div>
-      {!lessonRunning && <ChapterActionBar book={book} chapter={chapter} chosen={chosenOpen} due={due} onLearn={onLearn} onReview={onReview} />}
+      {!lessonRunning &&
+        (selectedVerse ? (
+          <VerseActionBar
+            verse={selectedVerse}
+            status={statusOf(selectedVerse.verseNumber)}
+            chosen={chosen.has(selectedVerse.verseNumber)}
+            onAction={() => onAction(selectedVerse, statusOf(selectedVerse.verseNumber))}
+            onChoose={() => toggleChosen(selectedVerse.verseNumber)}
+            onClose={() => onSelect(selectedVerse.verseNumber)}
+          />
+        ) : (
+          <ChapterActionBar book={book} chapter={chapter} chosen={chosenOpen} due={due} onLearn={onLearn} onReview={onReview} />
+        ))}
     </div>
   );
 }

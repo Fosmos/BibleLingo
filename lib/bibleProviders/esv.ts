@@ -1,6 +1,7 @@
 // SERVER ONLY — reads ESV_API_KEY. Never import this from a "use client" component;
 // only app/api/bible/chapter/route.ts (a server-only Route Handler) should call it.
 import type { BibleBook } from "@/types";
+import { stripEditorialNotes } from "@/lib/editorialNotes";
 
 const ESV_API_BASE = "https://api.esv.org/v3/passage/text";
 
@@ -24,10 +25,8 @@ function parseEsvPassage(text: string): string[] {
   const verses: string[] = [];
   markers.forEach((marker, index) => {
     const nextStart = markers[index + 1]?.start ?? text.length;
-    const segmentText = text
-      .slice(marker.end, nextStart)
-      .replace(/\s+/g, " ")
-      .trim();
+    // Without a translators' note riding along (Mark 16:8's "[Some of the earliest manuscripts…]").
+    const segmentText = stripEditorialNotes(text.slice(marker.end, nextStart));
     // A combined range shares its text across every verse number it covers, so the
     // returned array stays index-aligned with verse numbers (verse N at index N-1) —
     // every downstream lookup (chapter slicing, SRS ranges) depends on that alignment.
