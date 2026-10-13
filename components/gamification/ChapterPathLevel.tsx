@@ -3,8 +3,8 @@
 import type { VerseSegment } from "@/types";
 import { chapterPathVerses } from "@/lib/chapterPathVerses";
 import { useChapterText } from "@/lib/useChapterText";
-import { ChapterPericopeLevel } from "@/components/gamification/ChapterPericopeLevel";
-import type { VerseStatus } from "@/components/gamification/ChapterPathVerseRow";
+import { ChapterSenseReader } from "@/components/gamification/ChapterSenseReader";
+import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface ChapterPathLevelProps {
@@ -17,16 +17,15 @@ interface ChapterPathLevelProps {
   selected: number | null;
   onSelect: (verseNumber: number) => void;
   onAction: (verse: VerseSegment, status: VerseStatus) => void;
-  onLearn: (verses: number[]) => void;
-  onReview: (verses: number[]) => void;
-  onBack: () => void;
+  onBible: () => void;
+  onBook: () => void;
   lessonVerse: number | null;
   isHidden: (verseNumber: number) => boolean;
 }
 
-// The Path tab's chapter level — one chapter as pericope cards (ChapterPericopeLevel.tsx), anywhere
-// in the Bible: the path's own chapters straight from its verses, any other chapter fetched in its
-// translation. Keyed by chapter so its open card and chosen verses start fresh on each.
+// The Path tab's chapter level — one chapter's reader (ChapterSenseReader.tsx), anywhere in the
+// Bible: the path's own chapters straight from its verses, any other chapter fetched in its
+// translation. Keyed by chapter so each opens fresh.
 export function ChapterPathLevel({ book, chapter, version, pathVerses, ...view }: ChapterPathLevelProps) {
   const onPath = pathVerses.some((verse) => verse.book === book && verse.chapter === chapter);
   const loaded = useChapterText(book, chapter, version, onPath);
@@ -34,5 +33,5 @@ export function ChapterPathLevel({ book, chapter, version, pathVerses, ...view }
 
   if (loaded.error) return <FetchError message={loaded.error} />;
   if (!verses) return <FetchLoading label={`Loading ${book} ${chapter}…`} />;
-  return <ChapterPericopeLevel key={`${book}|${chapter}`} book={book} chapter={chapter} verses={verses} {...view} />;
+  return <ChapterSenseReader key={`${book}|${chapter}`} book={book} chapter={chapter} version={version} verses={verses} {...view} />;
 }

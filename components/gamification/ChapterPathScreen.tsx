@@ -5,22 +5,20 @@ import { useRouter } from "next/navigation";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
-import { isDue } from "@/lib/srs";
 import { useVerseMemory } from "@/lib/useVerseMemory";
-import { verseRuns } from "@/lib/verseMemoryState";
-import { verseRunPathHref, verseRunPathKey } from "@/lib/singleVersePath";
+import type { VerseStatus } from "@/lib/readerVerseStatus";
+import { singleVersePathHref } from "@/lib/singleVersePath";
 import { useBibleZoom } from "@/lib/useBibleZoom";
 import { useHideTabBarWhile } from "@/lib/useHideTabBarWhile";
 import { useReviewArrival } from "@/lib/useReviewArrival";
 import { usePracticeArrival } from "@/lib/usePracticeArrival";
 import { findVerseLessonDay } from "@/lib/verseLessonAction";
-import { BibleBreadcrumbs } from "@/components/gamification/BibleBreadcrumbs";
-import { BibleZoomLayer } from "@/components/gamification/BibleZoomLayer";
-import { BibleShelves } from "@/components/gamification/BibleShelves";
+import { BibleProgressLevel } from "@/components/gamification/BibleProgressLevel";
+import { BookProgressLevel } from "@/components/gamification/BookProgressLevel";
 import { ChapterPathLevel } from "@/components/gamification/ChapterPathLevel";
 import { ChapterPathLesson, type ChapterLesson } from "@/components/gamification/ChapterPathLesson";
 import { MindMapSheetBreadcrumb } from "@/components/gamification/MindMapSheetBreadcrumb";
-import type { VerseStatus } from "@/components/gamification/ChapterPathVerseRow";
+import type { ProgressFilter } from "@/lib/bibleProgress";
 
 interface ChapterPathScreenProps {
   pathKey: string;
@@ -36,15 +34,13 @@ interface ChapterPathScreenProps {
   startAt?: { book: string; chapter: number };
 }
 
-// The Path tab for book, chapter and verse paths (shelf_path): shelves of book spines, and each
-// chapter as pericope cards opening into the path view, starting on your next verse's chapter. Its
-// lessons, reviews and previews run in the verse's own card, controls docked below.
+// The Path tab for book, chapter and verse paths (design_handoff_bible_progress): the whole Bible as
+// circles, a book's chapters as circles, and a chapter in sense lines — opening on your next verse's
+// chapter. Lessons and reviews run in place in the verse's own row, controls docked below.
 export function ChapterPathScreen({ pathKey, label, days, verses, version, completedDays, todaysDay, autoStartLesson, startAt }: ChapterPathScreenProps) {
   const router = useRouter();
   const memory = useVerseMemory();
   const entities = useProgressStore((state) => state.memorizedEntities);
-  const setPath = useProgressStore((state) => state.setPath);
-  const setActivePath = useProgressStore((state) => state.setActivePath);
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const focusVerse = useLessonSessionStore((state) => state.focusVerse);
   const clearFocusVerse = useLessonSessionStore((state) => state.clearFocusVerse);
@@ -54,6 +50,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   const pathBook = verses[0]?.book ?? "";
   const zoom = useBibleZoom(startAt ?? { book: pathBook, chapter: current?.chapter ?? verses[0]?.chapter ?? 1 });
   const [selected, setSelected] = useState<number | null>(current?.verseNumber ?? null);
+  const [filter, setFilter] = useState<ProgressFilter>("all");
   const [sheet, setSheet] = useState<ChapterLesson | null>(() =>
     autoStartLesson && nextDay && current ? { kind: "lesson", verseNumber: current.verseNumber, dayNumber: nextDay.dayNumber, mode: "select" } : null,
   );
@@ -122,25 +119,10 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
       if (day && day.dayNumber <= completedDays) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "practice" });
     }
     if (status === "current" && day) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "select" });
-    setSheet({ kind: "preview", verseNumber, verse });
-  }
-
-  // A pericope card's or the action bar's "Review": every due range touching those verses, in place.
-  function reviewVerses(picked: number[]) {
-    const now = new Date();
-    const ids = new Set(picked.flatMap((verseNumber) => covering(verseNumber).filter((entity) => isDue(entity.srs, now)).map((entity) => entity.id)));
-    if (ids.size) startReview([...ids]);
-  }
-
-  // "Learn N chosen": each run of chosen verses becomes its own active verse path; the first opens.
-  function learnVerses(picked: number[]) {
-    const keys = verseRuns(picked).map(([start, end]) => verseRunPathKey(book, chapter, start, end));
-    if (!keys.length) return;
-    keys.slice(1).forEach((key) => {
-      setPath(key, version);
-      setActivePath(key);
-    });
-    router.push(verseRunPathHref(keys[0], version));
+    // Known but with no review or lesson to run here: read and listen to it.
+    if (status !== "open" && status !== "current") return setSheet({ kind: "preview", verseNumber, verse });
+    // Learn on a verse that isn't the path's next one: that verse as a path of its own, straight into its lesson.
+    router.push(singleVersePathHref(verse.book, verse.chapter, verseNumber, version));
   }
 
   // Lessons and reviews (not previews) blank every verse after the drilled one; a review, its range.
@@ -158,38 +140,37 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   const lessonVerse = sheet ? (followed?.verseNumber ?? sheet.verseNumber) : null;
   const isHidden = (verseNumber: number) => reviewedHere.has(verseNumber) || (hidesAhead && lessonVerse !== null && verseNumber > lessonVerse);
 
+  const { place } = zoom;
   return (
     <div className={`flex h-[100dvh] w-full flex-col ${sheet ? "" : "-mb-28"}`}>
-      {!sheet && (
-        <BibleBreadcrumbs
-          crumbs={["The Bible", `${zoom.place.book} ${zoom.place.chapter}`]}
-          level={zoom.level}
-          onSelect={(level) => (level === 0 ? zoom.toShelves() : openChapter(zoom.place.book, zoom.place.chapter))}
-        />
-      )}
-      <div data-zoom-stage className="relative min-h-0 flex-1 overflow-hidden">
-        <BibleZoomLayer depth={0} level={zoom.level} origin={undefined}>
-          <BibleShelves openBook={zoom.openBook} onToggleBook={zoom.setOpenBook} onOpenChapter={(inBook, inChapter) => openVerse(inBook, inChapter, current?.book === inBook && current.chapter === inChapter ? current.verseNumber : null)} />
-        </BibleZoomLayer>
-        <BibleZoomLayer depth={1} level={zoom.level} origin={undefined} className="flex flex-col">
-          {zoom.level === 1 && (
-            <ChapterPathLevel
-              book={book}
-              chapter={chapter}
-              version={version}
-              pathVerses={verses}
-              statusOf={statusOf}
-              selected={selected}
-              onSelect={(verseNumber) => setSelected((prev) => (prev === verseNumber ? null : verseNumber))}
-              onAction={handleAction}
-              onLearn={learnVerses}
-              onReview={reviewVerses}
-              onBack={zoom.toShelves}
-              lessonVerse={lessonVerse}
-              isHidden={isHidden}
-            />
-          )}
-        </BibleZoomLayer>
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {zoom.level === 0 && <BibleProgressLevel filter={filter} onFilter={setFilter} hereBook={pathBook} onOpenBook={zoom.openBook} />}
+        {zoom.level === 1 && (
+          <BookProgressLevel
+            book={place.book}
+            filter={filter}
+            onFilter={setFilter}
+            hereChapter={place.book === current?.book ? current.chapter : null}
+            onBible={zoom.toBible}
+            onOpenChapter={(inChapter) => openVerse(place.book, inChapter, current?.book === place.book && current.chapter === inChapter ? current.verseNumber : null)}
+          />
+        )}
+        {zoom.level === 2 && (
+          <ChapterPathLevel
+            book={book}
+            chapter={chapter}
+            version={version}
+            pathVerses={verses}
+            statusOf={statusOf}
+            selected={selected}
+            onSelect={setSelected}
+            onAction={handleAction}
+            onBible={zoom.toBible}
+            onBook={zoom.toBook}
+            lessonVerse={lessonVerse}
+            isHidden={isHidden}
+          />
+        )}
       </div>
       {sheet && <ChapterPathLesson lesson={sheet} page={{ pathKey, label, days, verses, version, completedDays, todaysDay }} onClose={closeLesson} />}
       {sheet && focusVerse && (

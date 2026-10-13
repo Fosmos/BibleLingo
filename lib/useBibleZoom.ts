@@ -2,31 +2,29 @@
 
 import { useState } from "react";
 
-// 0 — the shelves; 1 — a chapter's pericope cards.
-export type ZoomLevel = 0 | 1;
+// 0 — the whole Bible; 1 — one book's chapters; 2 — one chapter's reader.
+export type ZoomLevel = 0 | 1 | 2;
 
 export interface BiblePlace {
   book: string;
   chapter: number;
 }
 
-// The Path tab's two levels (shelf_path): where you are, and which book's chapter drawer is pulled
-// out on the shelves. Opens on the chapter; backing out keeps that book's drawer open.
+// The Path tab's three levels (design_handoff_bible_progress) and where you are in them. Opens on
+// the chapter reader; the breadcrumbs step back out to the book or the whole Bible.
 export function useBibleZoom(start: BiblePlace) {
-  const [level, setLevel] = useState<ZoomLevel>(1);
+  const [level, setLevel] = useState<ZoomLevel>(2);
   const [place, setPlace] = useState<BiblePlace>(start);
-  const [openBook, setOpenBook] = useState<string | null>(start.book || null);
 
-  function openChapter(book: string, chapter: number) {
-    setPlace({ book, chapter });
-    setOpenBook(book);
+  function openBook(book: string) {
+    setPlace((prev) => ({ book, chapter: prev.book === book ? prev.chapter : 1 }));
     setLevel(1);
   }
 
-  function toShelves() {
-    setOpenBook(place.book);
-    setLevel(0);
+  function openChapter(book: string, chapter: number) {
+    setPlace({ book, chapter });
+    setLevel(2);
   }
 
-  return { level, place, openBook, setOpenBook, openChapter, toShelves };
+  return { level, place, openBook, openChapter, toBible: () => setLevel(0), toBook: () => setLevel(1) };
 }

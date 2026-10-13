@@ -25,6 +25,8 @@ export async function ensureChapterLoaded(book: string, chapter: number, version
   const cached = getCachedChapter(book, chapter);
   if (cached && getCachedChapterVersion(book, chapter) === version) {
     if (version === "ESV") touchEsvChapter(book, chapter, cached.length);
+    // Its length outlives the cached text (lib/chapterVerseIndex.ts), so record it on a cache hit too.
+    recordChapterVerses(book, chapter, cached);
     return cached;
   }
   const requestKey = `${book}|${chapter}|${version}`;
