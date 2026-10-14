@@ -9,6 +9,9 @@ export interface SheetStage {
   steps: number;
   // No stage label — just the reference, beside the close button (spaced review).
   compact?: boolean;
+  // A spaced review's live score (0–100) and the score that moves it up a box (SrsAccuracyTracker.tsx).
+  accuracy?: number;
+  threshold?: number;
 }
 
 export interface LessonFocusVerse {

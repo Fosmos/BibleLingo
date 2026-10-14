@@ -14,7 +14,7 @@ interface VerseTextLineProps {
 // lines instead of two labeled ones around a bare one.
 export function VerseTextLine({ chapter, verseNumber }: VerseTextLineProps) {
   return (
-    <span className="font-semibold text-ink-muted dark:text-zinc-500">
+    <span className="font-semibold text-ink-muted dark:text-zinc-500 [.path-lesson-verse_&]:hidden">
       {chapter}:{verseNumber}{" "}
     </span>
   );

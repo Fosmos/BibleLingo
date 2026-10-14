@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
@@ -17,6 +17,7 @@ import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
 import { BookMindMapWithLessonSheet } from "@/components/gamification/BookMindMapWithLessonSheet";
 import { ChapterPathScreen } from "@/components/gamification/ChapterPathScreen";
+import { PathTrailScreen } from "@/components/gamification/PathTrailScreen";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
 interface PathOverviewScreenProps {
@@ -27,11 +28,12 @@ interface PathOverviewScreenProps {
   startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
   // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once (PathProgress.priorKnownVerseCount).
   priorKnownVerseCount?: number;
-  // "map" — the Mind Map tab (app/path/[key]/map); otherwise the Path tab's chapter path view.
-  view?: "path" | "map";
+  // "path" — the Path tab's trail; "reader" — the Memorized tab's reader; "map" — the Mind Map tab.
+  view?: "path" | "reader" | "map";
+  bibleFooter?: ReactNode;
 }
 
-export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount, view = "path" }: PathOverviewScreenProps) {
+export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount, view = "path", bibleFooter }: PathOverviewScreenProps) {
   // `verses` is seeded from the localStorage cache (empty during SSR) — gating on `mounted` keeps the first paint stable.
   const mounted = useHasMounted();
   const plan = useProgressStore((state) => state.paths[key]);
@@ -89,16 +91,12 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     if (!verses) return;
     const versesPerDayChanged = versesPerDay !== undefined && plan?.versesPerDay !== versesPerDay;
     if (!plan || plan.version !== version || versesPerDayChanged) {
-      // How many auto-completed days that prior-known verse count actually becomes (see
-      // lib/dayPlan.ts's own doc comment — book mode's own prefix can span several chapters,
-      // one day each, not always just one) — computed here, the one place this effect already
-      // has both the real `verses` AND this path's own `kind` in hand.
+      // How many auto-completed days the prior-known verses become (lib/dayPlan.ts — book mode's prefix can span chapters).
       const priorKnownDays = priorKnownVerseCount ? priorKnownDayCount(verses, priorKnownVerseCount, parsePathKey(key).kind) : 0;
       setPath(key, version, versesPerDay, priorKnownVerseCount, priorKnownDays);
     }
   }, [plan, verses, key, version, versesPerDay, priorKnownVerseCount, setPath]);
   const pericopesReady = usePericopesReady(verses);
-  // Wins over every other early return below — the only one identical between server/client.
   if (!mounted) return <FetchLoading label={`Loading ${label}…`} />;
 
   if (error) {
@@ -122,7 +120,6 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   const activeDay = activeDayNumber(plan, now);
   const todaysDay = todaysDayNumber(plan, now);
   const { kind } = parsePathKey(key);
-  // Wins over everything below — stays mounted here until it exits.
   if (lessonDay) {
     return (
       <InPlaceLessonSession
@@ -140,10 +137,13 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
 
-  // Book, chapter and verse paths: the Path tab's chapter path view (ChapterPathScreen.tsx), or
-  // the Mind Map tab's canon view (BookMindMapWithLessonSheet.tsx). Topic paths get the day list.
+  // Every path kind: the Path tab's trail, or the Memorized tab's reader. Book, chapter and verse
+  // paths get the Mind Map tab's canon view; a topic path's map view is its day list.
+  if (view === "path") {
+    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesPerDay={plan.versesPerDay} />;
+  }
   const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
-  if (onMindMap && view === "path") {
+  if (view === "reader") {
     return (
       <ChapterPathScreen
         key={key}
@@ -155,6 +155,8 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
         completedDays={plan.completedDays}
         todaysDay={todaysDay}
         autoStartLesson={startLesson}
+        startOnBible={!startLesson}
+        bibleFooter={bibleFooter}
       />
     );
   }
@@ -176,7 +178,6 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   }
 
   const { visibleDays, title, chapterMemorizedFraction, onNextChapter, onPreviousChapter } = resolveBookChapterView(kind, days, plan, todaysDay, label, chapterOverride, setChapterOverride);
-
   const diagram = (
     <DayPathDiagram
       label={title}

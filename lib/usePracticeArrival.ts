@@ -6,7 +6,8 @@ import { useEffect, useRef } from "react";
 // `?practiceDay=<day>`: once, on arrival, hands that day to `startPractice` so its review runs on
 // the path — in place, like a spaced review.
 export function practiceArrivalHref(pathKey: string, version: string, dayNumber: number): string {
-  return `/path/${encodeURIComponent(pathKey)}?${new URLSearchParams({ version, practiceDay: String(dayNumber) })}`;
+  // The Memorized tab's chapter reader, where lessons and reviews run in place.
+  return `/memorized?${new URLSearchParams({ path: pathKey, version, practiceDay: String(dayNumber) })}`;
 }
 
 export function usePracticeArrival(startPractice: (dayNumber: number) => void): void {

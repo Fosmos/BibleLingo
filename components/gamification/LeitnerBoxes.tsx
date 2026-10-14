@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type { MemorizedEntity } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { formatVerseSpanLabel } from "@/lib/chapterContent";
-import { BOX_INTERVAL_DAYS, BOX_ORDER, boxDisplayNumber, formatNextReview } from "@/lib/srs";
+import { BOX_ORDER, boxDisplayNumber, boxIntervalLabel, formatNextReview } from "@/lib/srs";
 
 const MOVE_CLASS =
   "flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink-muted hover:bg-mist disabled:opacity-30 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800";
@@ -28,13 +28,12 @@ export function LeitnerBoxes() {
     <div className="flex flex-col gap-3">
       {BOX_ORDER.map((box, position) => {
         const boxEntities = entities.filter((entity) => entity.srs.box === box);
-        const days = BOX_INTERVAL_DAYS[box];
         return (
           <div key={box} className="flex flex-col gap-2 rounded-xl bg-white p-3 dark:bg-zinc-800">
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-sm font-semibold text-ink dark:text-zinc-200">Box {boxDisplayNumber(box)}</p>
               <p className="text-xs text-ink-muted">
-                Every {days} day{days === 1 ? "" : "s"} · {boxEntities.length}
+                {boxIntervalLabel(box)} · {boxEntities.length}
               </p>
             </div>
             {boxEntities.length === 0 ? (

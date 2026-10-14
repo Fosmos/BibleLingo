@@ -7,7 +7,8 @@ interface VerseNumberMarkerProps {
 
 // Inline verse-number marker shown wherever a new verse starts within a multi-verse joined
 // segment (see lib/verseBatching.ts's verseNumberMarkers) — matches VerseTextLine's muted
-// styling so it reads as the same kind of navigational cue, not memorization content.
+// styling so it reads as the same kind of navigational cue, not memorization content. Hidden in a
+// lesson on the Path tab's reader, whose verse rows already show each verse's number.
 export function VerseNumberMarker({ number, className }: VerseNumberMarkerProps) {
-  return <span className={className ?? "font-semibold text-ink-muted dark:text-zinc-500"}>{number}</span>;
+  return <span className={`${className ?? "font-semibold text-ink-muted dark:text-zinc-500"} [.path-lesson-verse_&]:hidden`}>{number}</span>;
 }

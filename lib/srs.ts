@@ -2,7 +2,7 @@ import type { SRSState, SrsBox } from "@/types";
 import { rateSrsReview, RATING_BOX_STEP } from "@/lib/srsRating";
 
 // Leitner-box review cadence ("Sword of the Spirit" — see components/gamification/
-// SwordOfTheSpirit.tsx): 5 boxes, each with its own fixed interval. A review's first-letter-
+// SwordOfTheSpirit.tsx): 6 boxes, each with its own fixed interval. A review's first-letter-
 // typing accuracy is first turned into a graduated Again/Hard/Good/Easy rating (see
 // lib/srsRating.ts's rateSrsReview) and moves the entity by that rating's own number of boxes
 // (RATING_BOX_STEP) — a critical miss (Again) steps back two, an ordinary miss (Hard) steps
@@ -20,19 +20,21 @@ import { rateSrsReview, RATING_BOX_STEP } from "@/lib/srsRating";
 // reinterpreting them would silently change an existing entity's cadence. So `SrsBox` ids are
 // NOT in ascending-interval order; BOX_ORDER below is. The "Box N" number shown to the user
 // (see boxDisplayNumber) is sequential by position in BOX_ORDER, not the raw id, so what's
-// displayed always reads as ascending review frequency regardless of this id history.
+// displayed always reads as ascending review frequency regardless of this id history. The
+// every-2-months box (id 6) was added last, after the monthly one, and sits at the end.
 export const BOX_INTERVAL_DAYS: Record<SrsBox, number> = {
   1: 1,
   5: 3,
   2: 7,
   3: 14,
   4: 30,
+  6: 60,
 };
 
 // The ascending promotion order, by id — see the id-vs-display-number note above. Anything
 // that needs to walk every box in cadence order (e.g. SwordOfTheSpirit.tsx's overview, or
 // promotion below) should use this instead of assuming ids are already in order.
-export const BOX_ORDER: SrsBox[] = [1, 5, 2, 3, 4];
+export const BOX_ORDER: SrsBox[] = [1, 5, 2, 3, 4, 6];
 
 export const PROMOTION_ACCURACY_THRESHOLD = 90;
 
@@ -44,9 +46,10 @@ function stepBox(box: SrsBox, steps: number): SrsBox {
   return BOX_ORDER[clamped];
 }
 
-// The "Box N" number shown to the user — sequential by position in BOX_ORDER (1-5), not the
+// The "Box N" number shown to the user — sequential by position in BOX_ORDER (1-6), not the
 // internal SrsBox id, so the displayed numbers always read as ascending review frequency:
-// Box 1 (daily), Box 2 (every 3 days), Box 3 (weekly), Box 4 (biweekly), Box 5 (monthly).
+// Box 1 (daily), Box 2 (every 3 days), Box 3 (weekly), Box 4 (biweekly), Box 5 (monthly),
+// Box 6 (every 2 months).
 export function boxDisplayNumber(box: SrsBox): number {
   return BOX_ORDER.indexOf(box) + 1;
 }
@@ -72,7 +75,7 @@ export function createInitialSRSState(now: Date = new Date()): SRSState {
 }
 
 function isValidBox(value: unknown): value is SrsBox {
-  return value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
+  return value === 1 || value === 2 || value === 3 || value === 4 || value === 5 || value === 6;
 }
 
 // accuracy is the 0-100 score from the review's first-letter-typing drill (see
@@ -123,9 +126,18 @@ export function formatNextReview(nextDueAt: string | null, now: Date = new Date(
   return `Next review in ${days} days`;
 }
 
-export type SrsPhase = "daily" | "every3days" | "weekly" | "biweekly" | "monthly";
+export type SrsPhase = "daily" | "every3days" | "weekly" | "biweekly" | "monthly" | "bimonthly";
 
-const PHASE_BOX: Record<SrsPhase, SrsBox> = { daily: 1, every3days: 5, weekly: 2, biweekly: 3, monthly: 4 };
+const PHASE_BOX: Record<SrsPhase, SrsBox> = { daily: 1, every3days: 5, weekly: 2, biweekly: 3, monthly: 4, bimonthly: 6 };
+
+// A box's cadence in words: "Every day", "Every 3 days", … "Every 2 months".
+export function boxIntervalLabel(box: SrsBox): string {
+  const days = BOX_INTERVAL_DAYS[box];
+  if (days === 1) return "Every day";
+  if (days === 60) return "Every 2 months";
+  if (days === 30) return "Every month";
+  return `Every ${days} days`;
+}
 
 // Lets a manually-added "I already knew this" entry seed straight into whichever box
 // matches how well the user says they already know it, instead of starting at Box 1.

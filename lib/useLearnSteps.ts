@@ -7,7 +7,7 @@ import { buildSteps, type FlatStep } from "@/lib/learnSteps";
 // Reads every per-reader Learn-stage toggle (Profile > Advanced) and builds this day's own
 // flat step list from them — split out of LearnSection.tsx purely to keep that file under
 // this codebase's 200-line cap.
-// `priorCount`: how many learned verses sit just before this lesson (0–2 — see learnSteps.ts).
+// `priorCount`: how many learned verses sit just before this lesson (0–3 — see learnSteps.ts).
 export function useLearnSteps(realVerseIndices: number[], priorCount: number): FlatStep[] {
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);

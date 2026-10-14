@@ -17,7 +17,7 @@ import { BIBLE_VERSIONS } from "@/lib/bibleVersions";
 
 interface MindMapPathPickerProps {
   // Topics are verses from all over Scripture, so they have no single place on the map — this
-  // opens their own list instead (see BeginFlow.tsx).
+  // opens their own list instead (the topic list).
   onChooseTopic: () => void;
 }
 

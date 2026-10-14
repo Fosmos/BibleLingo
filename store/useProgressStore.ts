@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -36,6 +36,7 @@ interface ProgressActions {
   setActivePath: (pathKey: string) => void;
   removeActivePath: (pathKey: string) => void;
   retireLearnedPath: (pathKey: string) => void;
+  setPathReminder: (pathKey: string, reminder: PathReminder) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;

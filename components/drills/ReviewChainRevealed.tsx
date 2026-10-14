@@ -61,7 +61,7 @@ export function ReviewChainRevealed({ verses, combinedWords, revealedCount }: Re
         const groupVerse = verses[group.verseIndex];
         return (
           <p key={group.verseIndex} className="text-lg leading-relaxed">
-            <span className="mr-2 align-top text-sm font-semibold text-ink-muted">
+            <span className="mr-2 align-top text-sm font-semibold text-ink-muted [.path-lesson-verse_&]:hidden">
               {groupVerse.chapter}:{groupVerse.verseNumber}
             </span>
             {group.words.map((slot) => (

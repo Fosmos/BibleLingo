@@ -17,6 +17,8 @@ import { ReviewChain } from "@/components/drills/ReviewChain";
 import { FirstLetterSpeakRep } from "@/components/drills/FirstLetterSpeakRep";
 import { SrsInputModeToggle } from "@/components/gamification/SrsInputModeToggle";
 import { joinVerses, verseNumberMarkers } from "@/lib/verseBatching";
+import { tokenizeVerseWords } from "@/lib/verseWords";
+import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 import { LessonChrome } from "@/components/gamification/LessonChrome";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
@@ -40,6 +42,7 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   const recordSrsReview = useProgressStore((state) => state.recordSrsReview);
   const includeVerseReferences = useProgressStore((state) => state.includeVerseReferences);
   const speakMode = useProgressStore((state) => state.srsSpeakModeEnabled);
+  const threshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   const reportVerse = useReportFocusVerse(true);
   const { pending, celebrate, finish } = useCelebration();
@@ -51,7 +54,15 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   const current = entityIds.findIndex((id, position) => position >= index && entities.some((candidate) => candidate.id === id));
   const entity = current === -1 ? undefined : entities.find((candidate) => candidate.id === entityIds[current]);
   const { saveIndex, saveProgress, finish: finishRun } = run;
-  const onProgress = useCallback((progress: ReviewChainProgress) => saveProgress(current, progress), [current, saveProgress]);
+  // Words missed so far in the range being typed — the header's live score (SrsAccuracyTracker.tsx).
+  const [missed, setMissed] = useState<{ index: number; count: number }>({ index: -1, count: 0 });
+  const onProgress = useCallback(
+    (progress: ReviewChainProgress) => {
+      saveProgress(current, progress);
+      setMissed({ index: current, count: progress.wrongWordIndices.length });
+    },
+    [current, saveProgress],
+  );
   useEffect(() => {
     if (current !== -1) saveIndex(current);
   }, [current, saveIndex]);
@@ -100,9 +111,15 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
     entity && focusVerse && focusVerse.book === entity.book && focusVerse.chapter === entity.chapter && focusVerse.verseNumber >= entity.startVerse && focusVerse.verseNumber <= entity.endVerse
       ? focusVerse.verseNumber
       : entity?.startVerse;
+  // The live score, worked out exactly as the final one (ReviewChain.tsx): words right first try out
+  // of the whole range. Typing only — a spoken review scores as it goes in its own drill.
+  const rangeWords = entity && loadedForId === entity.id ? applyReferencePreference(chapterVerses.slice(entity.startVerse - 1, entity.endVerse), includeVerseReferences) : [];
+  const totalWords = rangeWords.reduce((sum, verse) => sum + tokenizeVerseWords(verse.text).length, 0);
+  const wrongSoFar = missed.index === current ? missed.count : (run.progressFor(current)?.wrongWordIndices.length ?? 0);
+  const accuracy = !speakMode && totalWords ? Math.max(0, Math.round(((totalWords - wrongSoFar) / totalWords) * 100)) : undefined;
   useReportSheetStage(
     entity && currentVerseNumber !== undefined
-      ? { label: "Spaced review", reference: formatVerseSpanLabel(entity.book, entity.chapter, currentVerseNumber, currentVerseNumber), step: current, steps: entityIds.length, compact: true }
+      ? { label: "Spaced review", reference: formatVerseSpanLabel(entity.book, entity.chapter, currentVerseNumber, currentVerseNumber), step: current, steps: entityIds.length, compact: true, accuracy, threshold }
       : null,
     true,
   );

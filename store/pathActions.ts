@@ -1,5 +1,5 @@
 import type { StoreApi } from "zustand";
-import type { PathProgress, UserProgress } from "@/types";
+import type { PathProgress, UserProgress, PathReminder } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 import { activePathKeysOf } from "@/lib/activePaths";
 import { syncMemorizedEntities } from "@/lib/memorizedEntities";
@@ -26,6 +26,8 @@ interface PathActions {
   // completed before finished paths retired themselves: drops it, and makes sure its verses are in
   // spaced review.
   retireLearnedPath: (pathKey: string) => void;
+  // A path's daily reminder choice (types/index.ts's PathReminder) — saved only, for now.
+  setPathReminder: (pathKey: string, reminder: PathReminder) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -103,6 +105,11 @@ export function createPathActions(
       get().removeActivePath(pathKey);
       const state = get();
       set(persist({ ...state, memorizedEntities: syncMemorizedEntities(state.paths, state.memorizedEntities) }));
+    },
+
+    setPathReminder: (pathKey, reminder) => {
+      const state = get();
+      set(persist({ ...state, pathReminders: { ...(state.pathReminders ?? {}), [pathKey]: reminder } }));
     },
 
     removeActivePath: (pathKey) => {

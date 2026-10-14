@@ -8,8 +8,11 @@ import { useLineFit } from "@/lib/useLineFit";
 import { firstLettersOnly } from "@/lib/chapterPathPalette";
 import { FIRST_LETTER_TEXT_SPACING_CLASS } from "@/lib/firstLetterGap";
 import { PathLessonVerseSlot } from "@/components/gamification/PathLessonVerseSlot";
+import { SrsSeal } from "@/components/ui/SrsSeal";
 
 interface ReaderVerseRowProps {
+  // "Book|chapter|verse" — how the continuous reader finds and anchors rows across chapters.
+  rowKey: string;
   verse: VerseSegment;
   status: VerseStatus;
   selected: boolean;
@@ -20,7 +23,15 @@ interface ReaderVerseRowProps {
   duringLesson: boolean;
   // Mid-lesson or review, a verse not reached yet (or in the review's range): left blank.
   hidden: boolean;
+  // Where this verse sits in a run of highlighted verses (a several-verse lesson), so the run
+  // reads as one block: rounded only at its ends, one unbroken left bar.
+  run?: "single" | "first" | "middle" | "last";
+  // The verse's spaced-review seal (1–6, lib/srsSeals.ts), when it's in review.
+  seal?: number | null;
 }
+
+const RUN_SHAPE = { single: "rounded-[20px]", first: "rounded-t-[20px]", middle: "rounded-none", last: "rounded-b-[20px]" };
+const RUN_BAR = { single: "top-3 bottom-3", first: "top-3 bottom-0 rounded-b-none", middle: "top-0 bottom-0 rounded-none", last: "top-0 bottom-3 rounded-t-none" };
 
 const NUMBER_CLASS: Record<VerseStatus, string> = {
   rooted: "bg-sage-700 text-white",
@@ -33,33 +44,42 @@ const NUMBER_CLASS: Record<VerseStatus, string> = {
 // One verse in the chapter reader (design_handoff_bible_progress): its number circle, coloured by
 // state, beside its sense lines — fitted to the column at one fixed size (lib/fitSenseLines.ts).
 // Selecting tints the row and adds a left bar without moving anything.
-export function ReaderVerseRow({ verse, status, selected, onSelect, hostsLesson, duringLesson, hidden }: ReaderVerseRowProps) {
+export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, hostsLesson, duringLesson, hidden, run = "single", seal = null }: ReaderVerseRowProps) {
   const [textRef, measure, width] = useLineFit<HTMLDivElement>();
   const lettersOnly = duringLesson && status !== "open" && status !== "current";
+  // The selected verse — and the verse a lesson or review is running on — carries the highlight.
+  const highlighted = selected || hostsLesson;
   const lines = fitSenseLines(parseToSenseLines(verse.text), measure, width).map((line) => (lettersOnly ? firstLettersOnly(line) : line));
 
   return (
     <div
-      data-verse={verse.verseNumber}
+      data-verse-key={rowKey}
       onClick={hostsLesson ? undefined : onSelect}
-      className={`relative grid cursor-pointer grid-cols-[30px_minmax(0,1fr)] gap-3 rounded-[20px] px-3.5 py-2 ${selected && !hostsLesson ? "bg-sage-200/55 dark:bg-sage-900/40" : ""}`}
+      className={`relative grid cursor-pointer grid-cols-[30px_minmax(0,1fr)] gap-3 px-3.5 py-2 ${highlighted ? RUN_SHAPE[run] : "rounded-[20px]"} ${highlighted ? "bg-sage-200/55 dark:bg-sage-900/40" : ""}`}
     >
-      {selected && !hostsLesson && <span aria-hidden="true" className="absolute bottom-3 left-1.5 top-3 w-[5px] rounded-full bg-sage-700" />}
-      <span className={`flex h-[30px] w-[30px] items-center justify-center rounded-full font-heading text-[13px] ${NUMBER_CLASS[status]}`}>{verse.verseNumber}</span>
+      {highlighted && <span aria-hidden="true" className={`absolute left-1.5 w-[5px] rounded-full bg-sage-700 ${RUN_BAR[run]}`} />}
+      <span className={`relative flex h-[30px] w-[30px] items-center justify-center rounded-full font-heading text-[13px] ${NUMBER_CLASS[status]}`}>
+        {verse.verseNumber}
+        {seal !== null && (
+          <span className="absolute -bottom-1.5 -right-1.5">
+            <SrsSeal tier={seal} size={16} />
+          </span>
+        )}
+      </span>
       {hostsLesson ? (
-        <PathLessonVerseSlot className="relative z-[2] flex min-w-0 flex-col gap-1.5 rounded-[14px] bg-paper px-1.5 py-1 shadow-organic-md dark:bg-zinc-950" />
+        <PathLessonVerseSlot className="relative z-[2] flex min-w-0 flex-col gap-1.5" />
       ) : (
         <div
           ref={textRef}
           aria-hidden={hidden || undefined}
-          className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"} ${lettersOnly ? FIRST_LETTER_TEXT_SPACING_CLASS : ""}`}
+          // A blanked verse keeps its lines (invisible), so nothing below it moves.
+          className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${hidden ? "invisible" : ""} ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"} ${lettersOnly ? FIRST_LETTER_TEXT_SPACING_CLASS : ""}`}
         >
-          {!hidden &&
-            lines.map((line, index) => (
-              <p key={index} className="pl-4 -indent-4">
-                {line}
-              </p>
-            ))}
+          {lines.map((line, index) => (
+            <p key={index} className="pl-4 -indent-4">
+              {line}
+            </p>
+          ))}
         </div>
       )}
     </div>

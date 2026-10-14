@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { tileShade, type TileLevel } from "@/lib/bibleProgress";
+import { SrsSeal } from "@/components/ui/SrsSeal";
 
 interface ProgressCircleProps {
   level: TileLevel;
@@ -8,6 +9,8 @@ interface ProgressCircleProps {
   subLabel: string;
   known: number;
   complete: boolean;
+  // A complete tile's spaced-review seal (1–6, lib/srsSeals.ts) — shown in place of the check.
+  seal: number | null;
   due: boolean;
   here: boolean;
   faded: boolean;
@@ -17,7 +20,7 @@ interface ProgressCircleProps {
 
 // One book (Bible level) or chapter (Book level) tile: a circle shaded by verses known, a check
 // badge once complete, a terracotta dot when due, and a ring on the path's current place.
-export function ProgressCircle({ level, label, subLabel, known, complete, due, here, faded, ariaLabel, onTap }: ProgressCircleProps) {
+export function ProgressCircle({ level, label, subLabel, known, complete, seal, due, here, faded, ariaLabel, onTap }: ProgressCircleProps) {
   return (
     <button
       type="button"
@@ -32,13 +35,18 @@ export function ProgressCircle({ level, label, subLabel, known, complete, due, h
       >
         {label}
         {due && <span className="absolute -right-px -top-px h-3 w-3 rounded-full border-[2.5px] border-[#FEFDFB] bg-brand-500 dark:border-zinc-900" />}
-        {complete && (
-          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-[2.5px] border-[#FEFDFB] bg-sage-500 text-white dark:border-zinc-900">
+        {complete && seal !== null && (
+          <span className="absolute -bottom-1.5 -right-1.5">
+            <SrsSeal tier={seal} size={24} />
+          </span>
+        )}
+        {complete && seal === null && (
+          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-[2.5px] border-[#FEFDFB] bg-sage-800 text-white dark:border-zinc-900">
             <Check size={11} strokeWidth={2.75} />
           </span>
         )}
       </span>
-      <span className={`h-[11px] text-[10px] font-extrabold leading-[11px] ${complete ? "text-sage-900 dark:text-sage-300" : "text-sand-700 dark:text-zinc-400"}`}>{subLabel}</span>
+      <span className={`h-[11px] text-[10px] font-extrabold leading-[11px] ${complete ? "text-sage-700 dark:text-sage-300" : "text-sand-700 dark:text-zinc-400"}`}>{subLabel}</span>
     </button>
   );
 }

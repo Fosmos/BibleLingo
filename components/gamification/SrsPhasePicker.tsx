@@ -16,6 +16,7 @@ const OPTIONS: PhaseOption[] = [
   { phase: "weekly", label: "Know it fairly well", description: "Skip ahead to Box 3 — the weekly review rotation." },
   { phase: "biweekly", label: "Know it well", description: "Skip ahead to Box 4 — the biweekly review rotation." },
   { phase: "monthly", label: "Know it solidly", description: "Skip ahead to Box 5 — the monthly review rotation." },
+  { phase: "bimonthly", label: "Know it by heart", description: "Skip ahead to Box 6 — reviewed every 2 months." },
 ];
 
 interface SrsPhasePickerProps {

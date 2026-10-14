@@ -46,23 +46,23 @@ function versePhases(
 
 // Every verse's own last sub-stage is followed right away by speak_verse: that one verse, just
 // learned, spoken aloud from memory on its own — then type_cumulative_today, a rolling check
-// typed by first letter (ReviewChain in LearnCumulativeStage.tsx): this verse plus the two before
-// it. Learning verses 1–8: 1, 1–2, 1–3, 2–4, 3–5 … 6–8. The window reaches back past today's
+// typed by first letter (ReviewChain in LearnCumulativeStage.tsx): this verse plus the three
+// before it. Learning verses 1–8: 1, 1–2, 1–3, 1–4, 2–5 … 5–8. The window reaches back past today's
 // first verse into the learned verses just before the lesson, so the next day (9–18) runs
-// 7–9, 8–10, 9–11 … — every day's verses stitched onto the last. A final check then types all of
+// 6–9, 7–10, 8–11 … — every day's verses stitched onto the last. A final check then types all of
 // today's verses together before Pray.
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
 // own gap verse (see lib/bibleProviders/esv.ts's note on Mark 11:26 and its siblings) rides
 // along in day.newVerses for day-ownership/reading-view purposes (see lib/chapterChunking.ts),
 // but never earns its own stages here: there's nothing there to drill.
-const WINDOW = 3;
+const WINDOW = 4;
 
 // The learned verses just before today's lesson, as indices the cumulative checks can use:
-// -1 the verse right before today's first, -2 the one before that (usePriorLearnedVerses.ts
+// -1 the verse right before today's first, -2 and -3 the ones before that (usePriorLearnedVerses.ts
 // supplies them, nearest last).
 export const PRIOR_VERSE_INDEX = -1;
-export const PRIOR_VERSE_INDICES = [-2, -1];
+export const PRIOR_VERSE_INDICES = [-3, -2, -1];
 
 export function buildSteps(
   verseIndices: number[],
@@ -72,7 +72,7 @@ export function buildSteps(
   fillInTheBlankEnabled: boolean,
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
-  // How many learned verses sit just before today's lesson (0–2) — see PRIOR_VERSE_INDICES.
+  // How many learned verses sit just before today's lesson (0–3) — see PRIOR_VERSE_INDICES.
   priorCount: number,
 ): FlatStep[] {
   const steps: FlatStep[] = [];

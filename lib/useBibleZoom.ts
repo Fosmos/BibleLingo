@@ -12,8 +12,8 @@ export interface BiblePlace {
 
 // The Path tab's three levels (design_handoff_bible_progress) and where you are in them. Opens on
 // the chapter reader; the breadcrumbs step back out to the book or the whole Bible.
-export function useBibleZoom(start: BiblePlace) {
-  const [level, setLevel] = useState<ZoomLevel>(2);
+export function useBibleZoom(start: BiblePlace, startLevel: ZoomLevel = 2) {
+  const [level, setLevel] = useState<ZoomLevel>(startLevel);
   const [place, setPlace] = useState<BiblePlace>(start);
 
   function openBook(book: string) {

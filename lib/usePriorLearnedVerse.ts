@@ -6,8 +6,8 @@ import { getAdjacentVerse } from "@/lib/chapterContent";
 import { buildMemorizedVerseIndex } from "@/lib/memorizedVerseIndex";
 
 // How many learned verses before a lesson its rolling cumulative checks reach back to (see
-// lib/learnSteps.ts) — each check is a verse plus the two before it.
-const PRIOR_REACH = 2;
+// lib/learnSteps.ts) — each check is a verse plus the three before it.
+const PRIOR_REACH = 3;
 
 // The learned verses just before a lesson's first verse, nearest last — [v7, v8] for a lesson
 // starting at v9 — which its first cumulative "Remember" checks start from (see learnSteps.ts's

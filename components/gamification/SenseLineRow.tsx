@@ -59,7 +59,7 @@ export function SenseLineRow({ topGap, leadingMarkers, number, numberColor, unde
         {(leadingMarkers || number !== undefined) && (
           <span className="absolute right-full mr-1 whitespace-nowrap text-right">
             {leadingMarkers}
-            {number !== undefined && <sup className={`text-[0.9em] font-semibold ${numberColor}`}>{number}</sup>}
+            {number !== undefined && <sup className={`text-[0.9em] font-semibold ${numberColor} [.path-lesson-verse_&]:hidden`}>{number}</sup>}
           </span>
         )}
         <span className={underline ? "underline decoration-brand-600 underline-offset-2 dark:decoration-brand-400" : undefined}>{children}</span>

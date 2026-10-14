@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
+import { SrsAccuracyTracker } from "@/components/gamification/SrsAccuracyTracker";
 
 interface LessonSheetHeaderProps {
   onClose: () => void;
@@ -46,6 +47,7 @@ export function LessonSheetHeader({ onClose }: LessonSheetHeaderProps) {
           <span className="flex-1" />
         )}
       </div>
+      {stage?.accuracy !== undefined && <SrsAccuracyTracker accuracy={stage.accuracy} threshold={stage.threshold ?? 90} />}
       {stage && !stage.compact && (
         <div className="flex flex-col gap-px">
           <span className="text-[11px] font-bold uppercase tracking-[.06em] text-brand-700 dark:text-brand-300">{stage.label}</span>

@@ -1,8 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { BIBLE_BOOKS } from "@/lib/bibleBooks";
-import { booksInRegion, bookAbbreviation, type BibleRegionId } from "@/lib/bibleRegions";
+import { bookAbbreviation } from "@/lib/bibleRegions";
 import { useVerseMemory } from "@/lib/useVerseMemory";
+import { useProgressStore } from "@/store/useProgressStore";
+import { computeMemorizedStats } from "@/lib/progressSummary";
+import { sealTier } from "@/lib/srsSeals";
+import { useMemorizedChaptersLoaded } from "@/lib/useMemorizedChaptersLoaded";
 import { heldCount } from "@/lib/verseMemoryState";
 import { bookLength, matchesFilter, type ProgressFilter as Filter } from "@/lib/bibleProgress";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
@@ -18,14 +23,22 @@ interface BibleProgressLevelProps {
   // The active path's book (ringed).
   hereBook: string;
   onOpenBook: (book: string) => void;
+  // Shown under the books (the Memorized tab's "Where you stumble").
+  footer?: ReactNode;
 }
 
-const SECTIONS: BibleRegionId[] = ["Law", "History", "Wisdom", "Prophets", "Gospels", "Acts", "Letters", "Revelation"];
+const TESTAMENTS = [
+  { id: "old", name: "Old Testament" },
+  { id: "new", name: "New Testament" },
+] as const;
 
 // The Path tab's top level (design_handoff_bible_progress): all 66 books as circles, grouped by
-// section, shaded by verses known — tap one to open its chapters.
-export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook }: BibleProgressLevelProps) {
+// testament, shaded by verses known — tap one to open its chapters.
+export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook, footer }: BibleProgressLevelProps) {
   const memory = useVerseMemory();
+  const entities = useProgressStore((state) => state.memorizedEntities);
+  // Re-renders as memorized chapters' text arrives, so whole books added by hand count (as on the Memorized page).
+  useMemorizedChaptersLoaded(entities);
   const stats = (name: string) => {
     const counts = memory.book(name);
     const known = heldCount(counts);
@@ -37,13 +50,13 @@ export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook }: B
   return (
     <div className="flex h-full flex-col gap-[18px] overflow-y-auto px-[18px] pb-[140px] pt-1.5 [scrollbar-width:none]">
       <ProgressHeader crumbs={[{ label: "Bible" }]} eyebrow="Genesis to Revelation" title="Your Bible" />
-      <ProgressSummaryCard known={sum("known")} due={sum("due")} total={sum("total")} started={all.filter((entry) => entry.known > 0).length} of={66} unit="books" />
+      <ProgressSummaryCard known={sum("known")} due={sum("due")} total={sum("total")} stats={computeMemorizedStats(entities)} />
       <ProgressFilter heading="Books" value={filter} onChange={onFilter} />
-      {SECTIONS.map((section) => {
-        const books = booksInRegion(section);
+      {TESTAMENTS.map((testament) => {
+        const books = BIBLE_BOOKS.filter((book) => book.testament === testament.id);
         const entries = books.map((book) => stats(book.name));
         return (
-          <ProgressGroupCard key={section} name={section} known={sum("known", entries)} due={sum("due", entries)} total={sum("total", entries)} columns={6}>
+          <ProgressGroupCard key={testament.id} name={testament.name} known={sum("known", entries)} due={sum("due", entries)} total={sum("total", entries)} columns={6}>
             {books.map((book, index) => {
               const { known, due, complete } = entries[index];
               return (
@@ -54,6 +67,7 @@ export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook }: B
                   subLabel={complete ? "All" : known ? `${known}` : ""}
                   known={known}
                   complete={complete}
+                  seal={complete ? sealTier(entities, { book: book.name }) : null}
                   due={due > 0}
                   here={book.name === hereBook}
                   faded={!matchesFilter(filter, known, due)}
@@ -66,6 +80,7 @@ export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook }: B
         );
       })}
       <ProgressKey level="book" />
+      {footer}
     </div>
   );
 }

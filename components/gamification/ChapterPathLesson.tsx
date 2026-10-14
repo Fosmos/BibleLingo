@@ -9,7 +9,8 @@ import { InPlaceSrsReview } from "@/components/gamification/InPlaceSrsReview";
 import { MindMapVersePreview } from "@/components/gamification/MindMapVersePreview";
 
 export type ChapterLesson =
-  | { kind: "lesson"; verseNumber: number; dayNumber: number; mode: "select" | "practice" }
+  // `page`: a lesson on another path than the screen's own (a verse learned on its own — lib/versePathLesson.ts).
+  | { kind: "lesson"; verseNumber: number; dayNumber: number; mode: "select" | "practice"; page?: ChapterPathPage }
   | { kind: "srs"; verseNumber: number; entityIds: string[] }
   | { kind: "preview"; verseNumber: number; verse: VerseSegment };
 

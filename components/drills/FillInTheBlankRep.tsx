@@ -11,7 +11,7 @@ import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
-import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 
@@ -30,8 +30,9 @@ interface FillInTheBlankRepProps {
 // this app's other 2-rep drills already follow.
 const REP_COUNT = 2;
 
-// Tap the missing words, in order, from a bank below — tiles are alphabetized (punctuation
-// stripped) rather than shuffled, so their position never hints at the answer. A wrong tap just
+// Tap the missing words, in order, from a bank below — only the current sense line's words at a
+// time, in a grid across the full width, alphabetized (punctuation stripped) rather than shuffled
+// so their position never hints at the answer. A wrong tap just
 // flashes red and stays available to try again — every tile already placed correctly stays
 // placed, so one slip never costs any real progress (see handleTileClick).
 export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankRepProps) {
@@ -61,6 +62,11 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
   const placedCount = usedTileIds.size;
   const targetIndex = blankIndices[placedCount];
   const targetWord = targetIndex !== undefined ? words[targetIndex] : undefined;
+  // The sense line holding the next blank — the tray offers just its words, then moves on.
+  const lineRanges = useMemo(() => senseLineWordRanges(verse.text), [verse.text]);
+  const line = lineRanges.find((range) => targetIndex !== undefined && targetIndex >= range.startIndex && targetIndex < range.endIndex);
+  const lineTiles = line ? tray.filter((entry) => entry.tileId >= line.startIndex && entry.tileId < line.endIndex) : [];
+  const columns = lineTiles.length <= 1 ? "grid-cols-1" : lineTiles.length === 2 ? "grid-cols-2" : "grid-cols-3";
 
   function handleTileClick(tileId: number, word: string) {
     if (!targetWord || usedTileIds.has(tileId)) return;
@@ -146,8 +152,8 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
         {/* Inside the Mind Map sheet's drill zone (tagged `lesson-sheet-controls` — see
             LessonBottomSheet.tsx) the options aren't boxed at all: they spread straight across
             the whole zone, centered in whatever height it has. */}
-        <div className="flex w-full flex-wrap justify-center gap-2 rounded-organic bg-sand-100 p-3 dark:bg-zinc-900 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:content-center [.lesson-sheet-controls_&]:bg-transparent [.lesson-sheet-controls_&]:p-0 dark:[.lesson-sheet-controls_&]:bg-transparent">
-          {tray.map((entry) => (
+        <div className={`grid w-full gap-2 rounded-organic bg-sand-100 p-3 dark:bg-zinc-900 [.lesson-sheet-controls_&]:flex-1 [.lesson-sheet-controls_&]:content-center [.lesson-sheet-controls_&]:bg-transparent [.lesson-sheet-controls_&]:p-0 dark:[.lesson-sheet-controls_&]:bg-transparent ${columns}`}>
+          {lineTiles.map((entry) => (
             <motion.button
               key={entry.tileId}
               type="button"
@@ -155,7 +161,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
               onClick={() => handleTileClick(entry.tileId, entry.word)}
               // Word tiles as pills; a used one stays as a dashed outline so the row never jumps.
               disabled={usedTileIds.has(entry.tileId)}
-              className={`rounded-full border-2 px-3.5 py-[9px] text-[15px] font-bold ${
+              className={`w-full truncate rounded-full border-2 px-3 py-[11px] text-[16px] font-bold ${
                 usedTileIds.has(entry.tileId)
                   ? "border-dashed border-sand-300 bg-transparent text-sand-500"
                   : wrongTileId === entry.tileId

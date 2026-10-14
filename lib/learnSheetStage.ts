@@ -4,7 +4,7 @@ import type { FlatStep } from "@/lib/learnSteps";
 import { formatVerseRangeLabel, formatVerseSpanLabel } from "@/lib/chapterContent";
 
 // The lesson sheet's stage names (the Organic restyle's header).
-const STAGE_LABELS: Record<FlatStep["phase"], string> = {
+export const STAGE_LABELS: Record<FlatStep["phase"], string> = {
   orientation: "Understand",
   orientation_summary: "Visualize",
   listen_verse: "Listen and repeat",
@@ -17,6 +17,12 @@ const STAGE_LABELS: Record<FlatStep["phase"], string> = {
   type_cumulative_today: "Remember",
   pray: "Pray",
 };
+
+// The stages that teach a verse rather than test recall — while one runs on the Path tab's reader,
+// the verses after it stay readable; a review step (Previous Verses, Remember, Chapter Review)
+// blanks them (ChapterPathScreen.tsx).
+const TEACHING = new Set(["orientation", "orientation_summary", "listen_verse", "rhythm", "draw_first_letters", "fill_in_the_blank", "fill_in_the_blank_letters", "speak_hint", "speak_verse", "pray"] as const);
+export const TEACHING_STAGE_LABELS = new Set([...TEACHING].map((phase) => STAGE_LABELS[phase]));
 
 // What a Learn lesson shows in the sheet header at `stepIndex`: the stage, the verse it drills
 // (or the lesson's range, for whole-lesson stages), and its place among the run of stages for

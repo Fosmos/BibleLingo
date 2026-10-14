@@ -8,9 +8,10 @@ import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 // `?review=<id>[,<id>…]`, plus `&start=1` to begin reviewing those ranges straight away (a row
 // tap, "Review all") rather than just landing on the first one with its review tab (the row's map pin).
 export function reviewArrivalHref(pathKey: string, version: string, entityIds: string[], start: boolean): string {
-  const query = new URLSearchParams({ version, review: entityIds.join(",") });
+  // The Memorized tab's chapter reader, where reviews run in place.
+  const query = new URLSearchParams({ path: pathKey, version, review: entityIds.join(",") });
   if (start) query.set("start", "1");
-  return `/path/${encodeURIComponent(pathKey)}?${query}`;
+  return `/memorized?${query}`;
 }
 
 // Arriving by that link, once: the map flies to the first range's first verse (lib/useMindMapArrival.ts),

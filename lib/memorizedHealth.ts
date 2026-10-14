@@ -14,7 +14,7 @@ export interface HealthGroup {
   entities: MemorizedEntity[];
 }
 
-// The display box ("Box 4" and "Box 5") at which a range counts as rooted.
+// The display box from which a range counts as rooted (Box 4 and up).
 const ROOTED_FROM_BOX = 4;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

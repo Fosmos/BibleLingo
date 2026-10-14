@@ -10,35 +10,34 @@ export type ProgressFilter = "all" | "due" | "known";
 export type TileLevel = "book" | "chapter";
 
 // Green steps by the COUNT of verses known (so a little progress in a long book still shows):
-// a fill mixing sage-800 into sage-100 at t%. Static class strings so Tailwind generates them.
+// a fill mixing sage-800 into sage-100 at t%, kept light. A whole book or chapter takes the top
+// step's shade, marked complete by its check badge (ProgressCircle.tsx) rather than a darker fill.
+// Static class strings so Tailwind generates them.
 const SHADES: Record<number, string> = {
-  16: "bg-[color-mix(in_oklch,#3D472B_16%,#F0FAE1)] text-sage-900",
-  22: "bg-[color-mix(in_oklch,#3D472B_22%,#F0FAE1)] text-sage-900",
-  34: "bg-[color-mix(in_oklch,#3D472B_34%,#F0FAE1)] text-sage-900",
-  45: "bg-[color-mix(in_oklch,#3D472B_45%,#F0FAE1)] text-sage-900",
-  52: "bg-[color-mix(in_oklch,#3D472B_52%,#F0FAE1)] text-sage-900",
-  68: "bg-[color-mix(in_oklch,#3D472B_68%,#F0FAE1)] text-white",
-  72: "bg-[color-mix(in_oklch,#3D472B_72%,#F0FAE1)] text-white",
-  85: "bg-[color-mix(in_oklch,#3D472B_85%,#F0FAE1)] text-white",
-  90: "bg-[color-mix(in_oklch,#3D472B_90%,#F0FAE1)] text-white",
+  10: "bg-[color-mix(in_oklch,#3D472B_10%,#F0FAE1)] text-sage-900",
+  12: "bg-[color-mix(in_oklch,#3D472B_12%,#F0FAE1)] text-sage-900",
+  20: "bg-[color-mix(in_oklch,#3D472B_20%,#F0FAE1)] text-sage-900",
+  24: "bg-[color-mix(in_oklch,#3D472B_24%,#F0FAE1)] text-sage-900",
+  32: "bg-[color-mix(in_oklch,#3D472B_32%,#F0FAE1)] text-sage-900",
+  36: "bg-[color-mix(in_oklch,#3D472B_36%,#F0FAE1)] text-sage-900",
+  46: "bg-[color-mix(in_oklch,#3D472B_46%,#F0FAE1)] text-sage-900",
+  48: "bg-[color-mix(in_oklch,#3D472B_48%,#F0FAE1)] text-sage-900",
 };
 const STEPS: Record<TileLevel, [number, number][]> = {
-  book: [[50, 90], [15, 72], [5, 52], [2, 34], [1, 16]],
-  chapter: [[10, 85], [5, 68], [2, 45], [1, 22]],
+  book: [[15, 46], [5, 32], [2, 20], [1, 10]],
+  chapter: [[10, 48], [5, 36], [2, 24], [1, 12]],
 };
 export const NOT_STARTED_SHADE = "bg-sand-200 text-sand-600 dark:bg-zinc-800 dark:text-zinc-400";
-export const COMPLETE_SHADE = "bg-sage-900 text-white";
 
 export function tileShade(level: TileLevel, known: number, complete: boolean): string {
-  if (complete) return COMPLETE_SHADE;
-  const step = STEPS[level].find(([from]) => known >= from);
+  const step = complete ? STEPS[level][0] : STEPS[level].find(([from]) => known >= from);
   return step ? SHADES[step[1]] : NOT_STARTED_SHADE;
 }
 
-// The key's five-shade ramp, lightest first.
+// The key's five swatches, lightest first — the last (whole book / chapter) is the top step.
 export const KEY_SHADES: Record<TileLevel, string[]> = {
-  book: [SHADES[16], SHADES[34], SHADES[52], SHADES[72], COMPLETE_SHADE],
-  chapter: [SHADES[22], SHADES[45], SHADES[68], SHADES[85], COMPLETE_SHADE],
+  book: [SHADES[10], SHADES[20], SHADES[32], SHADES[46], SHADES[46]],
+  chapter: [SHADES[12], SHADES[24], SHADES[36], SHADES[48], SHADES[48]],
 };
 
 // A chapter's verse count: exact from its cached text or the remembered verse index, else an

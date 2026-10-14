@@ -58,7 +58,7 @@ export const INFO_TIPS = {
   srsOverview:
     "Spaced-repetition review for verses you've fully learned — due verses are surfaced on a schedule so they stay memorized long-term.",
   swordOfTheSpirit:
-    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), then Box 5 (every 30 days). Fall below 90% and it drops back just one box, not all the way to Box 1. You can also move any group up or down a box yourself with the arrows.",
+    "A Leitner box system: every verse or chapter enters Box 1 (every 1 day) the moment it's memorized. Score 90% or higher on a review's first-letter typing to move up a box — Box 2 (every 3 days), Box 3 (every 7 days), Box 4 (every 14 days), Box 5 (every 30 days), then Box 6 (every 2 months). Fall below 90% and it drops back just one box, not all the way to Box 1. You can also move any group up or down a box yourself with the arrows.",
   stickerBook: "A collectible record of every path, boss battle, and Mastery level you've cleared.",
   includeVerseReferencesToggle:
     'When on, shows the verse number/reference inline in the text (e.g. "1:1 Paul and Timotheus...") wherever a verse is displayed.',

@@ -114,7 +114,7 @@ export interface PathProgress {
 // (see lib/srs.ts's BOX_INTERVAL_DAYS). A review's accuracy is graded into an Again/Hard/Good/
 // Easy rating (see lib/srsRating.ts) and steps the box up or down by that rating's own amount
 // (see lib/srs.ts's stepBox) — a graduated move by 1 or 2 boxes, not a reset to Box 1.
-export type SrsBox = 1 | 2 | 3 | 4 | 5;
+export type SrsBox = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface SRSState {
   box: SrsBox;
@@ -214,6 +214,10 @@ export interface StreakState {
   lastCompletedAt: string | null;
   freeze: StreakFreezeState;
 }
+
+// When to nudge the reader about a path each day (design_handoff_path_picker → Setup step 3). Saved
+// only for now — there's no notification system yet to act on it.
+export type PathReminder = "morning" | "midday" | "evening" | "off";
 
 export interface UserProgress {
   schemaVersion: number;
@@ -328,6 +332,8 @@ export interface UserProgress {
   // profile missing it just falls back to that same default at every read site, the same
   // self-healing convention SRSState.box already uses — never requires wiping progress.
   srsPromotionThreshold?: number;
+  // Each path's daily reminder choice, by path key (see PathReminder) — optional, healing to {}.
+  pathReminders?: Record<string, PathReminder>;
   // Every individual verse the reader had to explicitly reveal a letter for during its most
   // recent SRS review (see VerseAccuracy.neededHint in lib/verseAccuracyBreakdown.ts), keyed
   // by lib/verseKey.ts's verseKey — a standing "needs extra practice" list (see

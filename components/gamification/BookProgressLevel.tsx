@@ -1,8 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { findBook } from "@/lib/bibleBooks";
 import { bookMovements } from "@/lib/bookMovements";
 import { useVerseMemory } from "@/lib/useVerseMemory";
+import { useProgressStore } from "@/store/useProgressStore";
+import { computeMemorizedStats } from "@/lib/progressSummary";
+import { sealTier } from "@/lib/srsSeals";
+import { useMemorizedChaptersLoaded } from "@/lib/useMemorizedChaptersLoaded";
 import { heldCount } from "@/lib/verseMemoryState";
 import { bookLength, chapterLength, matchesFilter, type ProgressFilter as Filter } from "@/lib/bibleProgress";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
@@ -26,6 +31,10 @@ interface BookProgressLevelProps {
 // grouped by its themes (lib/bookMovements.ts) — tap one to read it in sense lines.
 export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible, onOpenChapter }: BookProgressLevelProps) {
   const memory = useVerseMemory();
+  // This book's ranges in spaced review — its fully memorized chapters and verses, as on the Memorized page.
+  const entities = useProgressStore((state) => state.memorizedEntities);
+  const bookEntities = useMemo(() => entities.filter((entity) => entity.book === book), [entities, book]);
+  useMemorizedChaptersLoaded(bookEntities);
   const chapterCount = findBook(book)?.chapterCount ?? 1;
   const stats = (chapter: number) => {
     const counts = memory.chapter(book, chapter);
@@ -46,10 +55,8 @@ export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible
         known={known}
         due={bookCounts.due}
         total={total}
-        started={chapters.filter((entry) => entry.known > 0).length}
-        of={chapterCount}
-        unit="chapters"
-        complete={known >= total}
+        stats={computeMemorizedStats(bookEntities)}
+        showBooks={false}
       />
       <ProgressFilter heading="Chapters" value={filter} onChange={onFilter} />
       {bookMovements(book).map((movement) => {
@@ -75,6 +82,7 @@ export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible
                   subLabel={entry.complete ? "All" : entry.known ? `${entry.known}/${entry.total}` : ""}
                   known={entry.known}
                   complete={entry.complete}
+                  seal={entry.complete ? sealTier(bookEntities, { book, chapter }) : null}
                   due={entry.due > 0}
                   here={chapter === hereChapter}
                   faded={!matchesFilter(filter, entry.known, entry.due)}
