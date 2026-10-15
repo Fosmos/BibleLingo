@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { resolveCompletingChapterVerses } from "@/lib/completingChapterVerses";
@@ -51,8 +51,10 @@ interface InPlaceLessonSessionProps {
 export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, onlyVerse, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
   const fullDay = days.find((candidate) => candidate.dayNumber === dayNumber);
   const index = fullDay && onlyVerse ? verseIndexInDay(fullDay, onlyVerse.chapter, onlyVerse.verseNumber) : -1;
-  const day = fullDay && index >= 0 ? singleVerseDay(fullDay, fullDay.newVerses[index]) : fullDay;
-  const dayPart = fullDay && index >= 0 && fullDay.newVerses.length > 1 ? { index, count: fullDay.newVerses.length } : undefined;
+  // Memoized: a new day (or part) object every render re-runs everything keyed on it, in a loop.
+  const day = useMemo(() => (fullDay && index >= 0 ? singleVerseDay(fullDay, fullDay.newVerses[index]) : fullDay), [fullDay, index]);
+  const count = fullDay?.newVerses.length ?? 0;
+  const dayPart = useMemo(() => (index >= 0 && count > 1 ? { index, count } : undefined), [index, count]);
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   // Review in the Mind Map sheet: same progress bar and canvas-follows-the-verse behavior a Learn
