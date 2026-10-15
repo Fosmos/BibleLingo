@@ -49,7 +49,7 @@ export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart
         <div className="pt-2">
           {stop.state === "current" && (
             <button type="button" onClick={onStart} className={primary}>
-              {stop.checkpoint && !stop.verse ? "Start recital" : "Start lesson"}
+              {stop.review ? "Start review" : stop.checkpoint && !stop.verse ? "Start recital" : "Start lesson"}
             </button>
           )}
           {due && (
@@ -59,7 +59,7 @@ export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart
           )}
           {stop.state === "done" && !due && (
             <button type="button" onClick={onPractise} className={secondary}>
-              Practise again
+              {stop.review ? "Review again" : "Practise again"}
             </button>
           )}
           {stop.state === "locked" && (

@@ -6,7 +6,6 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { isDue } from "@/lib/srs";
 import { useVerseMemory } from "@/lib/useVerseMemory";
-import { TEACHING_STAGE_LABELS } from "@/lib/learnSheetStage";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { versePathLesson } from "@/lib/versePathLesson";
 import { useBibleZoom } from "@/lib/useBibleZoom";
@@ -16,7 +15,6 @@ import { findVerseLessonDay } from "@/lib/verseLessonAction";
 import { BibleProgressLevel } from "@/components/gamification/BibleProgressLevel";
 import { BookProgressLevel } from "@/components/gamification/BookProgressLevel";
 import { ChapterSenseReader } from "@/components/gamification/ChapterSenseReader";
-import { BIBLE_BOOKS } from "@/lib/bibleBooks";
 import type { ParsedVerseKey } from "@/lib/verseKey";
 import { ChapterPathLesson, type ChapterLesson } from "@/components/gamification/ChapterPathLesson";
 import { MindMapSheetBreadcrumb } from "@/components/gamification/MindMapSheetBreadcrumb";
@@ -48,7 +46,6 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   const entities = useProgressStore((state) => state.memorizedEntities);
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const focusVerse = useLessonSessionStore((state) => state.focusVerse);
-  const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
   const clearFocusVerse = useLessonSessionStore((state) => state.clearFocusVerse);
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   // Each verse of a day is its own lesson: the next one up is past the day's learned verses.
@@ -118,32 +115,11 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
     if (own) setSheet({ kind: "lesson", verseNumber, dayNumber: own.dayNumber, mode: "select", page: own.page });
   }
 
-  // Reviews (and a lesson's review steps) blank the verses after the drilled one; teaching doesn't.
-  const teaching = sheet?.kind === "lesson" && sheet.mode === "select" && stageLabel !== undefined && TEACHING_STAGE_LABELS.has(stageLabel);
-  const hidesAhead = sheet !== null && sheet.kind !== "preview" && !teaching;
-  const reviewedHere = new Set<string>();
-  if (sheet?.kind === "srs") {
-    for (const entity of entities.filter((candidate) => sheet.entityIds.includes(candidate.id))) {
-      for (let verseNumber = entity.startVerse; verseNumber <= entity.endVerse; verseNumber++) reviewedHere.add(`${entity.book}|${entity.chapter}|${verseNumber}`);
-    }
-  } else if (sheet?.kind === "lesson" && sheet.mode === "practice") {
-    const practised = days.find((day) => day.dayNumber === sheet.dayNumber)?.newVerses.filter((verse) => !sheet.onlyVerse || (verse.chapter === sheet.onlyVerse.chapter && verse.verseNumber === sheet.onlyVerse.verseNumber));
-    for (const verse of practised ?? []) reviewedHere.add(`${verse.book}|${verse.chapter}|${verse.verseNumber}`);
-  }
-  // While a lesson or review runs, the view follows the verse being drilled (lib/useReportFocusVerse.ts).
-  const lessonVerse: ParsedVerseKey | null = sheet ? (focusVerse ?? { ...zoom.place, verseNumber: sheet.verseNumber }) : null;
-  const order = (book: string, chapter: number, verseNumber: number) => [BIBLE_BOOKS.findIndex((entry) => entry.name === book), chapter, verseNumber];
-  const isAhead = (book: string, chapter: number, verseNumber: number) => {
-    if (!lessonVerse) return false;
-    const [a, b] = [order(book, chapter, verseNumber), order(lessonVerse.book, lessonVerse.chapter, lessonVerse.verseNumber)];
-    return a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : a[2] > b[2];
-  };
-  const isHidden = (book: string, chapter: number, verseNumber: number) => reviewedHere.has(`${book}|${chapter}|${verseNumber}`) || (hidesAhead && isAhead(book, chapter, verseNumber));
-
   const { place } = zoom;
   return (
     <div className={`flex h-[100dvh] w-full flex-col ${sheet ? "" : "-mb-28"}`}>
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      {/* A lesson takes the screen as a page of its own (PathLessonPage.tsx); the reader comes back after. */}
+      <div className={`relative min-h-0 flex-1 overflow-hidden ${sheet ? "hidden" : ""}`}>
         {zoom.level === 0 && <BibleProgressLevel filter={filter} onFilter={setFilter} hereBook={pathBook} onOpenBook={zoom.openBook} footer={bibleFooter} />}
         {zoom.level === 1 && (
           <BookProgressLevel
@@ -167,8 +143,6 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
             onAction={handleAction}
             onBible={zoom.toBible}
             onBook={zoom.openBook}
-            lessonVerse={lessonVerse}
-            isHidden={isHidden}
             lessonRange={current ? [current] : []}
           />
         )}

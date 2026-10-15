@@ -5,8 +5,7 @@ import type { Phase } from "@/components/gamification/LearnPhaseContent";
 // phase is intercepted before LearnSection.tsx's own flat-step machinery even matters.
 //
 // cumulativeVerseIndices is set only on type_cumulative_today steps — the explicit list of
-// day.newVerses indices that rolling check covers (negative for the learned verses just before
-// the lesson — see PRIOR_VERSE_INDICES).
+// day.newVerses indices that check covers.
 export interface FlatStep {
   phase: Phase;
   verseIndex?: number;
@@ -44,25 +43,14 @@ function versePhases(
   return phases;
 }
 
-// Every verse's own last sub-stage is followed right away by speak_verse: that one verse, just
-// learned, spoken aloud from memory on its own — then type_cumulative_today, a rolling check
-// typed by first letter (ReviewChain in LearnCumulativeStage.tsx): this verse plus the three
-// before it. Learning verses 1–8: 1, 1–2, 1–3, 1–4, 2–5 … 5–8. The window reaches back past today's
-// first verse into the learned verses just before the lesson, so the next day (9–18) runs
-// 6–9, 7–10, 8–11 … — every day's verses stitched onto the last. A final check then types all of
-// today's verses together before Pray.
+// Each verse's stages, closed by speak_verse: that verse spoken from memory. A lesson of several
+// verses then types them all together once before Pray (ReviewChain in LearnCumulativeStage.tsx).
+// The pericope's earlier verses are reviewed before all this (VerseLessonFlow.tsx).
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
 // own gap verse (see lib/bibleProviders/esv.ts's note on Mark 11:26 and its siblings) rides
 // along in day.newVerses for day-ownership/reading-view purposes (see lib/chapterChunking.ts),
 // but never earns its own stages here: there's nothing there to drill.
-const WINDOW = 4;
-
-// The learned verses just before today's lesson, as indices the cumulative checks can use:
-// -1 the verse right before today's first, -2 and -3 the ones before that (usePriorLearnedVerses.ts
-// supplies them, nearest last).
-export const PRIOR_VERSE_INDEX = -1;
-export const PRIOR_VERSE_INDICES = [-3, -2, -1];
 
 export function buildSteps(
   verseIndices: number[],
@@ -72,26 +60,16 @@ export function buildSteps(
   fillInTheBlankEnabled: boolean,
   kineticTextEnabled: boolean,
   rhythmEnabled: boolean,
-  // How many learned verses sit just before today's lesson (0–3) — see PRIOR_VERSE_INDICES.
-  priorCount: number,
 ): FlatStep[] {
   const steps: FlatStep[] = [];
   if (understandEnabled) steps.push({ phase: "orientation" });
   if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
   const phases = versePhases(kineticTextEnabled, rhythmEnabled, writeFirstLetterEnabled, fillInTheBlankEnabled);
-  const sequence = [...PRIOR_VERSE_INDICES.slice(PRIOR_VERSE_INDICES.length - Math.min(priorCount, PRIOR_VERSE_INDICES.length)), ...verseIndices];
-  const offset = sequence.length - verseIndices.length;
-
-  verseIndices.forEach((verseIndex, position) => {
+  for (const verseIndex of verseIndices) {
     for (const phase of phases) steps.push({ phase, verseIndex });
     steps.push({ phase: "speak_verse", verseIndex });
-    const end = offset + position + 1;
-    steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: sequence.slice(Math.max(0, end - WINDOW), end) });
-  });
-  // Then every verse learned today, typed together once, right before Pray — so the day closes on
-  // "does it all fit together". Skipped when the last rolling check already held them all.
-  if (verseIndices.length > WINDOW) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
-
+  }
+  if (verseIndices.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
   steps.push({ phase: "pray" });
   return steps;
 }

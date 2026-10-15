@@ -6,7 +6,7 @@ import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWor
 import { fetchNarration } from "@/lib/cloudNarration";
 import { narrateText } from "@/lib/narrateText";
 import { isSecureContextOrLocal, isSpeechRecognitionSupported, requestMicPermission, startListening } from "@/lib/speechRecognition";
-import { spokenPrefixMatchCount } from "@/lib/textMatch";
+import { spokenPrefixMatchCountFirstLetter } from "@/lib/textMatch";
 import { playCorrectSfx } from "@/lib/audio";
 
 // idle: not started (a phone needs a tap before any audio). playing: the app is reading the
@@ -20,7 +20,10 @@ function initialMicBlock(): MicBlocked | null {
 }
 
 export interface ListenRepeat {
+  // The sense lines, then (for a verse of more than one) the whole verse.
   ranges: SenseLineWordRange[];
+  // How many of `ranges` are sense lines — any after them is the whole verse.
+  lineCount: number;
   // tokenizeVerseWords(text) — every range's startIndex/endIndex index into this.
   words: string[];
   clauseIndex: number;
@@ -36,6 +39,8 @@ export interface ListenRepeat {
   micBlocked: MicBlocked | null;
   start: () => void;
   hearAgain: () => void;
+  // The mic button: listen for the current line again (or stop listening), keeping what's been said.
+  toggleMic: () => void;
   next: () => void;
 }
 
@@ -46,8 +51,9 @@ const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAI
 // A pause between a line said back and the next one being read, so it doesn't feel rushed.
 const NEXT_LINE_DELAY_MS = 500;
 
-// Words a line may be short of and still count as said: a longer line forgives one misheard word.
-const allowedMisses = (wordCount: number) => (wordCount >= 5 ? 1 : 0);
+// Words a line may be short of and still count as said: a longer line forgives a misheard word,
+// the whole verse one in eight.
+const allowedMisses = (wordCount: number) => (wordCount >= 5 ? Math.max(1, Math.floor(wordCount / 8)) : 0);
 
 // Where in `text` each of its `words` starts — narration reports character positions.
 function wordStarts(text: string, words: string[]): number[] {
@@ -61,15 +67,21 @@ function wordStarts(text: string, words: string[]): number[] {
 
 // Listen & Repeat (ListenVerseRep.tsx): the verse's sense lines one at a time — each read aloud
 // with its words lit as they're heard, then said back by the reader, the mic lighting each word
-// as it's recognized and moving on once the line is said. Without a usable mic (no speech
+// as it's recognized and moving on once the line is said — then the whole verse the same way. Without a usable mic (no speech
 // recognition, or a phone on plain http) the reader says it aloud and taps Next.
 export function useListenRepeat(text: string): ListenRepeat {
-  const ranges = useMemo(() => senseLineWordRanges(text), [text]);
+  const lines = useMemo(() => senseLineWordRanges(text), [text]);
   const words = useMemo(() => tokenizeVerseWords(text), [text]);
+  const ranges = useMemo(() => (lines.length > 1 ? [...lines, { clause: { text }, startIndex: 0, endIndex: words.length }] : lines), [lines, text, words.length]);
   const [clauseIndex, setClauseIndex] = useState(0);
   const [phase, setPhase] = useState<ListenRepeatPhase>("idle");
   const [narratedWord, setNarratedWord] = useState(-1);
   const [repeatedCount, setRepeatedCount] = useState(0);
+  const repeatedRef = useRef(0);
+  const setRepeated = (count: number) => {
+    repeatedRef.current = count;
+    setRepeatedCount(count);
+  };
   const [micListening, setMicListening] = useState(false);
   const [micBlocked, setMicBlocked] = useState<MicBlocked | null>(null);
   const micBlockedRef = useRef<MicBlocked | null>(null);
@@ -93,7 +105,7 @@ export function useListenRepeat(text: string): ListenRepeat {
     setClauseIndex(index);
     setPhase("playing");
     setNarratedWord(-1);
-    setRepeatedCount(0);
+    setRepeated(0);
     setMicListening(false);
     const starts = wordStarts(range.clause.text, words.slice(range.startIndex, range.endIndex));
     const onWord = (charIndex: number) => {
@@ -113,16 +125,19 @@ export function useListenRepeat(text: string): ListenRepeat {
     // Straight into listening once the line has been read — unless the mic can't be used.
     if (micBlockedRef.current) return;
     const target = words.slice(range.startIndex, range.endIndex);
+    // Never starts the line over: each listen carries on from the words already said, a word
+    // counting once its first letter is heard.
+    const base = repeatedRef.current;
     let finished = false;
     const listener = startListening(
       (transcript) => {
         if (finished) return;
-        const said = spokenPrefixMatchCount(transcript, target);
-        setRepeatedCount((prev) => Math.max(prev, said));
+        const said = Math.max(repeatedRef.current, base + spokenPrefixMatchCountFirstLetter(transcript, target.slice(base)));
+        setRepeated(said);
         if (said < target.length - allowedMisses(target.length)) return;
         finished = true;
         listener.stop();
-        setRepeatedCount(target.length);
+        setRepeated(target.length);
         setMicListening(false);
         playCorrectSfx();
         const timer = setTimeout(() => advanceFrom(index), NEXT_LINE_DELAY_MS);
@@ -153,6 +168,7 @@ export function useListenRepeat(text: string): ListenRepeat {
 
   return {
     ranges,
+    lineCount: lines.length,
     words,
     clauseIndex,
     phase,
@@ -172,6 +188,13 @@ export function useListenRepeat(text: string): ListenRepeat {
       playLine(0);
     },
     hearAgain: () => playLine(clauseIndex),
+    toggleMic: () => {
+      if (phase !== "yourTurn") return;
+      if (micListening) {
+        cancelRef.current();
+        setMicListening(false);
+      } else yourTurn(clauseIndex);
+    },
     next: () => advanceFrom(clauseIndex),
   };
 }

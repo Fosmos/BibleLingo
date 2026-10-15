@@ -39,9 +39,6 @@ interface SpeakRepProps {
   // Non-context callers only (see SpeakRepPlainContext.tsx) — a first-letters hover-hint list.
   hintTokens?: FirstLetterHintToken[];
   onComplete: (hadMistake: boolean) => void;
-  // Fires the instant an attempt is judged wrong, before the retry — a life-loss counter
-  // can't wait for onComplete, which only fires once the rep is eventually gotten right.
-  onMistake?: () => void;
   // Plain fallback context only — see SpeakRepPlainContext.tsx.
   previousVerse?: VerseSegment;
   nextVerse?: VerseSegment;
@@ -61,16 +58,13 @@ export function SpeakRep({
   contextVerses,
   layout,
   onComplete,
-  onMistake,
   previousVerse,
   nextVerse,
   firstLettersOnMistake,
 }: SpeakRepProps) {
   const [openWordIndex, setOpenWordIndex] = useState<number | null>(null); // tapped-open hint word
-  // Graded by first letter exactly when the hint itself is showing first letters (see
-  // useSpeakRepMic.ts's own doc comment on why) — hintTokens is only ever set for that one
-  // stage (LearnPhaseContent.tsx's speak_hint), never for blind recitation.
-  const mic = useSpeakRepMic({ targetText, reps, gradeByFirstLetter: Boolean(hintTokens), onComplete, onMistake });
+  // Each word fills in once its first letter is heard; a missed word just waits (useSpeakRepMic.ts).
+  const mic = useSpeakRepMic({ targetText, reps, onComplete });
   const { completedReps, isListening, liveTranscript, revealedCount, mistake, permissionDenied, hadMistakeRef, supported, isSecure, handleStart, handleStop } =
     mic;
   const toggleWord = (index: number) => setOpenWordIndex((prev) => (prev === index ? null : index));

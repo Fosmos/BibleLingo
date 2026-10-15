@@ -37,6 +37,8 @@ interface PracticeChainProps {
   // Reports each verse as it comes up (and how far through the list that is) — the Mind Map sheet
   // uses it for its progress bar and to keep the canvas on the verse being reviewed.
   onVerseChange?: (verse: VerseSegment, fraction: number) => void;
+  // Called once every verse is through (a trail passage review marks itself done).
+  onDone?: () => void;
 }
 
 // A low-stakes companion to the boss battle: same word-for-word typing, but a mistake costs
@@ -44,7 +46,7 @@ interface PracticeChainProps {
 // attempt as prep or after one for upkeep. Leaving early (Exit practice) keeps the
 // verseIndex checkpoint so coming back resumes here — it's only cleared on genuinely
 // finishing every verse, since there's nothing left to resume at that point.
-export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord", layout, exitWhenDone, onVerseChange }: PracticeChainProps) {
+export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", mode = "fullWord", layout, exitWhenDone, onVerseChange, onDone }: PracticeChainProps) {
   const [verseIndex, setVerseIndex] = useCheckpointField(sessionKey, "verseIndex", 0);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const [attempt, setAttempt] = useState(0);
@@ -68,6 +70,7 @@ export function PracticeChain({ verses, onExit, sessionKey, label = "Practice", 
     const next = verseIndex + 1;
     if (next >= verses.length) {
       if (sessionKey) clearSessionCheckpoint(sessionKey);
+      onDone?.();
       setDonePracticing(true);
     } else {
       startVerse(next);

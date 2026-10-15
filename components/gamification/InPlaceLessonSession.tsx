@@ -3,6 +3,8 @@
 import { useCallback, useMemo } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
+import { useProgressStore } from "@/store/useProgressStore";
+import type { PassageReview } from "@/lib/trailReviews";
 import { resolveCompletingChapterVerses } from "@/lib/completingChapterVerses";
 import { singleVerseDay, verseIndexInDay } from "@/lib/dayVerseProgress";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
@@ -33,6 +35,8 @@ interface InPlaceLessonSessionProps {
   mode: "select" | "practice";
   // Just this verse of the day — each verse is its own lesson (lib/dayVerseProgress.ts).
   onlyVerse?: { chapter: number; verseNumber: number };
+  // A trail's pericope or chapter review (practice only): those verses, marked done when finished.
+  passage?: PassageReview;
   // Set only by BookMindMapWithLessonSheet.tsx's own bottom-sheet trigger — threaded straight
   // through to LearnSection.tsx's own per-verse chrome (see LearnVerseSpotlightChrome.tsx),
   // which uses it to skip its own small embedded Mind Map preview (the REAL canvas already
@@ -48,7 +52,8 @@ interface InPlaceLessonSessionProps {
 // still serve as a fallback (a bookmarked or shared link, say). `onExit` is the one way back:
 // it just clears PathOverviewScreen's own lessonDay state, so the exact same parchment view
 // reappears underneath rather than a browser-history "back" landing somewhere else entirely.
-export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, onlyVerse, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
+export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, onlyVerse, passage, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
+  const completeTrailReview = useProgressStore((state) => state.completeTrailReview);
   const fullDay = days.find((candidate) => candidate.dayNumber === dayNumber);
   const index = fullDay && onlyVerse ? verseIndexInDay(fullDay, onlyVerse.chapter, onlyVerse.verseNumber) : -1;
   // Memoized: a new day (or part) object every render re-runs everything keyed on it, in a loop.
@@ -78,9 +83,13 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
     // identical logic, which this mirrors for the standalone-route fallback. See
     // PracticeChain.tsx's own doc comment on why Review always drills first-letter while
     // Practice stays full-word.
-    const practiceVerses = day.newVerses.length > 0 ? day.newVerses : day.reviewVerses;
+    const practiceVerses = passage
+      ? verses.filter((verse) => verse.chapter === passage.chapter && verse.verseNumber >= passage.from && verse.verseNumber <= passage.to && verse.text.trim().length > 0)
+      : day.newVerses.length > 0
+        ? day.newVerses
+        : day.reviewVerses;
     if (practiceVerses.length === 0) return null;
-    const isReview = day.kind === "learn";
+    const isReview = day.kind === "learn" || passage !== undefined;
     const drillLabel = isReview ? "Review" : "Practice";
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -89,10 +98,11 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
           label={drillLabel}
           mode={isReview ? "firstLetter" : "fullWord"}
           onExit={onExit}
-          sessionKey={`${pathKey}:${dayNumber}:practice${index >= 0 ? `:${index}` : ""}`}
+          sessionKey={`${pathKey}:${dayNumber}:practice${passage ? `:${passage.key}` : index >= 0 ? `:${index}` : ""}`}
           layout={layout}
           exitWhenDone={embeddedInMindMap}
           onVerseChange={embeddedInMindMap ? reportPracticeVerse : undefined}
+          onDone={passage ? () => completeTrailReview(pathKey, passage.key) : undefined}
         />
       </div>
     );

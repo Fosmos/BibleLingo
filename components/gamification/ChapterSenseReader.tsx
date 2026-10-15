@@ -24,9 +24,6 @@ interface ChapterSenseReaderProps {
   onAction: (verse: VerseSegment, status: VerseStatus) => void;
   onBible: () => void;
   onBook: (book: string) => void;
-  // The verse a lesson or review runs on (its row holds the lesson's verse zone), and which it blanks.
-  lessonVerse: ParsedVerseKey | null;
-  isHidden: (book: string, chapter: number, verseNumber: number) => boolean;
   // Your next lesson's verses: selecting any of them highlights them all.
   lessonRange: VerseSegment[];
 }
@@ -36,17 +33,16 @@ const chapterKey = (at: { book: string; chapter: number }) => `${at.book}|${at.c
 
 // The Path tab's chapter reader (design_handoff_bible_progress): chapters in sense lines, grouped by
 // pericope, as one continuous scroll (lib/useContinuousChapters.ts), one verse selected with its
-// action floating at the bottom. Lessons and reviews run in place in the verse's own row.
+// action floating at the bottom. Lessons and reviews run on a page of their own (PathLessonPage.tsx).
 export function ChapterSenseReader(props: ChapterSenseReaderProps) {
-  const { start, version, pathVerses, statusOf, selected, onSelect, onAction, onBible, onBook, lessonVerse, isHidden, lessonRange } = props;
+  const { start, version, pathVerses, statusOf, selected, onSelect, onAction, onBible, onBook, lessonRange } = props;
   const entities = useProgressStore((state) => state.memorizedEntities);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
-  const lessonRunning = lessonVerse !== null;
   const [loaded, setLoaded] = useState<Record<string, VerseSegment[]>>({});
   const isLoaded = useCallback((at: ChapterRef) => Boolean(loaded[chapterKey(at)]), [loaded]);
-  const { chapters, inView, onScroll, ensure } = useContinuousChapters(start, scrollRef, contentRef, !lessonRunning, isLoaded);
+  const { chapters, inView, onScroll } = useContinuousChapters(start, scrollRef, contentRef, isLoaded);
   // Once the header (and its breadcrumbs) has scrolled away, a floating button keeps the way back to the book.
   const [pastHeader, setPastHeader] = useState(false);
   const handleScroll = () => {
@@ -78,13 +74,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
     if (!again) onSelect({ book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber });
   };
 
-  // A lesson moving on into another chapter: make sure it's in the scroll.
-  useEffect(() => {
-    if (lessonVerse) ensure(lessonVerse);
-  }, [lessonVerse, ensure]);
-
-  // The selected verse ~150px below the top (instantly on entry, smoothly after); a lesson's verse just under its top bar.
-  const target = lessonVerse ?? (active ? { book: active.book, chapter: active.chapter, verseNumber: active.verseNumber } : null);
+  // The selected verse ~150px below the top (instantly on entry, smoothly after).
+  const target = active ? { book: active.book, chapter: active.chapter, verseNumber: active.verseNumber } : null;
   const targetKey = target ? verseKey(target.book, target.chapter, target.verseNumber) : null;
   const targetLoaded = target ? Boolean(loaded[chapterKey(target)]) : false;
   useEffect(() => {
@@ -93,27 +84,25 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
       const scroller = scrollRef.current;
       const row = scroller?.querySelector<HTMLElement>(`[data-verse-key="${CSS.escape(targetKey)}"]`);
       if (!scroller || !row) return;
-      const top = scroller.scrollTop + row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - (lessonRunning ? 64 : 150);
+      const top = scroller.scrollTop + row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 150;
       scroller.scrollTo({ top, behavior: firstScroll.current || reducedMotion() ? "auto" : "smooth" });
       firstScroll.current = false;
     });
     return () => cancelAnimationFrame(frame);
-  }, [targetKey, targetLoaded, lessonRunning]);
+  }, [targetKey, targetLoaded]);
 
   const activeStatus = active ? statusOf(active.book, active.chapter, active.verseNumber) : "open";
   const covering = active ? entities.filter((entity) => entity.book === active.book && entity.chapter === active.chapter && active.verseNumber >= entity.startVerse && active.verseNumber <= entity.endVerse) : [];
 
   return (
     <div className="relative flex h-full flex-col">
-      <div ref={scrollRef} onScroll={handleScroll} className={`min-h-0 flex-1 overflow-y-auto px-[18px] pt-1.5 [overflow-anchor:none] [scrollbar-width:none] ${lessonRunning ? "pb-[70dvh]" : "pb-[220px]"}`}>
+      <div ref={scrollRef} onScroll={handleScroll} className={`min-h-0 flex-1 overflow-y-auto px-[18px] pt-1.5 [overflow-anchor:none] [scrollbar-width:none] pb-[220px]`}>
         <div ref={contentRef} className="flex flex-col gap-[18px]">
-          {!lessonRunning && (
-            <ProgressHeader
-              crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
-              eyebrow={`Sense lines · ${version}`}
-              title={inView.book}
-            />
-          )}
+          <ProgressHeader
+            crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
+            eyebrow={`Sense lines · ${version}`}
+            title={inView.book}
+          />
           {chapters.map((at) => (
             <ReaderChapterSection
               key={chapterKey(at)}
@@ -123,15 +112,12 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
               statusOf={(verseNumber) => statusOf(at.book, at.chapter, verseNumber)}
               highlighted={highlightedIn(at)}
               onTap={tap}
-              lessonVerse={lessonVerse && chapterKey(lessonVerse) === chapterKey(at) ? lessonVerse.verseNumber : null}
-              duringLesson={lessonRunning}
-              isHidden={(verseNumber) => isHidden(at.book, at.chapter, verseNumber)}
               onLoaded={onLoaded}
             />
           ))}
         </div>
       </div>
-      {!lessonRunning && pastHeader && (
+      {pastHeader && (
         <button
           type="button"
           onClick={() => onBook(inView.book)}
@@ -142,7 +128,7 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
           {inView.book}
         </button>
       )}
-      {!lessonRunning && active && (
+      {active && (
         <ReaderActionBar
           reference={highlighted.length > 1 ? formatVerseRangeLabel(highlighted) : `${formatChapterLabel(active.book, active.chapter)}:${active.verseNumber}`}
           status={activeStatus}

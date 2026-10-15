@@ -3,6 +3,7 @@ import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
 import { VerseNumberMarker } from "@/components/drills/VerseNumberMarker";
+import { PeekWord } from "@/components/drills/PeekWord";
 
 interface WordRevealLineProps {
   // Every word in the line, in order — not just the ones typed/spoken so far.
@@ -45,7 +46,9 @@ export function WordRevealLine({ words, revealedCount, annotations, verseMarkers
             {index < revealedCount ? (
               <AnnotatedVerseWord word={firstLettersOnly ? firstLetterWithPunctuation(word) : word} annotation={annotations?.[index]} className={firstLettersOnly ? FIRST_LETTER_GAP_CLASS : ""} />
             ) : (
-              <span>{hiddenWordBlank(word)}</span>
+              <PeekWord word={word}>
+                <span>{hiddenWordBlank(word)}</span>
+              </PeekWord>
             )}{" "}
           </span>
         );

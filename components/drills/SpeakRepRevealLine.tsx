@@ -2,8 +2,9 @@ import { Fragment } from "react";
 import { buildDrawTokens } from "@/lib/verseDrawTokens";
 import { firstWordCharacter, hiddenWordBlank } from "@/lib/verseWords";
 import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
+import { PeekWord } from "@/components/drills/PeekWord";
 
-const HINT_LETTER_CLASS = "font-bold tracking-[.08em] text-sage-900 dark:text-sage-200";
+const HINT_LETTER_CLASS = "rounded-md bg-brand-100 px-[.12em] font-bold tracking-[.08em] text-sand-800 dark:bg-brand-900/40 dark:text-sand-200";
 
 interface SpeakRepRevealLineProps {
   text: string;
@@ -36,10 +37,12 @@ export function SpeakRepRevealLine({ text, revealedCount, mode }: SpeakRepReveal
         // where the extra first-letter gap goes (see lib/firstLetterGap.ts). Never after a word
         // already spoken in full, which reads as ordinary text.
         let endsLetterUnit = false;
+        let hiddenWord = false;
         if (isWord) {
           const isRevealed = wordIndex < revealedCount;
           display = isRevealed ? token.text : mode === "blind" ? hiddenWordBlank(token.text) : (firstWordCharacter(token.text) ?? token.text);
           endsLetterUnit = mode === "hint" && !isRevealed;
+          hiddenWord = !isRevealed;
           wordIndex++;
         } else if (token.kind === "punctuation") {
           // Punctuation only appears once the word it belongs to has been said — never as part
@@ -51,9 +54,10 @@ export function SpeakRepRevealLine({ text, revealedCount, mode }: SpeakRepReveal
           if (ownerIndex >= revealedCount) display = mode === "blind" ? hiddenWordBlank(token.text) : "";
           endsLetterUnit = mode === "hint" && ownerIndex >= revealedCount;
         }
-        // A hint letter reads bold and spaced in deep sage (the Organic restyle), apart from the
-        // words already said.
-        const shown = endsLetterUnit && isWord ? <span className={HINT_LETTER_CLASS}>{display}</span> : display;
+        // A hint letter reads bold and spaced on a pale terracotta wash, apart from the words
+        // already said; a hidden word can be peeked at (PeekWord.tsx).
+        const letter = endsLetterUnit && isWord ? <span className={HINT_LETTER_CLASS}>{display}</span> : display;
+        const shown = hiddenWord ? <PeekWord word={token.text}>{letter}</PeekWord> : letter;
         return (
           <Fragment key={index}>
             {endsLetterUnit && token.spaceAfter ? <span className={FIRST_LETTER_GAP_CLASS}>{shown}</span> : shown}

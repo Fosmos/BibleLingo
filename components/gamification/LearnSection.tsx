@@ -12,11 +12,12 @@ import { useCelebration } from "@/lib/useCelebration";
 import { usePericopeHeading } from "@/lib/usePericopeHeading";
 import { sliceWordAnnotations, type WordAnnotationMap } from "@/lib/verseHighlights";
 import { useLearnSteps } from "@/lib/useLearnSteps";
-import { usePriorLearnedVerses } from "@/lib/usePriorLearnedVerse";
 import { useReportSheetStage } from "@/lib/useReportSheetStage";
 import { learnSheetStage } from "@/lib/learnSheetStage";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
+import { useReferenceStep } from "@/lib/useReferenceStep";
+import { LearnReferenceStep } from "@/components/gamification/LearnReferenceStep";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
 import { LearnCumulativeStage } from "@/components/gamification/LearnCumulativeStage";
 import { LearnSpeakVerseStage } from "@/components/gamification/LearnSpeakVerseStage";
@@ -25,16 +26,14 @@ import { SectionCompleteOverlay } from "@/components/ui/SectionCompleteOverlay";
 
 interface LearnSectionProps {
   day: MemorizationDay;
-  // This whole path's own full day plan (see DaySessionController.tsx) — narrowed to just
-  // this lesson's own chapter (lib/chapterScopedDays.ts) before powering useChapterReadingLayout.
+  // The path's whole plan, narrowed to this lesson's chapter for useChapterReadingLayout.
   allDays: MemorizationDay[];
   completedDays: number;
   todaysDay: number;
   label: string;
   version: string;
   onComplete: () => void;
-  // See DaySessionController.tsx's own doc comment — set only by the in-place lesson flow;
-  // LessonTopBar's own "Back" calls this instead of navigating anywhere when it's set.
+  // Set only by the in-place lesson flow: LessonTopBar's "Back" calls it (DaySessionController.tsx).
   onExit?: () => void;
   sessionKey?: string;
   // See InPlaceLessonSession.tsx's own doc comment — threaded straight through to LearnTopBar.
@@ -49,22 +48,16 @@ const LONGER_PRAYER_DURATION_S = 60;
 // Only the orientation phase ever calls this — every other phase gets this no-op.
 function noopAnnotationsChange() {}
 
-// A day's new verses go through Orientation (highlight/annotate + 3-word summary) ONCE across
-// every verse selected today. Then each verse, one at a time, runs Rhythm → Write First
-// Letter → Speak (first-letter hint) → Type it by first letter → speak that one verse aloud
-// from memory → (every verse but the first) type every verse learned today so far by first
-// letter, growing verse by verse — before moving to the next verse. One prayer timer closes
-// the lesson out, dead last — right before whatever review follows (Chapter Review, etc.). The
-// whole session shares ONE top bar and ONE fixed set of `contextVerses` — today's own real
-// verses plus a neighbor on each side, computed once — paginated per-stage down to just the one
-// page holding the active verse, so the parchment never resizes as the stage changes.
+// A day's new verses go through Orientation ONCE, then each verse runs its stages one at a time
+// (lib/learnSteps.ts) — every recall stage opening on the verse's reference, entered the same way
+// (lib/useReferenceStep.ts) — and a prayer timer closes it out. The session shares ONE top bar and
+// ONE fixed set of `contextVerses` (today's real verses plus a neighbour each side), paginated
+// per stage to the page holding the active verse, so the parchment never resizes.
 export function LearnSection({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: LearnSectionProps) {
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
   const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay, senseCardFillHeightPx, senseCardColumnWidthPx);
   const wholeDay = useMemo(() => joinVerses(day.newVerses, "day"), [day.newVerses]);
-  // Word offset of each verse's own first word within the whole-day joined text — lets a
-  // verse's stages read the slice of wordAnnotations (made once, during Orientation, against
-  // the whole-day text) relevant to just its own words.
+  // Each verse's first-word offset in the whole-day text, to slice Orientation's wordAnnotations.
   const verseOffsets = useMemo(() => {
     const offsets: number[] = [];
     let total = 0;
@@ -74,9 +67,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
     }
     return offsets;
   }, [day.newVerses]);
-  // Which of day.newVerses actually have something to drill — see buildSteps's own doc
-  // comment on why a translation's gap verse (still present in day.newVerses itself) never
-  // gets its own per-verse stages.
+  // Which of day.newVerses have something to drill (a translation's gap verse has no stages).
   const realVerseIndices = useMemo(
     () => day.newVerses.map((_, index) => index).filter((index) => day.newVerses[index].text.trim().length > 0),
     [day.newVerses],
@@ -96,23 +87,19 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   );
   const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
 
-  const steps = useLearnSteps(realVerseIndices, usePriorLearnedVerses(day).length);
+  const steps = useLearnSteps(realVerseIndices);
   const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);
   useReportSheetStage(learnSheetStage(steps, stepIndex, day), embeddedInMindMap);
   useRecordLearnedVerseCount(sessionKey, steps, stepIndex);
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
   const { pending, celebrate, finish } = useCelebration();
+  const advance = () => (stepIndex + 1 >= steps.length ? celebrate(onComplete, "New Verses Learned") : celebrate(() => setStepIndex(stepIndex + 1)));
+  const reference = useReferenceStep(steps[stepIndex], stepIndex, day);
 
   if (pending) return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
 
   const step = steps[stepIndex];
   if (!step) return null;
-
-  function advance() {
-    const next = stepIndex + 1;
-    if (next >= steps.length) celebrate(onComplete, "New Verses Learned");
-    else celebrate(() => setStepIndex(next));
-  }
 
   const topBar = (
     <LearnTopBar
@@ -131,6 +118,15 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
       embeddedInMindMap={embeddedInMindMap}
     />
   );
+
+  if (reference.asking) {
+    return (
+      <>
+        {topBar}
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3"><LearnReferenceStep key={stepIndex} verse={reference.asking.verse} mode={reference.asking.mode} layout={layout} onDone={reference.done} /></div>
+      </>
+    );
+  }
 
   if (step.phase === "speak_verse") {
     return (

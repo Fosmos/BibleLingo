@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
+import type { CustomClauseRole, FillReps, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -38,6 +38,7 @@ interface ProgressActions {
   retireLearnedPath: (pathKey: string) => void;
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
   learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
+  completeTrailReview: (pathKey: string, reviewKey: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;
@@ -90,6 +91,7 @@ interface ProgressActions {
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setFillInTheBlankStageEnabled: (value: boolean) => void;
+  setFillInTheBlankReps: (value: FillReps) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   setKineticTextStageEnabled: (value: boolean) => void;
   resetProgress: () => void;

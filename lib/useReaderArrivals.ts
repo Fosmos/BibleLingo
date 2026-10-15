@@ -8,12 +8,18 @@ import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useReviewArrival } from "@/lib/useReviewArrival";
 import { usePracticeArrival } from "@/lib/usePracticeArrival";
 import { trailHref } from "@/lib/readerHref";
+import type { PassageReview } from "@/lib/trailReviews";
 import type { ChapterLesson } from "@/components/gamification/ChapterPathLesson";
 
 const progressMark = (pathKey: string): string => {
   const plan = useProgressStore.getState().paths[pathKey];
-  return `${plan?.completedDays ?? 0}:${plan?.versesIntoDay ?? 0}`;
+  return `${plan?.completedDays ?? 0}:${plan?.versesIntoDay ?? 0}:${plan?.reviewsDone?.length ?? 0}`;
 };
+
+function parsePassage(value: string | null): PassageReview | undefined {
+  const match = value?.match(/^(.+)\|(\d+):(\d+)-(\d+)$/);
+  return match ? { key: match[1], chapter: Number(match[2]), from: Number(match[3]), to: Number(match[4]) } : undefined;
+}
 
 interface ReaderArrivalOptions {
   pathKey: string;
@@ -46,10 +52,17 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const offerVerse = useCallback((book: string, chapter: number, verseNumber: number) => (openVerse(book, chapter, verseNumber), true), [openVerse]);
   useReviewArrival(offerVerse, startReview);
 
-  // `?verse=chapter:verse` runs just that verse of the day (each verse its own lesson).
+  // `?verse=chapter:verse` runs just that verse of the day (each verse its own lesson);
+  // `?passage=key|chapter:from-to` a trail's pericope or chapter review instead.
   const startDay = useCallback(
     (dayNumber: number, mode: "select" | "practice") => {
       const day = days.find((candidate) => candidate.dayNumber === dayNumber);
+      const passage = parsePassage(new URLSearchParams(window.location.search).get("passage"));
+      if (day && passage && mode === "practice") {
+        openVerse(day.newVerses[0]?.book ?? "", passage.chapter, passage.from);
+        setSheet({ kind: "lesson", verseNumber: passage.from, dayNumber, mode, passage });
+        return;
+      }
       const [chapter, verseNumber] = (new URLSearchParams(window.location.search).get("verse") ?? "").split(":").map(Number);
       const only = day?.newVerses.find((verse) => verse.chapter === chapter && verse.verseNumber === verseNumber);
       const first = only ?? (day ? (day.kind === "learn" ? day.newVerses : day.reviewVerses)[0] : undefined);
@@ -73,7 +86,7 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const returnToTrail = useCallback(() => {
     if (!fromTrail) return false;
     const moved = progressMark(pathKey) !== completedAtStart.current;
-    router.push(`${trailHref(pathKey, version)}${moved ? "&toast=done" : ""}`);
+    router.push(`${trailHref(pathKey, version, "current")}${moved ? "&toast=done" : ""}`);
     return true;
   }, [fromTrail, pathKey, version, router]);
 

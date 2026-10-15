@@ -87,6 +87,7 @@ export function LearnPhaseContent({
   // whole day (see LearnSection.tsx) but keeps the first new verse's own identity, a
   // reasonable single anchor for a combined screen.
   const poa = useProgressStore((state) => state.versePOA[verseKey(verse.book, verse.chapter, verse.verseNumber)]);
+  const fillReps = useProgressStore((state) => state.fillInTheBlankReps ?? 2);
   const locationTag = useProgressStore((state) => state.locationTags[locationTagKey({ level: "verse", book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber })]);
   // Once the reader has visualized this lesson (i.e. every phase after orientation_summary),
   // a small badge pins their own mnemonic pieces — the location tag plus their POA — to the
@@ -147,7 +148,7 @@ export function LearnPhaseContent({
       />
     );
   } else if (phase === "fill_in_the_blank") {
-    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
+    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} reps={fillReps} onComplete={onAdvance} />;
   } else if (phase === "fill_in_the_blank_letters") {
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else {

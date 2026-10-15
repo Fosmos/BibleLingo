@@ -1,11 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { buildDrawTokens } from "@/lib/verseDrawTokens";
 import { spokenPrefixMatchCount, spokenPrefixMatchCountFirstLetter } from "@/lib/textMatch";
 
 export interface SpeakRepReveal {
   revealedCount: number;
+  total: number;
   reset: () => void;
-  onTranscript: (transcript: string) => void;
+  // A new listen carries on from the words already recognized instead of starting over.
+  resume: () => void;
+  // Returns the new count.
+  onTranscript: (transcript: string) => number;
 }
 
 // Tracks how many of targetText's own words have been recognized so far in a live speech
@@ -14,19 +18,37 @@ export interface SpeakRepReveal {
 // the matching itself. Split out of SpeakRep.tsx purely to keep that file under this codebase's
 // 200-line cap. targetWords excludes verse-reference tokens (e.g. "3:16") the same way
 // SpeakRepRevealLine's own token loop does, so the two stay in lockstep index-for-index.
-// `gradeByFirstLetter` (see useSpeakRepMic.ts's own doc comment) swaps in the first-letter
-// counterpart matcher, so a word visibly reveals under the SAME criterion the finished attempt
-// gets graded by — never "correct at the end" without ever having visibly filled in.
+// `gradeByFirstLetter` swaps in the first-letter matcher, so a word reveals the instant its first
+// letter is heard. Each listen (`resume`) matches only the words still to come, so stopping and
+// starting again never loses what's been said.
 export function useSpeakRepReveal(targetText: string, gradeByFirstLetter: boolean): SpeakRepReveal {
   const [revealedCount, setRevealedCount] = useState(0);
+  const countRef = useRef(0);
+  const baseRef = useRef(0);
   const targetWords = useMemo(
     () => buildDrawTokens(targetText, {}).filter((token) => token.kind === "word" && !token.isReference).map((token) => token.text),
     [targetText],
   );
   const matchCount = gradeByFirstLetter ? spokenPrefixMatchCountFirstLetter : spokenPrefixMatchCount;
+  const set = (count: number) => {
+    countRef.current = count;
+    setRevealedCount(count);
+  };
   return {
     revealedCount,
-    reset: () => setRevealedCount(0),
-    onTranscript: (transcript: string) => setRevealedCount((prev) => Math.max(prev, matchCount(transcript, targetWords))),
+    total: targetWords.length,
+    reset: () => {
+      baseRef.current = 0;
+      set(0);
+    },
+    resume: () => {
+      baseRef.current = countRef.current;
+    },
+    onTranscript: (transcript: string) => {
+      const base = baseRef.current;
+      const next = Math.max(countRef.current, base + matchCount(transcript, targetWords.slice(base)));
+      set(next);
+      return next;
+    },
   };
 }

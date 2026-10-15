@@ -84,6 +84,8 @@ export interface MemorizationDay {
 // at once, turned on/off globally from Settings (see UserProgress.locationTagLevels).
 export type LocationTagLevel = "book" | "chapter" | "pericope" | "verse";
 
+export type FillReps = 2 | 3;
+
 export interface PathProgress {
   version: string;
   completedDays: number;
@@ -106,6 +108,8 @@ export interface PathProgress {
   // How many verses of the next lesson day are already learned — each verse is its own lesson on
   // the trail (lib/dayVerseProgress.ts). Cleared when that day completes.
   versesIntoDay?: number;
+  // The trail's passage reviews finished — a pericope's or a chapter's (lib/trailStops.ts keys).
+  reviewsDone?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -377,6 +381,10 @@ export interface UserProgress {
   // during Learn, before the Speak hint. Off skips straight to the Speak hint (from Rhythm, or
   // from Write First Letter if that's on) for every verse that day.
   fillInTheBlankStageEnabled: boolean;
+  // How many word-bank Fill in the Blank reps each verse gets in all — 2 (half blanked, then all) or
+  // 3 (another all-blanked) — chosen on the Learn intensity slider (LearnIntensityPicker.tsx).
+  // Undefined (saved before this existed) is 2.
+  fillInTheBlankReps?: FillReps;
   // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
   // Learn — OPTIONAL, defaulting off: Listen (kineticTextStageEnabled below) is the default
   // introduction to a fresh verse now, and Rhythm is the deliberate, opt-in alternative/

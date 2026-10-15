@@ -16,6 +16,7 @@ import { ProgressFilter } from "@/components/gamification/ProgressFilter";
 import { ProgressGroupCard } from "@/components/gamification/ProgressGroupCard";
 import { ProgressCircle } from "@/components/gamification/ProgressCircle";
 import { ProgressKey } from "@/components/gamification/ProgressKey";
+import { RecallQuizButton } from "@/components/gamification/RecallQuizButton";
 
 interface BibleProgressLevelProps {
   filter: Filter;
@@ -51,6 +52,7 @@ export function BibleProgressLevel({ filter, onFilter, hereBook, onOpenBook, foo
     <div className="flex h-full flex-col gap-[18px] overflow-y-auto px-[18px] pb-[140px] pt-1.5 [scrollbar-width:none]">
       <ProgressHeader crumbs={[{ label: "Bible" }]} eyebrow="Genesis to Revelation" title="Your Bible" />
       <ProgressSummaryCard known={sum("known")} due={sum("due")} total={sum("total")} stats={computeMemorizedStats(entities)} />
+      <RecallQuizButton />
       <ProgressFilter heading="Books" value={filter} onChange={onFilter} />
       {TESTAMENTS.map((testament) => {
         const books = BIBLE_BOOKS.filter((book) => book.testament === testament.id);

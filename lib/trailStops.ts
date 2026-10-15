@@ -3,11 +3,14 @@ import { formatChapterLabel, formatVerseRangeLabel } from "@/lib/chapterContent"
 import { getPericopeForVerse } from "@/lib/chapterPericopes";
 import { entitiesInScope } from "@/lib/srsScopeStatus";
 import { isDue } from "@/lib/srs";
+import { chapterOfSectionKey, passageReviewStop, type PassageReview } from "@/lib/trailReviews";
 
-// The Path tab's winding trail (design_handoff_path_picker): the path's own lesson days as stops,
-// in sections — a book path by chapter, a chapter path by pericope, a topic path five at a time,
+// The Path tab's trail (design_handoff_path_trail): the path's own lesson days as stops, in
+// sections — book and chapter paths by pericope, a topic path five at a time,
 // a verse path as its one lesson's learning stages. One stop per verse — a day of several verses is
-// several stops, each opening that day's lesson. Review days are the sections' trophy stops.
+// several stops, each opening that day's lesson. Review days are the sections' trophy stops; a
+// pericope ends on a review of the whole pericope, and a book's chapter on a chapter review section.
+// A chapter path's own closing review days are its last section.
 export type StopState = "done" | "current" | "locked";
 
 export interface TrailStop {
@@ -22,14 +25,20 @@ export interface TrailStop {
   verses: VerseSegment[];
   // The one verse a lesson stop is (each verse its own lesson); unset for review stops.
   verse?: VerseSegment;
+  // A passage review stop — the pericope or chapter just learned (lib/trailReviews.ts).
+  review?: PassageReview;
 }
 
 export interface TrailSection {
+  // The section's reference, e.g. "Romans 8:1–11" ("Verses 1–5" for a topic, "Finish line").
+  ref: string;
   kicker: string;
   title: string;
   stops: TrailStop[];
   state: "complete" | "current" | "locked";
   done: number;
+  // A chapter review: one stop, opened straight from the map.
+  review?: boolean;
 }
 
 const REVIEW_TITLES: Record<Exclude<MemorizationDay["kind"], "learn">, string> = {
@@ -75,11 +84,12 @@ function stopFor(day: MemorizationDay, completedDays: number, nextDay: number | 
   };
 }
 
-function finishSection(kicker: string, title: string, stops: TrailStop[]): TrailSection {
+function finishSection(kicker: string, title: string, stops: TrailStop[], byPassage = false): TrailSection {
   if (stops.length) stops[stops.length - 1] = { ...stops[stops.length - 1], checkpoint: true };
   const done = stops.filter((stop) => stop.state === "done").length;
   const state = done === stops.length ? "complete" : stops.some((stop) => stop.state === "current") ? "current" : "locked";
-  return { kicker, title, stops, state, done };
+  const verses = stops.flatMap((stop) => (stop.verse ? [stop.verse] : []));
+  return { ref: byPassage && verses.length ? formatVerseRangeLabel(verses) : kicker, kicker, title, stops, state, done };
 }
 
 // Which section a stop belongs to — one verse of a lesson day, or a review day — by path kind: a
@@ -87,20 +97,17 @@ function finishSection(kicker: string, title: string, stops: TrailStop[]): Trail
 function sectionOf(kind: PathKind, day: MemorizationDay, index: number, verse?: VerseSegment): { key: string; kicker: string; title: string } {
   const first = verse ?? (day.kind === "learn" ? day.newVerses : day.reviewVerses)[0];
   if (day.kind !== "learn" && day.chapterGroup === undefined && kind === "book") return { key: "final", kicker: "Finish line", title: "Final review" };
-  if (kind === "book") {
-    const chapter = verse?.chapter ?? day.chapterGroup ?? first?.chapter ?? 1;
-    return { key: `ch-${chapter}`, kicker: `Chapter ${chapter}`, title: first ? formatChapterLabel(first.book, chapter) : `Chapter ${chapter}` };
-  }
-  if (kind === "chapter" && first) {
+  if (day.kind !== "learn" && kind === "chapter") return { key: "final", kicker: "Finish line", title: "Chapter review" };
+  if ((kind === "book" || kind === "chapter") && first) {
     const pericope = getPericopeForVerse(first.book, first.chapter, first.verseNumber);
-    if (pericope) return { key: `p-${pericope.startVerse}`, kicker: `Verses ${pericope.startVerse}–${pericope.endVerse}`, title: pericope.heading };
-    return { key: "all", kicker: formatChapterLabel(first.book, first.chapter), title: "The whole chapter" };
+    if (pericope) return { key: `p-${first.chapter}-${pericope.startVerse}`, kicker: `Verses ${pericope.startVerse}–${pericope.endVerse}`, title: pericope.heading };
+    return { key: `ch-${first.chapter}`, kicker: `Chapter ${first.chapter}`, title: formatChapterLabel(first.book, first.chapter) };
   }
   const group = Math.floor(index / 5);
   return { key: `g-${group}`, kicker: `Verses ${group * 5 + 1}–${group * 5 + 5}`, title: `Part ${group + 1}` };
 }
 
-export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDays: number, entities: MemorizedEntity[], stageLabels: string[], versesIntoDay = 0, now: Date = new Date()): TrailSection[] {
+export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDays: number, entities: MemorizedEntity[], stageLabels: string[], versesIntoDay = 0, reviewsDone: string[] = [], now: Date = new Date()): TrailSection[] {
   const nextDay = days.find((day) => day.dayNumber > completedDays)?.dayNumber;
   if (kind === "verse") {
     // One lesson, shown as its learning stages: all done once it's learned, else the first is up.
@@ -108,22 +115,35 @@ export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDay
     if (!day) return [];
     const base = stopFor(day, completedDays, nextDay, entities, now);
     const stops = stageLabels.map((label, index) => ({ ...base, key: `stage-${index}`, label, title: label, state: base.state === "current" && index > 0 ? ("locked" as const) : base.state, checkpoint: false }));
-    return [finishSection("Stage 1 · Day 1", "Learn it", stops)];
+    return [{ ...finishSection("Stage 1 · Day 1", "Learn it", stops), ref: base.title }];
   }
-  const sections: TrailSection[] = [];
-  let current: { key: string; kicker: string; title: string; stops: TrailStop[] } | null = null;
+  const groups: { key: string; kicker: string; title: string; stops: TrailStop[] }[] = [];
+  const byPassage = kind === "book" || kind === "chapter";
+  let current: (typeof groups)[number] | null = null;
   let learnIndex = 0;
   const entries = days.flatMap((day): { day: MemorizationDay; verse?: VerseSegment; index: number }[] => (day.kind === "learn" ? day.newVerses.map((verse, index) => ({ day, verse, index })) : [{ day, verse: undefined, index: 0 }]));
   for (const { day, verse, index } of entries) {
     const section = sectionOf(kind, day, kind === "topic" ? learnIndex : 0, verse);
     if (verse) learnIndex++;
     // Review days stay with the section before them (but a book's final review is its own).
-    if (!current || (section.key !== current.key && !(!verse && kind !== "book"))) {
-      if (current) sections.push(finishSection(current.kicker, current.title, current.stops));
+    if (!current || (section.key !== current.key && (verse || section.key === "final"))) {
       current = { ...section, stops: [] };
+      groups.push(current);
     }
     current.stops.push(verse ? stopFor(day, completedDays, nextDay, entities, now, verse, index, versesIntoDay) : stopFor(day, completedDays, nextDay, entities, now));
   }
-  if (current) sections.push(finishSection(current.kicker, current.title, current.stops));
-  return sections;
+  return groups.flatMap((group, index) => {
+    const lessons = group.stops.filter((stop) => stop.verse);
+    const review = group.key.startsWith("p-") ? passageReviewStop(`pericope:${group.key.slice(2)}`, "Review", `Review: ${group.title}`, lessons, reviewsDone) : null;
+    const sections = [finishSection(group.kicker, group.title, review ? [...group.stops, review] : group.stops, byPassage)];
+    // A book's chapter, once its last pericope is through, gets its own review section on the map.
+    const chapter = chapterOfSectionKey(group.key);
+    if (kind === "book" && chapter !== undefined && chapterOfSectionKey(groups[index + 1]?.key) !== chapter) {
+      const inChapter = groups.filter((other) => chapterOfSectionKey(other.key) === chapter).flatMap((other) => other.stops.filter((stop) => stop.verse));
+      const book = inChapter[0]?.verse?.book ?? "";
+      const stop = passageReviewStop(`chapter:${chapter}`, "Review", `Review ${formatChapterLabel(book, chapter)}`, inChapter, reviewsDone);
+      if (stop) sections.push({ ...finishSection("Chapter review", `Review ${formatChapterLabel(book, chapter)}`, [stop]), ref: formatChapterLabel(book, chapter), review: true });
+    }
+    return sections;
+  });
 }

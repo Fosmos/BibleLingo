@@ -14,6 +14,7 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
+import { PeekWord } from "@/components/drills/PeekWord";
 
 interface FirstLetterBlankRepProps {
   verse: VerseSegment;
@@ -79,7 +80,7 @@ export function FirstLetterBlankRep({ verse, layout, onComplete }: FirstLetterBl
   // (see LessonPageCard.tsx's own renderActiveVerse doc comment).
   // `indent-0` on the blank span below undoes something otherwise invisible — see
   // FillInTheBlankRep.tsx's own identical doc comment on why an inline-block sibling of this
-  // one needs it against SenseLineRow.tsx's own hanging-indent `-indent-6`.
+  // one needs it against SenseLineRow.tsx's own hanging-indent `-indent-5`.
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
     return (
       <>
@@ -113,7 +114,7 @@ export function FirstLetterBlankRep({ verse, layout, onComplete }: FirstLetterBl
                 isTarget && showError ? "border-heart-500" : isTarget ? "border-brand-400 dark:border-brand-600" : "border-dashed border-line dark:border-zinc-700"
               }`}
             >
-              {" "}
+              <PeekWord word={word}>{" "}</PeekWord>
             </span>
           );
         })}

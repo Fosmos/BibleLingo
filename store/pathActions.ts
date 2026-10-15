@@ -31,6 +31,8 @@ interface PathActions {
   // The first `count` verses of the next lesson day are learned (each verse its own lesson), so
   // they show as known and go into spaced review before the rest of the day is done.
   learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
+  // A trail passage review (a pericope's, or the chapter's) is done.
+  completeTrailReview: (pathKey: string, reviewKey: string) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -121,6 +123,13 @@ export function createPathActions(
       if (!existing || dayNumber !== existing.completedDays + 1) return;
       const paths = { ...state.paths, [pathKey]: { ...existing, versesIntoDay: Math.max(existing.versesIntoDay ?? 0, count) } };
       set(persist({ ...state, paths, memorizedEntities: syncMemorizedEntities(paths, state.memorizedEntities) }));
+    },
+
+    completeTrailReview: (pathKey, reviewKey) => {
+      const state = get();
+      const existing = state.paths[pathKey];
+      if (!existing || existing.reviewsDone?.includes(reviewKey)) return;
+      set(persist({ ...state, paths: { ...state.paths, [pathKey]: { ...existing, reviewsDone: [...(existing.reviewsDone ?? []), reviewKey] } } }));
     },
 
     removeActivePath: (pathKey) => {

@@ -27,7 +27,7 @@ export function parseToSenseLines(text: string): string[] {
 // left margin as the verse's own first line, regardless of which punctuation mark split it off
 // — only a genuine mid-clause line WRAP (a browser-wrapped second line of the same clause) hangs
 // indented under that clause's own first word (see HANGING_INDENT_PX/SenseLineRow.tsx).
-export const HANGING_INDENT_PX = 24; // 1.5rem — the wrapped-line hanging indent every clause gets
+export const HANGING_INDENT_PX = 20; // the wrapped-line hanging indent every clause gets (SenseLineRow.tsx `pl-5`)
 
 // The real width left for a clause's own text after its own hanging indent eats into the page's
 // column — used for both real word-wrap measurement (see lib/chapterPagination.ts) and the CSS

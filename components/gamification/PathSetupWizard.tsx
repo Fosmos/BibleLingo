@@ -88,7 +88,7 @@ export function PathSetupWizard({ choice, onBack }: PathSetupWizardProps) {
   if (step === "intensity" && intensity.pendingVersesPerDay !== null) {
     return (
       <SetupStepFrame {...frame}>
-        <LearnIntensityPicker initialStages={intensity.initialStages} initialMemoryPalace={intensity.initialMemoryPalace} onContinue={(stages, palace) => (intensity.handleIntensityContinue(stages, palace), next())} onBack={back} />
+        <LearnIntensityPicker initialStages={intensity.initialStages} initialMemoryPalace={intensity.initialMemoryPalace} initialFillReps={intensity.initialFillReps} onContinue={(stages, palace, extra) => (intensity.handleIntensityContinue(stages, palace, extra), next())} onBack={back} />
       </SetupStepFrame>
     );
   }

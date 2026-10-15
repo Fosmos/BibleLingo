@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { MemorizationDay } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
+import { usePriorLearnedVerses } from "@/lib/usePriorLearnedVerse";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { LearnSection } from "@/components/gamification/LearnSection";
 
@@ -28,10 +29,8 @@ interface VerseLessonFlowProps {
 const PHASES = ["previousReview", "learn", "postReview"] as const;
 type Phase = (typeof PHASES)[number];
 
-// A single verse lesson: first a quick check of just the immediately preceding lesson's
-// verse(s) — every path kind, not just book mode — then learn this verse (which itself
-// folds a growing typed check of everything learned TODAY so far right after each verse's
-// own speak-it-aloud stage — see LearnSection.tsx's type_cumulative_today), then (book mode
+// A single verse lesson: first a check of the verses already learned in its pericope — every path
+// kind, not just book mode — then learn this verse, then (book mode
 // only) the sliding-window chapter review. There's no separate generic "review everything so
 // far" phase here anymore — it read as a confusing, oddly-scoped extra stage in book mode
 // (where day.reviewVerses is deliberately empty, see lib/bookDayPlan.ts) squeezed between
@@ -39,7 +38,11 @@ type Phase = (typeof PHASES)[number];
 // in the place it actually belongs.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "phaseIndex", 0);
-  const hasPreviousReview = (day.previousVerses?.length ?? 0) > 0;
+  // The check first: every verse learned so far in this lesson's pericope (learning 8:5 of a
+  // pericope from 8:1, it types 8:1–4), then on to learning the verse.
+  const prior = usePriorLearnedVerses(day);
+  const previousDay = useMemo(() => ({ ...day, previousVerses: prior }), [day, prior]);
+  const hasPreviousReview = prior.length > 0;
   // Skip straight past the previous-lesson check when there's nothing to show for it (a path's
   // very first lesson): shown as "learn" at once, and saved as such just after rendering —
   // saving it during render updated the store mid-render (React's setState-in-render warning).
@@ -58,7 +61,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
   if (phase === "previousReview") {
     return (
       <ReviewSection
-        day={day}
+        day={previousDay}
         onComplete={() => setPhaseIndex(1)}
         sessionKey={sessionKey}
         phase="previous"

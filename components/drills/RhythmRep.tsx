@@ -69,7 +69,7 @@ export function RhythmRep({ verse, verseMarkers, annotations, layout, onComplete
 
   const activeVerseWords = (
     <Fragment>
-      {!layout && <sup className="mr-0.5 text-[0.7em] font-semibold text-ink-muted dark:text-zinc-500 [.path-lesson-verse_&]:hidden">{verse.verseNumber}</sup>}
+      {!layout && <sup className="mr-0.5 text-[0.7em] font-semibold text-ink-muted dark:text-zinc-500">{verse.verseNumber}</sup>}
       {flatWords.map((clauseWord, index) => {
         const stateClassName =
           index === wordIndex

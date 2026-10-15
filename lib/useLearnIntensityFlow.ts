@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { BibleBook } from "@/types";
+import type { BibleBook, FillReps } from "@/types";
 import type { LearnIntensityStages } from "@/lib/learnIntensity";
 import { useProgressStore } from "@/store/useProgressStore";
 
@@ -32,6 +32,8 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
   const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   const setFillInTheBlankStageEnabled = useProgressStore((state) => state.setFillInTheBlankStageEnabled);
+  const fillInTheBlankReps = useProgressStore((state) => state.fillInTheBlankReps ?? 2);
+  const setFillInTheBlankReps = useProgressStore((state) => state.setFillInTheBlankReps);
 
   // Held between steps so the final goToPath call has both answers at once.
   const [pendingVersesPerDay, setPendingVersesPerDay] = useState<number | null>(null);
@@ -41,7 +43,8 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
     setPendingVersesPerDay(versesPerDay);
   }
 
-  function handleIntensityContinue(stages: LearnIntensityStages, memoryPalace: boolean) {
+  function handleIntensityContinue(stages: LearnIntensityStages, memoryPalace: boolean, fillReps: FillReps) {
+    setFillInTheBlankReps(fillReps);
     setUnderstandStageEnabled(stages.understandStageEnabled);
     setVisualizeStageEnabled(stages.visualizeStageEnabled);
     setWriteFirstLetterStageEnabled(stages.writeFirstLetterStageEnabled);
@@ -59,6 +62,7 @@ export function useLearnIntensityFlow({ mode, selectedBook, selectedChapter, sel
     pendingVersesPerDay,
     initialStages: { understandStageEnabled, visualizeStageEnabled, writeFirstLetterStageEnabled, fillInTheBlankStageEnabled },
     initialMemoryPalace: buildingViewEnabled,
+    initialFillReps: fillInTheBlankReps,
     handleSelectVersesPerDay,
     handleIntensityContinue,
     resetPendingVersesPerDay: () => setPendingVersesPerDay(null),

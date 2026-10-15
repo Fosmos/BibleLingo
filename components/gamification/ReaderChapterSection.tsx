@@ -22,10 +22,6 @@ interface ReaderChapterSectionProps {
   // Highlighted verse numbers in this chapter (the selection, or the whole next lesson).
   highlighted: number[];
   onTap: (verse: VerseSegment) => void;
-  // The verse here a lesson runs on, if any; whether a lesson runs anywhere; which verses it blanks.
-  lessonVerse: number | null;
-  duringLesson: boolean;
-  isHidden: (verseNumber: number) => boolean;
   onLoaded: (at: ChapterRef, verses: VerseSegment[]) => void;
 }
 
@@ -37,7 +33,7 @@ function runPosition(run: number[], verseNumber: number): "single" | "first" | "
 
 // One chapter in the continuous reader (ChapterSenseReader.tsx): its title, then its pericopes in
 // sense lines — the path's own chapters straight from its verses, any other fetched in `version`.
-export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, lessonVerse, duringLesson, isHidden, onLoaded }: ReaderChapterSectionProps) {
+export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, onLoaded }: ReaderChapterSectionProps) {
   const entities = useProgressStore((state) => state.memorizedEntities);
   const onPath = pathVerses.some((verse) => verse.book === at.book && verse.chapter === at.chapter);
   const loaded = useChapterText(at.book, at.chapter, version, onPath);
@@ -71,12 +67,9 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
                 rowKey={verseKey(at.book, at.chapter, verse.verseNumber)}
                 verse={verse}
                 status={statusOf(verse.verseNumber)}
-                selected={!duringLesson && highlighted.includes(verse.verseNumber)}
+                selected={highlighted.includes(verse.verseNumber)}
                 run={runPosition(highlighted, verse.verseNumber)}
                 onSelect={() => onTap(verse)}
-                hostsLesson={lessonVerse === verse.verseNumber}
-                duringLesson={duringLesson}
-                hidden={isHidden(verse.verseNumber)}
                 seal={sealTier(entities, { book: at.book, chapter: at.chapter, startVerse: verse.verseNumber, endVerse: verse.verseNumber })}
               />
             ))}

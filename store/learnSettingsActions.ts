@@ -1,5 +1,5 @@
 import type { StoreApi } from "zustand";
-import type { UserProgress } from "@/types";
+import type { FillReps, UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 interface LearnSettingsActions {
@@ -7,6 +7,7 @@ interface LearnSettingsActions {
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setFillInTheBlankStageEnabled: (value: boolean) => void;
+  setFillInTheBlankReps: (value: FillReps) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   setKineticTextStageEnabled: (value: boolean) => void;
 }
@@ -37,6 +38,11 @@ export function createLearnSettingsActions(
     setFillInTheBlankStageEnabled: (value) => {
       const state = get();
       set(persist({ ...state, fillInTheBlankStageEnabled: value }));
+    },
+
+    setFillInTheBlankReps: (value) => {
+      const state = get();
+      set(persist({ ...state, fillInTheBlankReps: value }));
     },
 
     setRhythmStageEnabled: (value) => {

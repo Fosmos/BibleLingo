@@ -27,7 +27,7 @@ export function PathHomeCard({ pathKey }: PathHomeCardProps) {
   const Icon = meta.icon;
   const open = () => {
     setActivePath(pathKey);
-    router.push(trailHref(pathKey, plan.version));
+    router.push(trailHref(pathKey, plan.version, "current"));
   };
 
   return (

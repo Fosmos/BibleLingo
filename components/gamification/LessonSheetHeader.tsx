@@ -1,59 +1,56 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { X } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
-import { SrsAccuracyTracker } from "@/components/gamification/SrsAccuracyTracker";
 
 interface LessonSheetHeaderProps {
   onClose: () => void;
 }
 
-// The Mind Map lesson sheet's header (the Organic restyle): a close button, a step bar across the
-// current verse's run of stages with its "2 of 4" count, then the stage's name over the verse it
-// drills — all reported by whichever screen is in the sheet (lib/useReportSheetStage.ts). A
-// compact stage (spaced review) drops the label and shows just the current verse beside the close.
+// A lesson's header (design_handoff_lesson_view): close, the step bar across the current verse's
+// run of stages (done sand, current terracotta, to come pale) with its "2 of 4", a spaced review's
+// live score, and the stage's name under it — hidden once the verse zone goes compact to fit
+// (lib/useVerseFit.ts). All reported by whichever screen is running (lib/useReportSheetStage.ts).
 export function LessonSheetHeader({ onClose }: LessonSheetHeaderProps) {
   const stage = useLessonSessionStore((state) => state.sheetStage);
+  const compactFit = useLessonSessionStore((state) => state.verseCompactFit);
+  const progress = useLessonSessionStore((state) => state.lessonProgress) ?? 0;
+  const steps = stage?.steps ?? 1;
+  const step = stage?.step ?? 0;
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 px-4 pb-1.5 pt-3">
+    <div className="flex shrink-0 flex-col gap-2 px-4 pb-1.5 pt-1">
       <div className="flex items-center gap-2.5">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-sand-200 text-sand-800 hover:bg-sand-300 dark:bg-zinc-800 dark:text-zinc-200"
+          className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-sand-200 text-sand-700 hover:bg-sand-300 dark:bg-zinc-800 dark:text-zinc-200"
         >
-          <X size={16} strokeWidth={2.75} />
+          <X size={18} strokeWidth={3} />
         </button>
-        {stage?.compact && (
-          <span className="min-w-0 shrink truncate whitespace-nowrap font-serif text-xl leading-[1.1] text-ink dark:text-zinc-100">{stage.reference}</span>
-        )}
-        {stage && stage.steps > 1 ? (
+        {steps > 1 ? (
           <>
             <div className="flex flex-1 gap-[5px]" aria-hidden="true">
-              {Array.from({ length: stage.steps }, (_, index) => (
-                <span
-                  key={index}
-                  className={`h-2 flex-1 rounded-full ${index < stage.step ? "bg-sage-600" : index === stage.step ? "bg-brand-500" : "bg-sand-300 dark:bg-zinc-700"}`}
-                />
+              {Array.from({ length: steps }, (_, index) => (
+                <span key={index} className={`h-2.5 flex-1 rounded-full transition-colors ${index < step ? "bg-sand-700" : index === step ? "bg-brand-500" : "bg-sand-300 dark:bg-zinc-700"}`} />
               ))}
             </div>
-            <span className="whitespace-nowrap text-[13px] font-bold text-ink-muted">
-              {stage.step + 1} of {stage.steps}
+            <span className="whitespace-nowrap text-[12.5px] font-black text-sand-700 dark:text-zinc-400">
+              {step + 1} of {steps}
             </span>
           </>
         ) : (
-          <span className="flex-1" />
+          <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-sand-300 dark:bg-zinc-700" aria-hidden="true">
+            <span style={{ "--w": `${Math.round(progress * 100)}%` } as CSSProperties} className="block h-full w-[var(--w)] rounded-full bg-brand-500 transition-[width]" />
+          </span>
+        )}
+        {stage?.accuracy !== undefined && (
+          <span className={`shrink-0 rounded-[10px] px-2.5 py-1 text-[13px] font-black text-white ${stage.accuracy >= (stage.threshold ?? 90) ? "bg-sand-700" : "bg-brand-600"}`}>{Math.round(stage.accuracy)}%</span>
         )}
       </div>
-      {stage?.accuracy !== undefined && <SrsAccuracyTracker accuracy={stage.accuracy} threshold={stage.threshold ?? 90} />}
-      {stage && !stage.compact && (
-        <div className="flex flex-col gap-px">
-          <span className="text-[11px] font-bold uppercase tracking-[.06em] text-brand-700 dark:text-brand-300">{stage.label}</span>
-          <span className="truncate whitespace-nowrap font-serif text-xl leading-[1.1] text-ink dark:text-zinc-100">{stage.reference}</span>
-        </div>
-      )}
+      {stage && !compactFit && <span className="px-1.5 pt-1.5 text-[11.5px] font-black uppercase tracking-[.08em] text-brand-700 dark:text-brand-300">{stage.label}</span>}
     </div>
   );
 }

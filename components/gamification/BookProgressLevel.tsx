@@ -16,6 +16,7 @@ import { ProgressFilter } from "@/components/gamification/ProgressFilter";
 import { ProgressGroupCard } from "@/components/gamification/ProgressGroupCard";
 import { ProgressCircle } from "@/components/gamification/ProgressCircle";
 import { ProgressKey } from "@/components/gamification/ProgressKey";
+import { RecallQuizButton } from "@/components/gamification/RecallQuizButton";
 
 interface BookProgressLevelProps {
   book: string;
@@ -58,6 +59,7 @@ export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible
         stats={computeMemorizedStats(bookEntities)}
         showBooks={false}
       />
+      <RecallQuizButton book={book} />
       <ProgressFilter heading="Chapters" value={filter} onChange={onFilter} />
       {bookMovements(book).map((movement) => {
         const entries = movement.chapters.map((chapter) => chapters[chapter - 1]);

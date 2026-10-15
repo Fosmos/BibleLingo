@@ -63,3 +63,13 @@ body {
     color: var(--color-ink-muted, #645c50);
   }
 }
+
+/* Path trail (design_handoff_path_trail): the bobbing START bubble and pressable 3D stones. */
+@keyframes trailBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.trail-bob { animation: trailBob 1.1s ease-in-out infinite; }
+.press-5, .press-6 { transition: transform .08s, box-shadow .08s; }
+.press-5:active { transform: translateY(5px); box-shadow: none !important; }
+.press-6:active { transform: translateY(6px); box-shadow: none !important; }

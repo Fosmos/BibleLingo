@@ -14,6 +14,7 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
+import { PeekWord } from "@/components/drills/PeekWord";
 
 interface FillInTheBlankRepProps {
   verse: VerseSegment;
@@ -21,21 +22,23 @@ interface FillInTheBlankRepProps {
   // only caller, so always set; the verse renders on the SAME real reading-view page/size/
   // position as browsing, via LessonPageCard.tsx.
   layout: ChapterReadingLayout;
+  // Reps in all (the Learn intensity slider's choice, 2 or 3) — any after the second blank every word.
+  reps?: number;
   onComplete: () => void;
 }
 
 // Two passes: the first blanks about half the verse's own words (content/meaning-bearing ones
 // prioritized — see lib/wordImportance.ts), leaving enough visible to anchor the reader; the
 // second blanks every word, the full recall check. Same "progressively less scaffolding" shape
-// this app's other 2-rep drills already follow.
-const REP_COUNT = 2;
+// this app's other 2-rep drills already follow. A third rep (`reps`) repeats the all-blanked pass.
 
 // Tap the missing words, in order, from a bank below — only the current sense line's words at a
 // time, in a grid across the full width, alphabetized (punctuation stripped) rather than shuffled
 // so their position never hints at the answer. A wrong tap just
 // flashes red and stays available to try again — every tile already placed correctly stays
 // placed, so one slip never costs any real progress (see handleTileClick).
-export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankRepProps) {
+export function FillInTheBlankRep({ verse, layout, reps = 2, onComplete }: FillInTheBlankRepProps) {
+  const repCount = reps;
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
   const [repIndex, setRepIndex] = useState(0);
   const blankIndices = useMemo(
@@ -77,7 +80,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
       const next = placedCount + 1;
       setUsedTileIds((prev) => new Set(prev).add(tileId));
       if (next >= blankIndices.length) {
-        if (repIndex + 1 >= REP_COUNT) {
+        if (repIndex + 1 >= repCount) {
           onComplete();
         } else {
           setRepIndex((prev) => prev + 1);
@@ -96,7 +99,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
   // this clause's own range so a multi-clause verse still renders through the same hanging-
   // indent line structure a non-active verse gets.
   // `indent-0` on the blank span below undoes something otherwise invisible: SenseLineRow.tsx's
-  // own `-indent-6` (a negative text-indent, for its hanging-indent layout) is CSS-inherited, and
+  // own `-indent-5` (a negative text-indent, for its hanging-indent layout) is CSS-inherited, and
   // an `inline-block` establishes its own line box for its own content — so without resetting it
   // here, that negative indent applies AGAIN to this span's own text, shifting it left by that
   // same amount and painting it back over whatever word came right before it.
@@ -116,19 +119,25 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
           return (
             <span key={index}>
               <span
-                // Filled: sage, underlined. The next blank: a solid terracotta underline. Later
-                // blanks: a dashed neutral one (the Organic restyle).
-                className={`inline-block indent-0 whitespace-nowrap leading-none ${
+                // Filled: dark terracotta on a pale wash, underlined. The next blank: the pale wash
+                // ringed in terracotta. Later blanks: plain sand (the lesson view, no sage).
+                className={`-mr-[.12em] inline-block rounded-md px-[.12em] indent-0 whitespace-nowrap leading-tight transition-colors ${
                   isFilled
-                    ? "border-b-[3px] border-sage-500 font-semibold text-sage-800 dark:text-sage-300"
+                    ? "border-b-2 border-brand-300 bg-brand-100 text-brand-900 dark:bg-brand-900/40 dark:text-brand-100"
                     : slotPosition === placedCount
-                      ? "border-b-[3px] border-brand-500"
-                      : "border-b-2 border-dashed border-sand-400 dark:border-zinc-700"
+                      ? "bg-brand-100 ring-2 ring-inset ring-brand-500 dark:bg-brand-900/40"
+                      : "bg-sand-300 dark:bg-zinc-700"
                 }`}
               >
-                <span className={isFilled ? "" : "invisible"} aria-hidden={isFilled ? undefined : true}>
-                  {word}
-                </span>
+                {isFilled ? (
+                  word
+                ) : (
+                  <PeekWord word={word}>
+                    <span className="invisible" aria-hidden="true">
+                      {word}
+                    </span>
+                  </PeekWord>
+                )}
               </span>{" "}
             </span>
           );
@@ -145,7 +154,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
         <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">
           Fill in the blanks
           <span className="font-normal normal-case tracking-normal text-ink-muted">
-            · Rep {repIndex + 1} of {REP_COUNT}
+            · Rep {repIndex + 1} of {repCount}
           </span>
           <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
         </p>

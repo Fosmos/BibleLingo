@@ -4,7 +4,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { LEARN_INTENSITY_LEVELS, formatIntensityEstimate, type LearnIntensityStages } from "@/lib/learnIntensity";
 import { TAP_SCALE } from "@/lib/motionTokens";
+import type { FillReps } from "@/types";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { FillRepsSlider } from "@/components/ui/FillRepsSlider";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
@@ -14,17 +16,20 @@ interface LearnIntensityPickerProps {
   // anything the reader already chose.
   initialStages: LearnIntensityStages;
   initialMemoryPalace: boolean;
-  onContinue: (stages: LearnIntensityStages, memoryPalace: boolean) => void;
+  // Seed for the Fill in the Blank reps slider (UserProgress.fillInTheBlankReps).
+  initialFillReps: FillReps;
+  onContinue: (stages: LearnIntensityStages, memoryPalace: boolean, fillReps: FillReps) => void;
   onBack: () => void;
 }
 
 const DEFAULT_LEVEL = 3;
 
-export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onContinue, onBack }: LearnIntensityPickerProps) {
+export function LearnIntensityPicker({ initialStages, initialMemoryPalace, initialFillReps, onContinue, onBack }: LearnIntensityPickerProps) {
   const [level, setLevel] = useState(DEFAULT_LEVEL);
   const [customize, setCustomize] = useState(false);
   const [customStages, setCustomStages] = useState<LearnIntensityStages>(initialStages);
   const [memoryPalace, setMemoryPalace] = useState(initialMemoryPalace);
+  const [fillReps, setFillReps] = useState(initialFillReps);
 
   const preset = LEARN_INTENSITY_LEVELS[level - 1];
   const stages: LearnIntensityStages = customize
@@ -70,6 +75,11 @@ export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onCon
             <span>Least time</span>
             <span>Most time</span>
           </div>
+          {stages.fillInTheBlankStageEnabled && (
+            <div className="mt-2 border-t border-sand-300 pt-3 dark:border-zinc-700">
+              <FillRepsSlider value={fillReps} onChange={setFillReps} />
+            </div>
+          )}
         </div>
       )}
 
@@ -112,6 +122,8 @@ export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onCon
         </div>
       )}
 
+      {customize && stages.fillInTheBlankStageEnabled && <FillRepsSlider value={fillReps} onChange={setFillReps} />}
+
       <div className="flex items-start gap-1.5">
         <ToggleSwitch checked={memoryPalace} onChange={setMemoryPalace} label="Memory Palace" description="Add location tags to this path" />
         <InfoTip text={INFO_TIPS.memoryPalaceToggle} />
@@ -120,7 +132,7 @@ export function LearnIntensityPicker({ initialStages, initialMemoryPalace, onCon
       <motion.button
         type="button"
         whileTap={TAP_SCALE}
-        onClick={() => onContinue(stages, memoryPalace)}
+        onClick={() => onContinue(stages, memoryPalace, fillReps)}
         className="self-start rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white"
       >
         Continue

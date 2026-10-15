@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { FlaskConical } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
@@ -17,7 +18,23 @@ export function AutoCompleteButton({ onClick, label }: AutoCompleteButtonProps) 
   // beside the breadcrumb's own lookup buttons (see lib/useMindMapVerseViewSlot.ts), icon-only,
   // instead of taking a row of the sheet's fixed-height controls box.
   const breadcrumbSlot = useLessonSessionStore((state) => state.verseViewPortalNode);
+  // On the lesson page a stage's shortcut is the tray's Skip chip (DrillHelpChips.tsx) — and the
+  // whole-lesson one isn't offered there at all.
+  const lessonPage = useLessonSessionStore((state) => state.lessonPageOpen);
+  const setSkipStage = useLessonSessionStore((state) => state.setSkipStage);
+  const latest = useRef(onClick);
+  useEffect(() => {
+    latest.current = onClick;
+  });
+  const skips = lessonPage && label === undefined;
+  useEffect(() => {
+    if (!skips) return;
+    setSkipStage(() => latest.current());
+    return () => setSkipStage(null);
+  }, [skips, setSkipStage]);
   const text = label ?? "Auto-complete (testing)";
+
+  if (lessonPage) return null;
 
   if (breadcrumbSlot) {
     return createPortal(

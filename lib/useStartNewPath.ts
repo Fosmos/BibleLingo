@@ -21,7 +21,7 @@ export function useStartNewPath(): (start: NewPathStart) => void {
   return ({ key, version, versesPerDay, priorKnownVerseCount, reminder }) => {
     resetPathProgress(key);
     setPathReminder(key, reminder);
-    const query = new URLSearchParams({ version, toast: "ready" });
+    const query = new URLSearchParams({ version, toast: "ready", section: "current" });
     if (versesPerDay) query.set("versesPerDay", String(versesPerDay));
     if (priorKnownVerseCount) query.set("priorKnownVerseCount", String(priorKnownVerseCount));
     router.push(`/path/${encodeURIComponent(key)}?${query}`);

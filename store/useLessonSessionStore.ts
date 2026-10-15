@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Peek } from "@/lib/peek";
 
 // What the Mind Map lesson sheet's header shows (LessonSheetHeader.tsx): the stage's name, the
 // verse(s) it drills, and where it sits among its group of stages (the step bar).
@@ -71,6 +72,17 @@ interface LessonSessionState {
   // A path just finished (see lib/completeDayEffects.ts) — PathCompleteCelebration.tsx shows it
   // once no lesson is on screen, then clears it.
   completedPath: string | null;
+  // The lesson page (PathLessonPage.tsx) is open — its drill tray carries the help chips
+  // (DrillHelpChips.tsx), which stand in for the reference lookup and the testing shortcut.
+  lessonPageOpen: boolean;
+  // Letters / Verse help chips: hidden words show their first letter, or in full (lib/peek.ts).
+  peek: Peek;
+  // The verse zone has gone compact to fit (lib/useVerseFit.ts) — the stage label hides.
+  verseCompactFit: boolean;
+  // The current stage's skip (its AutoCompleteButton.tsx callback), for the Skip chip.
+  skipStage: (() => void) | null;
+  // A step's own question for the tray, in place of its stage's prompt (lib/useTrayPrompt.ts).
+  trayPrompt: string | null;
 }
 
 interface LessonSessionActions {
@@ -91,6 +103,11 @@ interface LessonSessionActions {
   removeExpandedVerseZoneUser: () => void;
   setLessonProgress: (progress: number | null) => void;
   setCompletedPath: (pathKey: string | null) => void;
+  setLessonPageOpen: (open: boolean) => void;
+  setPeek: (peek: Peek) => void;
+  setVerseCompactFit: (compact: boolean) => void;
+  setSkipStage: (skip: (() => void) | null) => void;
+  setTrayPrompt: (prompt: string | null) => void;
 }
 
 type LessonSessionStore = LessonSessionState & LessonSessionActions;
@@ -117,6 +134,11 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   expandedVerseZoneUsers: 0,
   lessonProgress: null,
   completedPath: null,
+  lessonPageOpen: false,
+  peek: null,
+  verseCompactFit: false,
+  skipStage: null,
+  trayPrompt: null,
   begin: () => set((state) => ({ activeCount: state.activeCount + 1 })),
   end: () => set((state) => ({ activeCount: Math.max(0, state.activeCount - 1) })),
   setFocusVerse: (verse) => set({ focusVerse: verse }),
@@ -133,6 +155,11 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   addExpandedVerseZoneUser: () => set((state) => ({ expandedVerseZoneUsers: state.expandedVerseZoneUsers + 1 })),
   removeExpandedVerseZoneUser: () => set((state) => ({ expandedVerseZoneUsers: Math.max(0, state.expandedVerseZoneUsers - 1) })),
   setLessonProgress: (progress) => set({ lessonProgress: progress }),
+  setLessonPageOpen: (open) => set({ lessonPageOpen: open }),
+  setPeek: (peek) => set({ peek }),
+  setVerseCompactFit: (compact) => set({ verseCompactFit: compact }),
+  setSkipStage: (skip) => set({ skipStage: skip }),
+  setTrayPrompt: (prompt) => set({ trayPrompt: prompt }),
   setCompletedPath: (pathKey) => set({ completedPath: pathKey }),
 }));
 

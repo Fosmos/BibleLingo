@@ -25,13 +25,15 @@ const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 // Inside the Mind Map lesson sheet's drill zone (LessonBottomSheet.tsx tags it
 // `lesson-sheet-controls`) the keys are one fixed, larger size (48px tall, 22px letters) —
 // the keyboard never stretches or squashes with the zone, it just docks at its bottom.
-// The Organic restyle's keys: soft sand fills, 12px corners, bold 18px letters, no shadow.
+// The Organic restyle's keys: soft sand fills, 12px corners, bold 18px letters, no shadow. On the
+// lesson page (PathLessonPage.tsx, `lesson-page-tray`) they're 36px tall, rows 6px apart, so
+// the verse keeps its room.
 const KEY_CLASS =
-  "flex h-[42px] flex-1 items-center justify-center rounded-xl bg-sand-200 text-lg font-bold uppercase text-ink transition active:scale-95 active:bg-brand-200 disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-100 dark:active:bg-zinc-700 [.lesson-sheet-controls_&]:h-12 [.lesson-sheet-controls_&]:text-[22px]";
+  "flex h-[42px] flex-1 items-center justify-center rounded-xl bg-sand-200 text-lg font-bold uppercase text-ink transition active:scale-95 active:bg-brand-200 disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-100 dark:active:bg-zinc-700 [.lesson-sheet-controls_&]:h-12 [.lesson-sheet-controls_&]:text-[22px] [.lesson-page-tray_&]:!h-9 [.lesson-page-tray_&]:!text-lg";
 
 export function OnScreenKeyboard({ onKey, onBackspace, onSubmit, disabled }: OnScreenKeyboardProps) {
   return (
-    <div className="flex w-full flex-col items-center gap-[5px] [.lesson-sheet-controls_&]:gap-2">
+    <div className="flex w-full flex-col items-center gap-[5px] [.lesson-sheet-controls_&]:gap-2 [.lesson-page-tray_&]:!gap-1.5">
       {KEYBOARD_ROWS.map((row, rowIndex) => (
         // gap-1 (not the row-group's own gap-2) — a narrower gap between keys hands that
         // saved space straight to each key's own flex-1 width instead, more tappable room

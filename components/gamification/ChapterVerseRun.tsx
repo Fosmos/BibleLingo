@@ -93,7 +93,7 @@ export function ChapterVerseRun({
               <MapPin aria-hidden="true" size={10} className="mr-0.5 inline text-teal-600 dark:text-teal-400" />
             )}
             {!verse.wordOffset && (!isVerseNumberVisible || isVerseNumberVisible(verse)) && (
-              <sup className={`mr-0.5 text-[0.9em] font-semibold ${numberColor} [.path-lesson-verse_&]:hidden`}>{verse.verseNumber}</sup>
+              <sup className={`mr-0.5 text-[0.9em] font-semibold ${numberColor}`}>{verse.verseNumber}</sup>
             )}
             <span className={state === "today" ? "underline decoration-gold-600 underline-offset-2 dark:decoration-gold-400" : undefined}>
               {renderVerseWords?.(verse) ??

@@ -2,6 +2,7 @@
 
 import { useProgressStore } from "@/store/useProgressStore";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { FillRepsSlider } from "@/components/ui/FillRepsSlider";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
@@ -20,6 +21,8 @@ export function LearnStageToggles() {
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
   const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   const setFillInTheBlankStageEnabled = useProgressStore((state) => state.setFillInTheBlankStageEnabled);
+  const fillInTheBlankReps = useProgressStore((state) => state.fillInTheBlankReps ?? 2);
+  const setFillInTheBlankReps = useProgressStore((state) => state.setFillInTheBlankReps);
   const kineticTextStageEnabled = useProgressStore((state) => state.kineticTextStageEnabled) ?? true;
   const setKineticTextStageEnabled = useProgressStore((state) => state.setKineticTextStageEnabled);
   const rhythmStageEnabled = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
@@ -63,6 +66,9 @@ export function LearnStageToggles() {
         />
         <InfoTip text={INFO_TIPS.fillInTheBlankStageToggle} />
       </div>
+      {fillInTheBlankStageEnabled && (
+        <FillRepsSlider value={fillInTheBlankReps} onChange={setFillInTheBlankReps} />
+      )}
       <div className="flex items-start gap-1.5">
         <ToggleSwitch
           checked={kineticTextStageEnabled}

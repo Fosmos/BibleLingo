@@ -36,20 +36,22 @@ const MIC_BLOCKED_REASON: Record<MicBlocked, string> = {
 // lib/learnSteps.ts's versePhases), gated by kineticTextStageEnabled (Profile > Advanced). The
 // verse goes line by line (its sense lines): each is read aloud with its words lit as they're
 // heard, then the reader says it back, each word lighting green as the mic hears it, and the next
-// line follows on its own (see lib/useListenRepeat.ts). Not graded: Continue is always there.
+// line follows on its own, then the whole verse together (see lib/useListenRepeat.ts). Not graded:
+// Continue is always there.
 export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProps) {
   const lr = useListenRepeat(verse.text);
   const current = lr.ranges[lr.clauseIndex];
-  const lineCount = lr.ranges.length;
+  const lineCount = lr.lineCount;
+  const wholeVerse = lr.clauseIndex >= lineCount;
 
   function wordClass(index: number): string {
     if (lr.phase === "idle" || lr.phase === "done" || !current || index < current.startIndex) return "";
     if (index >= current.endIndex) return "text-ink-muted/50 dark:text-zinc-600";
     if (lr.phase === "playing") {
-      if (index === lr.narratedWord) return "rounded bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300";
+      if (index <= lr.narratedWord) return "rounded-md bg-brand-200 text-brand-900 dark:bg-brand-900/50 dark:text-brand-100";
       return "text-ink dark:text-zinc-100";
     }
-    return index - current.startIndex < lr.repeatedCount ? "text-green-700 dark:text-green-400" : "text-brand-700 dark:text-brand-300";
+    return index - current.startIndex < lr.repeatedCount ? "rounded-md bg-brand-200 text-brand-900 dark:bg-brand-900/50 dark:text-brand-100" : "text-brand-700 dark:text-brand-300";
   }
 
   const renderWords = (start: number, end: number) =>
@@ -64,9 +66,11 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
   const status =
     lr.phase === "idle" ? "Hear each line, then say it back" :
     lr.phase === "done" ? "Every line heard and repeated" :
-    lr.phase === "playing" ? `Listen — line ${lr.clauseIndex + 1} of ${lineCount}` :
+    lr.phase === "playing" ? (wholeVerse ? "Listen — now the whole verse" : `Listen — line ${lr.clauseIndex + 1} of ${lineCount}`) :
+    wholeVerse && lr.micListening ? "Your turn — say the whole verse" :
     lr.micListening ? "Your turn — say it back" :
-    lr.micBlocked ? `Say it aloud, then tap Next (${MIC_BLOCKED_REASON[lr.micBlocked]})` :
+    !lr.micBlocked ? "Tap the mic and say it back" :
+    lr.micBlocked ? `Say ${wholeVerse ? "the whole verse" : "it"} aloud, then tap Next (${MIC_BLOCKED_REASON[lr.micBlocked]})` :
     "Your turn — say it aloud, then tap Next";
 
   return (
@@ -79,7 +83,7 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
             Listen &amp; Repeat <InfoTip text={INFO_TIPS.listenVerseRep} />
           </p>
           <div className="flex flex-col font-reading text-lg font-medium leading-loose">
-            {lr.ranges.map((range) => (
+            {lr.ranges.slice(0, lineCount).map((range) => (
               <p key={range.startIndex}>{renderWords(range.startIndex, range.endIndex)}</p>
             ))}
           </div>
@@ -99,10 +103,21 @@ export function ListenVerseRep({ verse, layout, onComplete }: ListenVerseRepProp
             {lr.phase === "idle" ? "Start" : "Start over"}
           </motion.button>
         ) : (
-          <div className="flex w-full gap-2">
+          <div className="flex w-full items-center gap-2">
             <button type="button" onClick={lr.hearAgain} className={SECONDARY_CLASS}>
               <RotateCcw size={16} /> Hear again
             </button>
+            {/* Say the line back to it — tap to listen again (or stop); what's been said is kept. */}
+            <motion.button
+              type="button"
+              whileTap={TAP_SCALE}
+              onClick={lr.toggleMic}
+              disabled={lr.phase !== "yourTurn" || lr.micBlocked !== null}
+              aria-label={lr.micListening ? "Stop listening" : "Say it back"}
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-[0_4px_0_#8C491A] disabled:opacity-40 ${lr.micListening ? "animate-pulse bg-heart-500" : "bg-brand-500"}`}
+            >
+              <Mic size={24} strokeWidth={2.5} />
+            </motion.button>
             <button type="button" onClick={lr.next} className={SECONDARY_CLASS}>
               Next <ArrowRight size={16} />
             </button>

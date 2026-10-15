@@ -75,6 +75,8 @@ export function LessonControlBar({ children, dockRef, verseText, verseViewExtra,
   // The Mind Map sheet's drill zone (see SheetDrillPortal.tsx) — when set, this bar's controls
   // render there, filling it, instead of as a docked bar of their own.
   const drillPortalNode = useLessonSessionStore((state) => state.drillPortalNode);
+  // The lesson page has its own Letters / Verse chips in place of this lookup (DrillHelpChips.tsx).
+  const lessonPage = useLessonSessionStore((state) => state.lessonPageOpen);
 
   // Docked mode is exactly "a lesson-like session is on screen" — tells AuthGate.tsx to hide
   // the bottom tab bar for as long as this bar itself is mounted this way (see
@@ -106,9 +108,10 @@ export function LessonControlBar({ children, dockRef, verseText, verseViewExtra,
   // Portaled (icon-only, to fit a phone-width breadcrumb) into the breadcrumb's own slot whenever
   // it exists (the in-place Mind Map sheet), rendered inline right here otherwise (the
   // standalone route, which has no such slot).
-  const verseView = verseText && !verseViewPortalNode ? <VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} /> : null;
+  const lookup = verseText && !lessonPage;
+  const verseView = lookup && !verseViewPortalNode ? <VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} /> : null;
   const portaledVerseView =
-    verseText && verseViewPortalNode ? createPortal(<VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} compact />, verseViewPortalNode) : null;
+    lookup && verseViewPortalNode ? createPortal(<VerseViewButtons text={verseText} extra={verseViewExtra} onPeek={onVersePeek} compact />, verseViewPortalNode) : null;
 
   if (drillPortalNode) {
     return (

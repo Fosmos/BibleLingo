@@ -29,7 +29,7 @@ export function LessonCompleteScreen({ heading, shekelsEarned, continueLabel, on
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-sage-600 text-white"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-700 text-white"
       >
         <Check size={24} strokeWidth={3} />
       </motion.span>

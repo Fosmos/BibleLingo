@@ -15,10 +15,10 @@ interface SenseLineRowProps {
 
 // One sense-line — a single clause block. Every row starts flush at the SAME left margin as the
 // verse's own very first line, whatever produced this particular split (see topGap's own doc
-// comment above) — `pl-6`/`-indent-6` together (1.5rem — lib/senseLines.ts's own
+// comment above) — `pl-5`/`-indent-5` together (20px — lib/senseLines.ts's own
 // HANGING_INDENT_PX) still do real work within a SINGLE row's own `<p>`: if that one line's own
 // text is long enough to wrap on its own within the browser (same `<p>`, a rare case since every
-// line this app hands here already fits the column on its own), the -indent-6 only ever affects
+// line this app hands here already fits the column on its own), the -indent-5 only ever affects
 // that paragraph's own FIRST line — its second line still lands at the padded position, hanging
 // indented under the line's own first word, same as any hanging-indent paragraph. `text-pretty`
 // avoids leaving an orphan word alone on its own wrapped line.
@@ -48,18 +48,18 @@ interface SenseLineRowProps {
 // gets bigger still — `mt-[1.3em]`, double that. Two tiers, not three: margin, not line-height,
 // is what tells "a new verse" apart from "still this verse" in the first place. `em` keeps every
 // tier scaled to whatever font size the page actually renders at, same as every other size on
-// this row. Split out of SenseLineVerse.tsx purely to keep that file under this codebase's own
-// 200-line file cap — no behavior difference from having it inline there.
-const TOP_GAP_CLASS: Record<SenseLineRowProps["topGap"], string> = { clause: "mt-[0.65em]", verse: "mt-[1.3em]" };
+// this row. The lesson verse zone (SheetVerseZone.tsx) tightens the gaps and line height through
+// CSS variables as it fits a long passage; everywhere else they fall back to the values above.
+const TOP_GAP_CLASS: Record<SenseLineRowProps["topGap"], string> = { clause: "mt-[var(--sense-clause-gap,0.65em)]", verse: "mt-[var(--sense-verse-gap,1.3em)]" };
 
 export function SenseLineRow({ topGap, leadingMarkers, number, numberColor, underline, children }: SenseLineRowProps) {
   return (
     <div className={TOP_GAP_CLASS[topGap]}>
-      <p className="relative -indent-6 pl-6 text-pretty leading-[1.5]">
+      <p className="relative -indent-5 pl-5 text-pretty leading-[var(--sense-leading,1.5)]">
         {(leadingMarkers || number !== undefined) && (
           <span className="absolute right-full mr-1 whitespace-nowrap text-right">
             {leadingMarkers}
-            {number !== undefined && <sup className={`text-[0.9em] font-semibold ${numberColor} [.path-lesson-verse_&]:hidden`}>{number}</sup>}
+            {number !== undefined && <sup className={`text-[0.9em] font-semibold ${numberColor}`}>{number}</sup>}
           </span>
         )}
         <span className={underline ? "underline decoration-brand-600 underline-offset-2 dark:decoration-brand-400" : undefined}>{children}</span>

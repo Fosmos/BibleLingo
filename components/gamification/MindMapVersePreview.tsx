@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import { useReportSheetStage } from "@/lib/useReportSheetStage";
-import { formatVerseSpanLabel } from "@/lib/chapterContent";
+import { formatVerseRangeLabel, formatVerseSpanLabel } from "@/lib/chapterContent";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useExpandedVerseZone } from "@/lib/useExpandedVerseZone";
 import { useElementWidth } from "@/lib/useElementWidth";
@@ -52,19 +52,21 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
       {verseZone &&
         verse &&
         createPortal(
-          <SheetVerseZone>
-            <div ref={columnRef} className="font-reading text-lg font-medium">
-              <SenseLineVerse
-                verse={verse}
-                dayNumber={undefined}
-                state={learned ? "completed" : "future"}
-                locationTags={NO_TAGS}
-                iconTags={NO_TAGS}
-                pegActive={false}
-                onSelect={() => {}}
-                columnWidthPx={columnWidthPx}
-              />
-            </div>
+          <SheetVerseZone fitKey={verse.id} reference={formatVerseRangeLabel([verse])}>
+            {() => (
+              <div ref={columnRef} className="font-reading text-lg font-medium">
+                <SenseLineVerse
+                  verse={verse}
+                  dayNumber={undefined}
+                  state={learned ? "completed" : "future"}
+                  locationTags={NO_TAGS}
+                  iconTags={NO_TAGS}
+                  pegActive={false}
+                  onSelect={() => {}}
+                  columnWidthPx={columnWidthPx}
+                />
+              </div>
+            )}
           </SheetVerseZone>,
           verseZone,
         )}
