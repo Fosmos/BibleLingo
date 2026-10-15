@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { resolveCompletingChapterVerses } from "@/lib/completingChapterVerses";
+import { singleVerseDay, verseIndexInDay } from "@/lib/dayVerseProgress";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { DaySessionController } from "@/components/gamification/DaySessionController";
@@ -30,6 +31,8 @@ interface InPlaceLessonSessionProps {
   todaysDay: number;
   dayNumber: number;
   mode: "select" | "practice";
+  // Just this verse of the day — each verse is its own lesson (lib/dayVerseProgress.ts).
+  onlyVerse?: { chapter: number; verseNumber: number };
   // Set only by BookMindMapWithLessonSheet.tsx's own bottom-sheet trigger — threaded straight
   // through to LearnSection.tsx's own per-verse chrome (see LearnVerseSpotlightChrome.tsx),
   // which uses it to skip its own small embedded Mind Map preview (the REAL canvas already
@@ -45,8 +48,11 @@ interface InPlaceLessonSessionProps {
 // still serve as a fallback (a bookmarked or shared link, say). `onExit` is the one way back:
 // it just clears PathOverviewScreen's own lessonDay state, so the exact same parchment view
 // reappears underneath rather than a browser-history "back" landing somewhere else entirely.
-export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
-  const day = days.find((candidate) => candidate.dayNumber === dayNumber);
+export function InPlaceLessonSession({ pathKey, label, days, verses, version, completedDays, todaysDay, dayNumber, mode, onlyVerse, embeddedInMindMap, onExit }: InPlaceLessonSessionProps) {
+  const fullDay = days.find((candidate) => candidate.dayNumber === dayNumber);
+  const index = fullDay && onlyVerse ? verseIndexInDay(fullDay, onlyVerse.chapter, onlyVerse.verseNumber) : -1;
+  const day = fullDay && index >= 0 ? singleVerseDay(fullDay, fullDay.newVerses[index]) : fullDay;
+  const dayPart = fullDay && index >= 0 && fullDay.newVerses.length > 1 ? { index, count: fullDay.newVerses.length } : undefined;
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   // Review in the Mind Map sheet: same progress bar and canvas-follows-the-verse behavior a Learn
@@ -81,7 +87,7 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
           label={drillLabel}
           mode={isReview ? "firstLetter" : "fullWord"}
           onExit={onExit}
-          sessionKey={`${pathKey}:${dayNumber}:practice`}
+          sessionKey={`${pathKey}:${dayNumber}:practice${index >= 0 ? `:${index}` : ""}`}
           layout={layout}
           exitWhenDone={embeddedInMindMap}
           onVerseChange={embeddedInMindMap ? reportPracticeVerse : undefined}
@@ -100,7 +106,8 @@ export function InPlaceLessonSession({ pathKey, label, days, verses, version, co
         completedDays={completedDays}
         todaysDay={todaysDay}
         totalDays={days.length}
-        completingChapterVerses={resolveCompletingChapterVerses(day, days, verses)}
+        completingChapterVerses={resolveCompletingChapterVerses(fullDay ?? day, days, verses)}
+        dayPart={dayPart}
         embeddedInMindMap={embeddedInMindMap}
         onExit={onExit}
       />

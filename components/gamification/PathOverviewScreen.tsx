@@ -140,7 +140,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   // Every path kind: the Path tab's trail, or the Memorized tab's reader. Book, chapter and verse
   // paths get the Mind Map tab's canon view; a topic path's map view is its day list.
   if (view === "path") {
-    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesPerDay={plan.versesPerDay} />;
+    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} versesPerDay={plan.versesPerDay} />;
   }
   const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
   if (view === "reader") {

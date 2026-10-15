@@ -51,8 +51,11 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
   const clearFocusVerse = useLessonSessionStore((state) => state.clearFocusVerse);
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
+  // Each verse of a day is its own lesson: the next one up is past the day's learned verses.
+  const versesIntoDay = useProgressStore((state) => state.paths[pathKey]?.versesIntoDay ?? 0);
   const nextDay = days.find((day) => day.kind === "learn" && day.dayNumber > completedDays);
-  const current = nextDay?.newVerses[0];
+  const current = nextDay?.newVerses[nextDay.dayNumber === completedDays + 1 ? versesIntoDay : 0] ?? nextDay?.newVerses[0];
+  const only = (verse: { chapter: number; verseNumber: number }) => ({ chapter: verse.chapter, verseNumber: verse.verseNumber });
   const pathBook = verses[0]?.book ?? "";
   const zoom = useBibleZoom(startAt ?? { book: pathBook, chapter: current?.chapter ?? verses[0]?.chapter ?? 1 }, startOnBible ? 0 : 2);
   const [selected, setSelected] = useState<ParsedVerseKey | null>(current ? { book: current.book, chapter: current.chapter, verseNumber: current.verseNumber } : null);
@@ -60,7 +63,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
   // Bumped on every jump to a chapter (not scrolling on into one), so the reader starts over from it.
   const [jumps, setJumps] = useState(0);
   const [sheet, setSheet] = useState<ChapterLesson | null>(() =>
-    autoStartLesson && nextDay && current ? { kind: "lesson", verseNumber: current.verseNumber, dayNumber: nextDay.dayNumber, mode: "select" } : null,
+    autoStartLesson && nextDay && current ? { kind: "lesson", verseNumber: current.verseNumber, dayNumber: nextDay.dayNumber, mode: "select", onlyVerse: only(current) } : null,
   );
   useHideTabBarWhile(sheet !== null);
 
@@ -105,9 +108,9 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
       const due = ranges.filter((entity) => isDue(entity.srs));
       const ids = (due.length ? due : ranges.slice(0, 1)).map((entity) => entity.id);
       if (ids.length) return setSheet({ kind: "srs", verseNumber, entityIds: ids });
-      if (day && day.dayNumber <= completedDays) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "practice" });
+      if (day && day.dayNumber <= completedDays + 1) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "practice", onlyVerse: only(verse) });
     }
-    if (status === "current" && day) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "select" });
+    if (status === "current" && day) return setSheet({ kind: "lesson", verseNumber, dayNumber: day.dayNumber, mode: "select", onlyVerse: only(verse) });
     // Known but with no review or lesson to run here: read and listen to it.
     if (status !== "open" && status !== "current") return setSheet({ kind: "preview", verseNumber, verse });
     // Learn on a verse that isn't the path's next one: that verse as a path of its own, learned right here.
@@ -124,7 +127,8 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
       for (let verseNumber = entity.startVerse; verseNumber <= entity.endVerse; verseNumber++) reviewedHere.add(`${entity.book}|${entity.chapter}|${verseNumber}`);
     }
   } else if (sheet?.kind === "lesson" && sheet.mode === "practice") {
-    for (const verse of days.find((day) => day.dayNumber === sheet.dayNumber)?.newVerses ?? []) reviewedHere.add(`${verse.book}|${verse.chapter}|${verse.verseNumber}`);
+    const practised = days.find((day) => day.dayNumber === sheet.dayNumber)?.newVerses.filter((verse) => !sheet.onlyVerse || (verse.chapter === sheet.onlyVerse.chapter && verse.verseNumber === sheet.onlyVerse.verseNumber));
+    for (const verse of practised ?? []) reviewedHere.add(`${verse.book}|${verse.chapter}|${verse.verseNumber}`);
   }
   // While a lesson or review runs, the view follows the verse being drilled (lib/useReportFocusVerse.ts).
   const lessonVerse: ParsedVerseKey | null = sheet ? (focusVerse ?? { ...zoom.place, verseNumber: sheet.verseNumber }) : null;
@@ -165,7 +169,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
             onBook={zoom.openBook}
             lessonVerse={lessonVerse}
             isHidden={isHidden}
-            lessonRange={nextDay?.newVerses ?? []}
+            lessonRange={current ? [current] : []}
           />
         )}
       </div>

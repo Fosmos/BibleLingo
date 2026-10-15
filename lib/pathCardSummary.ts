@@ -21,7 +21,9 @@ export function summarizePath(key: string, plan: PathProgress, entities: Memoriz
   if (!verses.length) return { percent: 0, next: `Day ${plan.completedDays + 1}`, due, finished: false };
   const days = buildPathDayPlan(key, verses, plan);
   const nextDay = days.find((day) => day.dayNumber > plan.completedDays);
+  // Each verse is its own lesson: next is the day's first verse not yet learned.
+  const into = nextDay && nextDay.dayNumber === plan.completedDays + 1 ? Math.min(plan.versesIntoDay ?? 0, nextDay.newVerses.length - 1) : 0;
   const percent = days.length ? Math.round((Math.min(plan.completedDays, days.length) / days.length) * 100) : 0;
-  const next = nextDay ? (nextDay.kind === "learn" ? formatVerseRangeLabel(nextDay.newVerses) : nextDay.kind === "boss_battle" || nextDay.kind === "section_boss_battle" ? "Boss battle" : "Review day") : null;
+  const next = nextDay ? (nextDay.kind === "learn" ? formatVerseRangeLabel(nextDay.newVerses.slice(into, into + 1)) : nextDay.kind === "boss_battle" || nextDay.kind === "section_boss_battle" ? "Boss battle" : "Review day") : null;
   return { percent, next, due, finished: !nextDay };
 }

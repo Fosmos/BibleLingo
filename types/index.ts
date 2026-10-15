@@ -103,6 +103,9 @@ export interface PathProgress {
   // a path with no completion yet, or one completed before this field existed — both read as
   // "no completion today," same self-healing convention this app already uses elsewhere.
   lastCompletedAt?: string;
+  // How many verses of the next lesson day are already learned — each verse is its own lesson on
+  // the trail (lib/dayVerseProgress.ts). Cleared when that day completes.
+  versesIntoDay?: number;
 }
 
 // ---------------------------------------------------------------------------

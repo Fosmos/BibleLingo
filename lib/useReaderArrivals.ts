@@ -10,6 +10,11 @@ import { usePracticeArrival } from "@/lib/usePracticeArrival";
 import { trailHref } from "@/lib/readerHref";
 import type { ChapterLesson } from "@/components/gamification/ChapterPathLesson";
 
+const progressMark = (pathKey: string): string => {
+  const plan = useProgressStore.getState().paths[pathKey];
+  return `${plan?.completedDays ?? 0}:${plan?.versesIntoDay ?? 0}`;
+};
+
 interface ReaderArrivalOptions {
   pathKey: string;
   version: string;
@@ -26,7 +31,8 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const router = useRouter();
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   const [fromTrail] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "trail");
-  const completedAtStart = useRef(useProgressStore.getState().paths[pathKey]?.completedDays ?? 0);
+  // Where the path stood on arrival (days, then verses into the next day), to tell if it moved on.
+  const completedAtStart = useRef(progressMark(pathKey));
 
   const startReview = useCallback(
     (entityIds: string[]) => {
@@ -40,14 +46,17 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const offerVerse = useCallback((book: string, chapter: number, verseNumber: number) => (openVerse(book, chapter, verseNumber), true), [openVerse]);
   useReviewArrival(offerVerse, startReview);
 
+  // `?verse=chapter:verse` runs just that verse of the day (each verse its own lesson).
   const startDay = useCallback(
     (dayNumber: number, mode: "select" | "practice") => {
       const day = days.find((candidate) => candidate.dayNumber === dayNumber);
-      const first = day ? (day.kind === "learn" ? day.newVerses : day.reviewVerses)[0] : undefined;
+      const [chapter, verseNumber] = (new URLSearchParams(window.location.search).get("verse") ?? "").split(":").map(Number);
+      const only = day?.newVerses.find((verse) => verse.chapter === chapter && verse.verseNumber === verseNumber);
+      const first = only ?? (day ? (day.kind === "learn" ? day.newVerses : day.reviewVerses)[0] : undefined);
       if (!first) return;
       openVerse(first.book, first.chapter, first.verseNumber);
       setFocusVerse({ book: first.book, chapter: first.chapter, verseNumber: first.verseNumber });
-      setSheet({ kind: "lesson", verseNumber: first.verseNumber, dayNumber, mode });
+      setSheet({ kind: "lesson", verseNumber: first.verseNumber, dayNumber, mode, onlyVerse: only ? { chapter: only.chapter, verseNumber: only.verseNumber } : undefined });
     },
     [days, openVerse, setFocusVerse, setSheet],
   );
@@ -63,7 +72,7 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   // Back to the trail after a lesson begun there — true when it navigated.
   const returnToTrail = useCallback(() => {
     if (!fromTrail) return false;
-    const moved = (useProgressStore.getState().paths[pathKey]?.completedDays ?? 0) > completedAtStart.current;
+    const moved = progressMark(pathKey) !== completedAtStart.current;
     router.push(`${trailHref(pathKey, version)}${moved ? "&toast=done" : ""}`);
     return true;
   }, [fromTrail, pathKey, version, router]);

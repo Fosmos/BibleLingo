@@ -10,7 +10,8 @@ import { MindMapVersePreview } from "@/components/gamification/MindMapVersePrevi
 
 export type ChapterLesson =
   // `page`: a lesson on another path than the screen's own (a verse learned on its own — lib/versePathLesson.ts).
-  | { kind: "lesson"; verseNumber: number; dayNumber: number; mode: "select" | "practice"; page?: ChapterPathPage }
+  // `onlyVerse`: just that verse of the day, each verse its own lesson (lib/dayVerseProgress.ts).
+  | { kind: "lesson"; verseNumber: number; dayNumber: number; mode: "select" | "practice"; page?: ChapterPathPage; onlyVerse?: { chapter: number; verseNumber: number } }
   | { kind: "srs"; verseNumber: number; entityIds: string[] }
   | { kind: "preview"; verseNumber: number; verse: VerseSegment };
 
@@ -48,7 +49,7 @@ export function ChapterPathLesson({ lesson, page, onClose }: ChapterPathLessonPr
     <PathLessonDock onClose={onClose}>
       {lesson.kind === "lesson" ? (
         <InPlaceLessonSession
-          key={`${page.pathKey}:${lesson.dayNumber}:${lesson.mode}`}
+          key={`${page.pathKey}:${lesson.dayNumber}:${lesson.mode}:${lesson.onlyVerse?.chapter}:${lesson.onlyVerse?.verseNumber}`}
           pathKey={page.pathKey}
           label={page.label}
           days={page.days}
@@ -58,6 +59,7 @@ export function ChapterPathLesson({ lesson, page, onClose }: ChapterPathLessonPr
           todaysDay={page.todaysDay}
           dayNumber={lesson.dayNumber}
           mode={lesson.mode}
+          onlyVerse={lesson.onlyVerse}
           embeddedInMindMap
           onExit={onClose}
         />

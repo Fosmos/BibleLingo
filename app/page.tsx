@@ -7,7 +7,7 @@ import { SleepTimerCard } from "@/components/gamification/SleepTimerCard";
 
 export default function Home() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-[22px] px-[18px] pb-7 pt-1.5">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-[22px] overflow-x-clip px-[18px] pb-7 pt-1.5">
       {/* "Your paths" (design_handoff_path_picker) — a card per path, then Start a new path — with
           what's due for review, Vespers and the sleep timer below. */}
       <PathHomeList />

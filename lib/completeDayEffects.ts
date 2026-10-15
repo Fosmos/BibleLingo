@@ -28,6 +28,18 @@ export function applyDayCompletion(pathKey: string, day: MemorizationDay, comple
   if (completingChapterVerses && completingChapterVerses.length > 0 && plan) {
     store.completeBookChapter(completingChapterVerses, plan.version);
   }
+  return rewardLesson(pathKey, day);
+}
+
+// One verse of a several-verse day learned on its own (lib/dayVerseProgress.ts), not its last:
+// the day's first `learnedCount` verses are now known, with the same streak and shekels.
+export function applyDayVerseCompletion(pathKey: string, day: MemorizationDay, learnedCount: number): number | null {
+  useProgressStore.getState().learnDayVerses(pathKey, day.dayNumber, learnedCount);
+  return rewardLesson(pathKey, day);
+}
+
+function rewardLesson(pathKey: string, day: MemorizationDay): number | null {
+  const store = useProgressStore.getState();
   const previousStreak = useProgressStore.getState().streak.currentStreak;
   store.incrementStreak();
   const newStreak = useProgressStore.getState().streak.currentStreak;

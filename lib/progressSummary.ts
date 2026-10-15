@@ -1,4 +1,5 @@
 import type { MemorizationDay, MemorizedEntity, PathProgress, VerseSegment } from "@/types";
+import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
 import { parsePathKey, resolvePath } from "@/lib/memorizationContent";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
@@ -37,9 +38,7 @@ export function getMemorizedVerses(paths: Record<string, PathProgress>): Memoriz
         ? getMemorizedBookVerses(resolved.verses, days, plan)
         : plan.completedDays >= days.length
           ? resolved.verses.map((verse) => ({ verse, version: plan.version }))
-          : days
-              .filter((day) => day.kind === "learn" && day.dayNumber <= plan.completedDays)
-              .flatMap((day) => day.newVerses.map((verse) => ({ verse, version: plan.version })));
+          : days.flatMap((day) => learnedVersesOfDay(day, plan).map((verse) => ({ verse, version: plan.version })));
     memorized.push(...earned);
     // Verses the reader said they already knew when choosing this path (see
     // PathProgress.priorKnownVerseCount) are memorized from the start — straight into spaced

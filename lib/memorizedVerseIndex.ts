@@ -1,4 +1,5 @@
 import type { BibleBook, MemorizedEntity, PathProgress } from "@/types";
+import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
 import { resolvePath } from "@/lib/memorizationContent";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
@@ -30,8 +31,7 @@ export function buildMemorizedVerseIndex(paths: Record<string, PathProgress>, en
     if (!verses) continue;
     for (const verse of verses.slice(0, plan.priorKnownVerseCount ?? 0)) add(index, verse.book, verse.chapter, verse.verseNumber);
     for (const day of buildPathDayPlan(key, verses, plan)) {
-      if (day.kind !== "learn" || day.dayNumber > plan.completedDays) continue;
-      for (const verse of day.newVerses) add(index, verse.book, verse.chapter, verse.verseNumber);
+      for (const verse of learnedVersesOfDay(day, plan)) add(index, verse.book, verse.chapter, verse.verseNumber);
     }
   }
   cached = { paths, entities, index };

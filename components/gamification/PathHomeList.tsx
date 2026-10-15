@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useActivePathKeys } from "@/lib/useActivePathKeys";
 import { isDue } from "@/lib/srs";
 import { PathHomeCard } from "@/components/gamification/PathHomeCard";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 
 // Home's "Your paths" (design_handoff_path_picker → Screen 1): a card per path in progress, the
-// most recently opened first, then "Start a new path".
+// most recently opened first, then "Start a new path" — under a "Welcome back" to the signed-in user.
 export function PathHomeList() {
   const keys = useActivePathKeys();
+  const username = useAuthStore((state) => state.currentUsername);
   const focused = useProgressStore((state) => state.activePathKey);
   const entities = useProgressStore((state) => state.memorizedEntities);
   const ordered = focused && keys.includes(focused) ? [focused, ...keys.filter((key) => key !== focused)] : keys;
@@ -20,6 +22,7 @@ export function PathHomeList() {
 
   return (
     <div className="flex flex-col gap-3.5">
+      <p className="relative z-[1] -mb-1.5 break-words font-heading text-[22px] leading-tight text-brand-700 dark:text-brand-300">{username ? `Welcome back, ${username}` : "Welcome back"}</p>
       <header className="relative flex items-start gap-3">
         <span aria-hidden="true" className="pointer-events-none absolute -right-[110px] -top-[90px] -z-10 h-[300px] w-[300px] rounded-full bg-sage-200/70 dark:bg-sage-900/40" />
         <span aria-hidden="true" className="pointer-events-none absolute -right-10 top-[70px] -z-10 h-[120px] w-[120px] rounded-full bg-brand-200/80 dark:bg-brand-900/40" />

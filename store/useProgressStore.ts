@@ -37,6 +37,7 @@ interface ProgressActions {
   removeActivePath: (pathKey: string) => void;
   retireLearnedPath: (pathKey: string) => void;
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
+  learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;
@@ -140,7 +141,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     // Stamped every time, not just on a real advance — see PathProgress.lastCompletedAt and
     // lib/dayRollover.ts: this is what keeps tomorrow's lesson from revealing itself as
     // "today's" the instant this one finishes, rather than only once an actual midnight passes.
-    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays, lastCompletedAt: new Date().toISOString() } };
+    const paths = { ...state.paths, [pathKey]: { ...existing, completedDays, versesIntoDay: undefined, lastCompletedAt: new Date().toISOString() } };
     const memorizedEntities = syncMemorizedEntities(paths, state.memorizedEntities);
     set(persist({ ...state, paths, memorizedEntities }));
   },

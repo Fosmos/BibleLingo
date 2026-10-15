@@ -28,6 +28,9 @@ interface PathActions {
   retireLearnedPath: (pathKey: string) => void;
   // A path's daily reminder choice (types/index.ts's PathReminder) — saved only, for now.
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
+  // The first `count` verses of the next lesson day are learned (each verse its own lesson), so
+  // they show as known and go into spaced review before the rest of the day is done.
+  learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -110,6 +113,14 @@ export function createPathActions(
     setPathReminder: (pathKey, reminder) => {
       const state = get();
       set(persist({ ...state, pathReminders: { ...(state.pathReminders ?? {}), [pathKey]: reminder } }));
+    },
+
+    learnDayVerses: (pathKey, dayNumber, count) => {
+      const state = get();
+      const existing = state.paths[pathKey];
+      if (!existing || dayNumber !== existing.completedDays + 1) return;
+      const paths = { ...state.paths, [pathKey]: { ...existing, versesIntoDay: Math.max(existing.versesIntoDay ?? 0, count) } };
+      set(persist({ ...state, paths, memorizedEntities: syncMemorizedEntities(paths, state.memorizedEntities) }));
     },
 
     removeActivePath: (pathKey) => {

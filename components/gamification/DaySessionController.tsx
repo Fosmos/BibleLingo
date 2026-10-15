@@ -6,7 +6,7 @@ import { LessonCompleteScreen } from "@/components/gamification/LessonCompleteSc
 import { SHEKELS_PER_BOSS_BATTLE, SHEKELS_PER_VERSE_COMPLETED } from "@/lib/economy";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
-import { applyDayCompletion } from "@/lib/completeDayEffects";
+import { applyDayCompletion, applyDayVerseCompletion } from "@/lib/completeDayEffects";
 import { VerseLessonFlow } from "@/components/gamification/VerseLessonFlow";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { ReviewChain } from "@/components/drills/ReviewChain";
@@ -41,12 +41,13 @@ interface DaySessionControllerProps {
   // both the mid-lesson "Back" and the finished-lesson screen return to that exact same
   // parchment view. Undefined for the standalone `/day/[dayNumber]` route (DayLoader.tsx).
   onExit?: () => void;
-  // See LessonChrome.tsx's own doc comment — threaded through to every branch below with a
-  // LessonChrome/LessonTopBar of its own to suppress (VerseLessonFlow, ReviewSection).
+  // See LessonChrome.tsx's own doc comment (VerseLessonFlow, ReviewSection).
   embeddedInMindMap?: boolean;
+  // `day` is one verse of a several-verse day (lib/dayVerseProgress.ts): which, of how many.
+  dayPart?: { index: number; count: number };
 }
 
-export function DaySessionController({ pathKey, label, day, allDays, completedDays, todaysDay, totalDays, completingChapterVerses, embeddedInMindMap, onExit }: DaySessionControllerProps) {
+export function DaySessionController({ pathKey, label, day, allDays, completedDays, todaysDay, totalDays, completingChapterVerses, embeddedInMindMap, dayPart, onExit }: DaySessionControllerProps) {
   const plan = useProgressStore((state) => state.paths[pathKey]);
   const clearSessionCheckpoint = useProgressStore((state) => state.clearSessionCheckpoint);
   const recordChapterReviewAccuracy = useProgressStore((state) => state.recordChapterReviewAccuracy);
@@ -61,15 +62,15 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
   const [milestoneStreak, setMilestoneStreak] = useState<number | null>(null);
   const { pending, celebrate, finish } = useCelebration();
 
-  // Shared by every nested stage/verse/phase index within this one day's session — see
-  // lib/useSessionCheckpoint.ts. Cleared once the day genuinely finishes so re-entering a
-  // completed day later (e.g. via the "locked circles clickable for testing" path) starts
-  // fresh rather than jumping to wherever it was left off.
-  const sessionKey = `${pathKey}:${day.dayNumber}`;
+  // Shared by every stage/verse/phase index in this session (lib/useSessionCheckpoint.ts);
+  // cleared when it finishes so re-entering it starts fresh.
+  const sessionKey = `${pathKey}:${day.dayNumber}${dayPart ? `:${dayPart.index}` : ""}`;
 
   function finishDay() {
     clearSessionCheckpoint(sessionKey);
-    const milestone = applyDayCompletion(pathKey, day, completingChapterVerses, allDays);
+    // A verse before the day's last only moves the day along; its last verse completes the day.
+    const partial = dayPart && dayPart.index < dayPart.count - 1;
+    const milestone = partial ? applyDayVerseCompletion(pathKey, day, dayPart.index + 1) : applyDayCompletion(pathKey, day, completingChapterVerses, allDays);
     if (milestone !== null) setMilestoneStreak(milestone);
     if (day.kind === "learn") {
       celebrate(() => setDayComplete(true), "Today's lesson complete");
@@ -78,9 +79,8 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
     }
   }
 
-  // The version query param is what the path overview page treats as the source of truth
-  // (see app/path/[key]/page.tsx) — omitting it would default to KJV and silently overwrite
-  // an already-selected translation via PathOverviewScreen's sync effect.
+  // The version param is the path page's source of truth (app/path/[key]/page.tsx) — without it
+  // the page would default to KJV and overwrite the chosen translation.
   const pathHref = `/path/${encodeURIComponent(pathKey)}${plan ? `?version=${encodeURIComponent(plan.version)}` : ""}`;
   const dayLabel = `Day ${day.dayNumber} of ${totalDays} — ${label}`;
   // The chapter-scoped title (e.g. "Titus 1") LearnSection's own top bar shows, matching how

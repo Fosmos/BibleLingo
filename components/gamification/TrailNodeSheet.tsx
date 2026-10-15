@@ -49,7 +49,7 @@ export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart
         <div className="pt-2">
           {stop.state === "current" && (
             <button type="button" onClick={onStart} className={primary}>
-              {stop.checkpoint ? "Start recital" : "Start lesson"}
+              {stop.checkpoint && !stop.verse ? "Start recital" : "Start lesson"}
             </button>
           )}
           {due && (
