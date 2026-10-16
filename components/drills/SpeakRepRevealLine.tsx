@@ -1,10 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { buildDrawTokens } from "@/lib/verseDrawTokens";
-import { firstWordCharacter, hiddenWordBlank } from "@/lib/verseWords";
-import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
-import { PeekWord } from "@/components/drills/PeekWord";
-
-const HINT_LETTER_CLASS = "rounded-md bg-brand-100 px-[.12em] font-bold tracking-[.08em] text-sand-800 dark:bg-brand-900/40 dark:text-sand-200";
+import { HiddenWord } from "@/components/drills/HiddenWord";
 
 interface SpeakRepRevealLineProps {
   text: string;
@@ -14,9 +10,8 @@ interface SpeakRepRevealLineProps {
   // once revealed never goes back to hidden, even if a later interim transcript update briefly
   // stops matching it.
   revealedCount: number;
-  // A not-yet-spoken word shows its bare first letter (the Speak flow's hint mode — a compact
-  // prompt, not a same-width stand-in) or nothing at all (blind recitation, still padded to the
-  // word's own real length, its punctuation hidden too — see lib/verseWords.ts's hiddenWordBlank).
+  // A not-yet-spoken word shows its first letter (the Speak flow's hint mode) or none of its
+  // letters (blind recitation) — either way at its own length, over an underline (HiddenWord.tsx).
   mode: "hint" | "blind";
 }
 
@@ -25,42 +20,21 @@ interface SpeakRepRevealLineProps {
 // un-revealing a word once it's been said (see SpeakRep.tsx's revealedCount tracking). Reuses
 // buildDrawTokens' own word/punctuation/reference split so a not-yet-spoken word's placeholder
 // lines up with the SAME tokenization lib/textMatch.ts's spokenPrefixMatchCount counts against.
+// Punctuation always shows, so the verse's shape is there from the start.
 export function SpeakRepRevealLine({ text, revealedCount, mode }: SpeakRepRevealLineProps) {
   const tokens = buildDrawTokens(text, {});
   let wordIndex = 0;
   return (
     <>
       {tokens.map((token, index) => {
-        const isWord = token.kind === "word" && !token.isReference;
-        let display = token.text;
-        // Whether this token ends a first-letter unit (a hint letter, plus its punctuation) —
-        // where the extra first-letter gap goes (see lib/firstLetterGap.ts). Never after a word
-        // already spoken in full, which reads as ordinary text.
-        let endsLetterUnit = false;
-        let hiddenWord = false;
-        if (isWord) {
-          const isRevealed = wordIndex < revealedCount;
-          display = isRevealed ? token.text : mode === "blind" ? hiddenWordBlank(token.text) : (firstWordCharacter(token.text) ?? token.text);
-          endsLetterUnit = mode === "hint" && !isRevealed;
-          hiddenWord = !isRevealed;
+        let shown: ReactNode = token.text;
+        if (token.kind === "word" && !token.isReference) {
+          if (wordIndex >= revealedCount) shown = <HiddenWord word={token.text} firstLetter={mode === "hint"} />;
           wordIndex++;
-        } else if (token.kind === "punctuation") {
-          // Punctuation only appears once the word it belongs to has been said — never as part
-          // of the hint, never ahead of the reader. A mark belongs to the word it touches:
-          // leading punctuation (no space after it) to the NEXT word, trailing punctuation to the
-          // one just before it. Hidden, it takes no room in hint mode (letters stay one space
-          // apart) and blank room in blind mode (matching the blank words around it).
-          const ownerIndex = token.spaceAfter ? wordIndex - 1 : wordIndex;
-          if (ownerIndex >= revealedCount) display = mode === "blind" ? hiddenWordBlank(token.text) : "";
-          endsLetterUnit = mode === "hint" && ownerIndex >= revealedCount;
         }
-        // A hint letter reads bold and spaced on a pale terracotta wash, apart from the words
-        // already said; a hidden word can be peeked at (PeekWord.tsx).
-        const letter = endsLetterUnit && isWord ? <span className={HINT_LETTER_CLASS}>{display}</span> : display;
-        const shown = hiddenWord ? <PeekWord word={token.text}>{letter}</PeekWord> : letter;
         return (
           <Fragment key={index}>
-            {endsLetterUnit && token.spaceAfter ? <span className={FIRST_LETTER_GAP_CLASS}>{shown}</span> : shown}
+            {shown}
             {token.spaceAfter && " "}
           </Fragment>
         );

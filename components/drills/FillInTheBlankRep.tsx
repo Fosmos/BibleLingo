@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import type { VerseSegment } from "@/types";
 import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
 import { TAP_SCALE } from "@/lib/motionTokens";
-import { tokenizeVerseWords, stripPunctuation } from "@/lib/verseWords";
+import { tokenizeVerseWords, stripPunctuation, splitWordPunctuation } from "@/lib/verseWords";
 import { blankIndicesImportantFirst } from "@/lib/wordImportance";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
@@ -14,7 +14,7 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
-import { PeekWord } from "@/components/drills/PeekWord";
+import { useReferenceGate } from "@/components/gamification/ReferenceGate";
 
 interface FillInTheBlankRepProps {
   verse: VerseSegment;
@@ -24,6 +24,8 @@ interface FillInTheBlankRepProps {
   layout: ChapterReadingLayout;
   // Reps in all (the Learn intensity slider's choice, 2 or 3) — any after the second blank every word.
   reps?: number;
+  // Every word blank from the first rep (a sense-line stage — lib/learnSteps.ts).
+  allBlank?: boolean;
   onComplete: () => void;
 }
 
@@ -37,12 +39,12 @@ interface FillInTheBlankRepProps {
 // so their position never hints at the answer. A wrong tap just
 // flashes red and stays available to try again — every tile already placed correctly stays
 // placed, so one slip never costs any real progress (see handleTileClick).
-export function FillInTheBlankRep({ verse, layout, reps = 2, onComplete }: FillInTheBlankRepProps) {
+export function FillInTheBlankRep({ verse, layout, reps = 2, allBlank = false, onComplete }: FillInTheBlankRepProps) {
   const repCount = reps;
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
   const [repIndex, setRepIndex] = useState(0);
   const blankIndices = useMemo(
-    () => blankIndicesImportantFirst(words, repIndex === 0 ? Math.ceil(words.length / 2) : words.length),
+    () => blankIndicesImportantFirst(words, repIndex === 0 && !allBlank ? Math.ceil(words.length / 2) : words.length),
     // Re-derived only on a real verse/rep change, not on every placement — a re-shuffle mid-round
     // would shuffle tiles the reader hasn't tapped yet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,6 +65,8 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, onComplete }: FillI
   );
 
   const placedCount = usedTileIds.size;
+  // No blank is "next" while the stage's reference is entered first (ReferenceGate.tsx).
+  const referenceFirst = useReferenceGate() !== null;
   const targetIndex = blankIndices[placedCount];
   const targetWord = targetIndex !== undefined ? words[targetIndex] : undefined;
   // The sense line holding the next blank — the tray offers just its words, then moves on.
@@ -104,7 +108,7 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, onComplete }: FillI
   // here, that negative indent applies AGAIN to this span's own text, shifting it left by that
   // same amount and painting it back over whatever word came right before it.
   //
-  // A blank always holds its own word, just invisible until placed — so it's exactly that word's
+  // A blank always holds its own word's letters, just invisible until placed — so it's exactly that word's
   // width from the start, and filling it in never widens the line. (A fixed-width blank used to
   // grow on fill and knock the rest of the line down onto the next one.) No side margin either:
   // the ordinary trailing space separates it, the same room sense-line merging measured for.
@@ -116,29 +120,31 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, onComplete }: FillI
           if (!blankIndices.includes(index)) return <span key={index}>{word} </span>;
           const slotPosition = blankIndices.indexOf(index);
           const isFilled = slotPosition < placedCount;
+          // The box holds just the letters — the word's punctuation always shows beside it.
+          const { lead, core, trail } = splitWordPunctuation(word);
           return (
             <span key={index}>
+              {lead}
               <span
                 // Filled: dark terracotta on a pale wash, underlined. The next blank: the pale wash
                 // ringed in terracotta. Later blanks: plain sand (the lesson view, no sage).
                 className={`-mr-[.12em] inline-block rounded-md px-[.12em] indent-0 whitespace-nowrap leading-tight transition-colors ${
                   isFilled
                     ? "border-b-2 border-brand-300 bg-brand-100 text-brand-900 dark:bg-brand-900/40 dark:text-brand-100"
-                    : slotPosition === placedCount
+                    : slotPosition === placedCount && !referenceFirst
                       ? "bg-brand-100 ring-2 ring-inset ring-brand-500 dark:bg-brand-900/40"
                       : "bg-sand-300 dark:bg-zinc-700"
                 }`}
               >
                 {isFilled ? (
-                  word
+                  core
                 ) : (
-                  <PeekWord word={word}>
-                    <span className="invisible" aria-hidden="true">
-                      {word}
-                    </span>
-                  </PeekWord>
+                  <span className="invisible" aria-hidden="true">
+                    {core}
+                  </span>
                 )}
-              </span>{" "}
+              </span>
+              {trail}{" "}
             </span>
           );
         })}

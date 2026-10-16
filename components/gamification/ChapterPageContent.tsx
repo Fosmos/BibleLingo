@@ -6,8 +6,6 @@ import type { ChapterPage } from "@/lib/chapterPagination";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { buildDayRuns, runState } from "@/lib/chapterReadingRuns";
 import { SenseLineVerse } from "@/components/gamification/SenseLineVerse";
-import { useElementWidth } from "@/lib/useElementWidth";
-import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
 
 interface ChapterPageContentProps {
   page: ChapterPage | undefined;
@@ -52,9 +50,8 @@ export function ChapterPageContent({
   onSelect,
 }: ChapterPageContentProps) {
   // The text column's own width — lets each verse join clauses that fit on one line.
-  const [columnRef, columnWidthPx] = useElementWidth<HTMLDivElement>();
   return (
-    <div ref={columnRef} data-fit-text className="flex flex-col gap-3" style={fontSizePx ? { fontSize: `${fontSizePx}px` } : undefined}>
+    <div data-fit-text className="flex flex-col gap-3" style={fontSizePx ? { fontSize: `${fontSizePx}px` } : undefined}>
       {page?.segments.map((segment) => (
         <div key={segment.key} className="font-reading text-lg font-medium">
           {buildDayRuns(segment.verses, dayNumberByVerse)
@@ -72,8 +69,6 @@ export function ChapterPageContent({
                 renderVerseWords={renderVerseWords}
                 isVerseNumberVisible={isVerseNumberVisible}
                 onSelect={onSelect}
-                columnWidthPx={columnWidthPx}
-                fontSizePx={fontSizePx ?? FIXED_PARCHMENT_FONT_PX}
               />
             ))}
         </div>

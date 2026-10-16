@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { VerseViewButtons } from "@/components/gamification/VerseViewButtons";
 import { SheetDrillPortal } from "@/components/gamification/SheetDrillPortal";
+import { useReferenceGate } from "@/components/gamification/ReferenceGate";
 
 interface LessonControlBarProps {
   children: ReactNode;
@@ -55,7 +56,9 @@ interface LessonControlBarProps {
 // Docks at the true screen bottom (not PathBottomDock's own `bottom-20`) because AuthGate.tsx
 // hides the bottom tab bar for as long as this bar is mounted this way — see
 // store/useLessonSessionStore.ts.
-export function LessonControlBar({ children, dockRef, verseText, verseViewExtra, onVersePeek }: LessonControlBarProps) {
+export function LessonControlBar({ children: stageControls, dockRef, verseText, verseViewExtra, onVersePeek }: LessonControlBarProps) {
+  // A Learn recall stage takes its verse's reference first (ReferenceGate.tsx), in these controls' place.
+  const children = useReferenceGate()?.entry ?? stageControls;
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether this box's own content currently overflows its max-h cap, with more still below
   // the fold — a box this small giving no hint there's anything to scroll to at all left a

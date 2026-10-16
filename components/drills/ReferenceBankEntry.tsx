@@ -8,8 +8,8 @@ interface ReferenceBankEntryProps {
   correct: ReferenceAnswer;
 }
 
-// The reference from a word bank, like Fill in the blank: the book from four, then the chapter
-// from four, then the verse.
+// The reference from a word bank, like Fill in the blank: a numbered book's number, the book from
+// four, then the chapter from four, then the verse.
 export function ReferenceBankEntry({ entry, correct }: ReferenceBankEntryProps) {
   if (!entry.part) return null;
   const part = entry.part;

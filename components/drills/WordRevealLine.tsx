@@ -1,9 +1,9 @@
-import { firstLetterWithPunctuation, hiddenWordBlank } from "@/lib/verseWords";
+import { firstLetterWithPunctuation } from "@/lib/verseWords";
 import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
 import type { WordAnnotationMap } from "@/lib/verseHighlights";
 import { AnnotatedVerseWord } from "@/components/drills/AnnotatedVerseWord";
 import { VerseNumberMarker } from "@/components/drills/VerseNumberMarker";
-import { PeekWord } from "@/components/drills/PeekWord";
+import { HiddenWord } from "@/components/drills/HiddenWord";
 
 interface WordRevealLineProps {
   // Every word in the line, in order — not just the ones typed/spoken so far.
@@ -26,8 +26,8 @@ interface WordRevealLineProps {
 }
 
 // The whole line from the start — every word already typed/spoken shown in full, every word
-// still to come shown as reserved blank space in its own real position, its punctuation hidden
-// too (see lib/verseWords.ts's hiddenWordBlank) — so typing or speaking a word fills it into the spot
+// still to come shown at its own length over an underline, its punctuation showing
+// (HiddenWord.tsx) — so typing or speaking a word fills it into the spot
 // it was always going to sit in, instead of the line only growing longer at the end as each
 // word comes in. Shared by FirstLetterTypeRep.tsx and ReviewChain.tsx's own word-by-word reveal.
 export function WordRevealLine({ words, revealedCount, annotations, verseMarkers, startIndex = 0, firstLettersOnly = false }: WordRevealLineProps) {
@@ -46,9 +46,7 @@ export function WordRevealLine({ words, revealedCount, annotations, verseMarkers
             {index < revealedCount ? (
               <AnnotatedVerseWord word={firstLettersOnly ? firstLetterWithPunctuation(word) : word} annotation={annotations?.[index]} className={firstLettersOnly ? FIRST_LETTER_GAP_CLASS : ""} />
             ) : (
-              <PeekWord word={word}>
-                <span>{hiddenWordBlank(word)}</span>
-              </PeekWord>
+              <HiddenWord word={word} />
             )}{" "}
           </span>
         );

@@ -16,41 +16,37 @@ import { PericopeTitle } from "@/components/gamification/PericopeTitle";
 import { GhostContextLine } from "@/components/gamification/GhostContextLine";
 import { ParchmentCard } from "@/components/ui/ParchmentCard";
 import { SheetVerseZone } from "@/components/gamification/SheetVerseZone";
-import { edgeGhostText } from "@/lib/verseEdgeGhost";
+import { edgeGhost } from "@/lib/verseEdgeGhost";
 import { formatVerseRangeLabel } from "@/lib/chapterContent";
+import { TEACHING_STAGE_LABELS } from "@/lib/learnSheetStage";
+import { useReferenceGate } from "@/components/gamification/ReferenceGate";
+import { senseLineSliceView } from "@/components/gamification/SenseLineSliceView";
+import { usePublishHelpVerse } from "@/lib/usePublishHelpVerse";
 
 interface LessonPageCardProps {
   layout: ChapterReadingLayout;
-  // The verse to look up the real page FROM — for a single-verse stage this is the one verse
-  // actually being drilled; for a multi-verse stage (see `isActive` below) it's whichever verse
-  // should decide which page opens (e.g. ReviewChain.tsx's own "furthest along" verse).
+  // The verse drilled — for a multi-verse stage (`isActive`), whichever decides the page shown.
   activeVerse: VerseSegment;
-  // Which verse(s) get `renderActiveVerse` — every other verse on the page renders normally.
-  // Defaults to matching `activeVerse` alone; pass this for a stage that drills several verses
-  // on the same page at once (ReviewChain.tsx's own combine stage).
+  // Which verse(s) get `renderActiveVerse` (default `activeVerse` alone) — for a stage drilling
+  // several verses on one page at once (ReviewChain.tsx's own combine stage).
   isActive?: (verse: VerseSegment) => boolean;
   // What to show in the active verse's place, called once per clause (senseLineWordRanges) — the
   // full verse, first letters, or blanks, in the same sense-line structure as every other verse.
   renderActiveVerse: (verse: VerseSegment, range: SenseLineWordRange) => ReactNode;
-  // SRS review only — lets the reader flip between an entity's pages (snaps back when recall
-  // moves on to another page).
+  // SRS review only — lets the reader flip between an entity's pages.
   allowManualFlip?: boolean;
-  // SRS review only — hides the pericope title until it returns true (no early section leak).
+  // SRS review only — hides the pericope title until it returns true.
   isHeadingVisible?: (segment: PericopeSegment) => boolean;
-  // Blind-recall drills only — a verse's number stays hidden until this returns true.
+  // Blind-recall drills — a verse's number stays hidden until this returns true.
   isVerseNumberVisible?: (verse: VerseSegment) => boolean;
-  // The word index the reader's actually on right now — only meaningful when `activeVerse` can
-  // split across a page break and the caller reveals it progressively.
+  // The word the reader's on — for an `activeVerse` that splits across a page break.
   activeWordIndex?: number;
-  // SRS review only — hides the trailing ghost line, since it previews words BEYOND the
-  // entity's own range. On (the default) everywhere else.
+  // Hides the trailing ghost line (it previews words beyond what's being recalled) — the lesson
+  // page's verse zone also hides it for every review, showing it only on a Learn teaching stage.
   showNextGhost?: boolean;
-  // The in-place Mind Map lesson sheet's own card renders NO pagination — this stage's own
-  // real verses directly, not a chapter-wide "page" a tiny 40dvh box has no business chunking.
-  // Defaults to `[activeVerse]`; LessonWholeDayPageCard.tsx passes its own list through.
+  // The verses the lesson page's verse zone shows (no pagination there) — `[activeVerse]` by
+  // default; LessonWholeDayPageCard.tsx passes its own list through.
   embeddedVerses?: VerseSegment[];
-  // In place of the reference above the verse — a Learn stage's reference being recalled.
-  referenceSlot?: ReactNode;
 }
 
 // The Learn/Review "verse lives here" surface — the SAME real reading-view page (every verse
@@ -74,17 +70,20 @@ export function LessonPageCard({
   activeWordIndex,
   showNextGhost = true,
   embeddedVerses,
-  referenceSlot,
 }: LessonPageCardProps) {
-  // The lesson page's or Mind Map sheet's verse zone (lib/useMindMapSenseCardSlot.ts), which this
-  // portals into instead of rendering inline. Null on the standalone route.
+  // A Learn recall stage's reference while it's being entered, in the reference's own place.
+  const referenceSlot = useReferenceGate()?.slot;
+  // The lesson page's verse zone (lib/useMindMapSenseCardSlot.ts) this portals into; null standalone.
   const senseCardPortalNode = useLessonSessionStore((state) => state.senseCardPortalNode);
+  // The verse zone's verses — for a sense-line stage, its whole verse; the Letters / Verse tabs show them.
+  const slice = senseCardPortalNode ? senseLineSliceView(activeVerse, renderActiveVerse) : null;
+  const shownVerses = slice ? [slice.whole] : (embeddedVerses ?? [activeVerse]);
+  usePublishHelpVerse(senseCardPortalNode ? shownVerses.map((verse) => verse.text).join(" ") : null);
   const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
   const [lastAutoPageIndex, setLastAutoPageIndex] = useState(autoPageIndex);
-  // Adjusted during render (lib/useChapterPagination.ts's pattern): a manual flip snaps back
-  // the moment recall itself moves to a new page.
+  // A manual flip snaps back once recall moves to a new page (adjusted during render).
   if (autoPageIndex !== lastAutoPageIndex) {
     setLastAutoPageIndex(autoPageIndex);
     setManualPageIndex(null);
@@ -101,17 +100,18 @@ export function LessonPageCard({
   const heading = segment && (!isHeadingVisible || isHeadingVisible(segment)) ? segment.heading : undefined;
   const { previousEdgeVerse, nextEdgeVerse, prevGhostText, nextGhostText } = computeGhostContext(layout.pages, pageIndex);
 
-  // The lesson page and the Mind Map sheet want just the stage's own verses (see embeddedVerses'
-  // own doc comment — no PAGE), in the verse zone (SheetVerseZone.tsx): fitted to it, no verse
-  // numbers, their reference under them at the right and a ghost line of the verse either side.
+  // The lesson page and the Mind Map sheet show just the stage's verses (no page) in the verse
+  // zone (SheetVerseZone.tsx): fitted, no verse numbers, the reference at the top left, a ghost
+  // line either side (just before, in a review). A sense-line stage: its whole verse (above).
   if (senseCardPortalNode) {
-    const shown = embeddedVerses ?? [activeVerse];
+    const shown = shownVerses;
+    const renderShown = slice ? (verse: VerseSegment, range: SenseLineWordRange) => (verse.id === slice.whole.id ? slice.renderLine(range) : undefined) : renderVerseWords;
     return createPortal(
       <SheetVerseZone
-        fitKey={`${stageLabel}|${shown.map((verse) => verse.id).join(",")}`}
+        fitKey={`${stageLabel}|${activeVerse.id}|${shown.map((verse) => verse.id).join(",")}`}
         reference={referenceSlot ?? formatVerseRangeLabel(shown)}
-        ghostPrev={edgeGhostText(shown[0], "previous")}
-        ghostNext={edgeGhostText(shown[shown.length - 1], "next")}
+        ghostPrev={edgeGhost(shown[0], "previous")}
+        ghostNext={showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
       >
         {(fontSizePx) => (
           <ChapterPageContent
@@ -123,7 +123,7 @@ export function LessonPageCard({
             iconTags={layout.iconTags}
             pegActive={layout.pegActive}
             fontSizePx={fontSizePx}
-            renderVerseWords={renderVerseWords}
+            renderVerseWords={renderShown}
             isVerseNumberVisible={() => false}
             onSelect={() => {}}
           />
@@ -152,6 +152,7 @@ export function LessonPageCard({
   return (
     <div className="flex flex-col">
       <PericopeTitle book={segment?.book} chapter={segment?.chapter} verseNumber={segment?.verses[0]?.verseNumber} heading={heading} />
+      {referenceSlot && <div className="px-4 pb-2 font-serif text-xl text-brand-700 dark:text-brand-300">{referenceSlot}</div>}
 
       <GhostContextLine
         verse={previousEdgeVerse}
@@ -184,7 +185,6 @@ export function LessonPageCard({
         )}
         {chapterPageContent}
       </ParchmentCard>
-      {referenceSlot && <div className="self-end px-4 pt-2 text-right font-serif text-xl text-brand-700 dark:text-brand-300">{referenceSlot}</div>}
 
       {showNextGhost && (
         <GhostContextLine

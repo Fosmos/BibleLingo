@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import type { MemorizationDay } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
@@ -26,53 +26,24 @@ interface VerseLessonFlowProps {
   embeddedInMindMap?: boolean;
 }
 
-const PHASES = ["previousReview", "learn", "postReview"] as const;
-type Phase = (typeof PHASES)[number];
+const PHASES = ["learn", "finalReview", "postReview"] as const;
 
-// A single verse lesson: first a check of the verses already learned in its pericope — every path
-// kind, not just book mode — then learn this verse, then (book mode
-// only) the sliding-window chapter review. There's no separate generic "review everything so
-// far" phase here anymore — it read as a confusing, oddly-scoped extra stage in book mode
-// (where day.reviewVerses is deliberately empty, see lib/bookDayPlan.ts) squeezed between
-// Learn and the real Chapter Review; the per-verse checks inside Learn cover that same ground
-// in the place it actually belongs.
+// A single verse lesson: learn the verse, then review it together with up to the 4 learned verses
+// just before it (every path kind), then (book mode only) the sliding-window chapter review.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
-  const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "phaseIndex", 0);
-  // The check first: every verse learned so far in this lesson's pericope (learning 8:5 of a
-  // pericope from 8:1, it types 8:1–4), then on to learning the verse.
+  // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
+  const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);
+  const phase = PHASES[phaseIndex] ?? PHASES[0];
+  // The closing review: the verses before this lesson's (learning 8:9, it reviews 8:5–8) and then
+  // the lesson's own verses, typed through in order.
   const prior = usePriorLearnedVerses(day);
-  const previousDay = useMemo(() => ({ ...day, previousVerses: prior }), [day, prior]);
-  const hasPreviousReview = prior.length > 0;
-  // Skip straight past the previous-lesson check when there's nothing to show for it (a path's
-  // very first lesson): shown as "learn" at once, and saved as such just after rendering —
-  // saving it during render updated the store mid-render (React's setState-in-render warning).
-  const skipPrevious = PHASES[phaseIndex] === "previousReview" && !hasPreviousReview;
-  const phase: Phase = skipPrevious ? PHASES[1] : PHASES[phaseIndex];
-  useEffect(() => {
-    if (skipPrevious) setPhaseIndex(1);
-  }, [skipPrevious, setPhaseIndex]);
+  const reviewDay = useMemo(() => ({ ...day, previousVerses: [...prior, ...day.newVerses.filter((verse) => verse.text.trim().length > 0)] }), [day, prior]);
   const hasPostReview = day.postLearnReviewStages?.some((stage) => stage.verses.length > 0) ?? false;
-  // Only actually used by the previousReview/postReview branches below (LearnSection computes
-  // its own for "learn") — called unconditionally regardless, same as every other hook here,
-  // since hooks can't be called after an early return.
+  const finishReview = () => (hasPostReview ? setPhaseIndex(2) : onComplete());
+  // Only used by the review branches below (LearnSection computes its own for "learn") — called
+  // unconditionally regardless, since hooks can't be called after an early return.
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
   const layout = useChapterScopedReadingLayout(allDays, day, completedDays, todaysDay, senseCardFillHeightPx, senseCardColumnWidthPx);
-
-  if (phase === "previousReview") {
-    return (
-      <ReviewSection
-        day={previousDay}
-        onComplete={() => setPhaseIndex(1)}
-        sessionKey={sessionKey}
-        phase="previous"
-        layout={layout}
-        lessonLabel={label}
-        version={version}
-        onExit={onExit}
-        embeddedInMindMap={embeddedInMindMap}
-      />
-    );
-  }
 
   if (phase === "learn") {
     return (
@@ -83,7 +54,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
         todaysDay={todaysDay}
         label={label}
         version={version}
-        onComplete={() => (hasPostReview ? setPhaseIndex(2) : onComplete())}
+        onComplete={() => setPhaseIndex(1)}
         onExit={onExit}
         sessionKey={sessionKey}
         embeddedInMindMap={embeddedInMindMap}
@@ -91,8 +62,26 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
     );
   }
 
+  if (phase === "finalReview") {
+    return (
+      <ReviewSection
+        key="final"
+        day={reviewDay}
+        onComplete={finishReview}
+        sessionKey={sessionKey}
+        phase="final"
+        layout={layout}
+        lessonLabel={label}
+        version={version}
+        onExit={onExit}
+        embeddedInMindMap={embeddedInMindMap}
+      />
+    );
+  }
+
   return (
     <ReviewSection
+      key="post"
       day={day}
       onComplete={onComplete}
       sessionKey={sessionKey}

@@ -22,6 +22,7 @@ export function ReferenceSpeakEntry({ entry, correct }: ReferenceSpeakEntryProps
 
   function take(transcript: string) {
     const match = spokenReferenceMatches(transcript, correct);
+    if (correct.number && match.number) entry.answer("number", correct.number);
     if (match.book) entry.answer("book", correct.book);
     if (match.chapter) entry.answer("chapter", correct.chapter);
     if (match.verse && entry.answer("verse", correct.verse)) listening.stop();

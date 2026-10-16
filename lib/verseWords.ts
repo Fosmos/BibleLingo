@@ -148,3 +148,13 @@ const REFERENCE_PATTERN = /^(\d+):(\d+)$/;
 export function isReferenceToken(word: string): boolean {
   return REFERENCE_PATTERN.test(word);
 }
+
+// A word's leading punctuation, its letters, and its trailing punctuation — `“Behold,` →
+// { lead: "“", core: "Behold", trail: "," } — so a stage can hide the letters and keep the marks.
+export function splitWordPunctuation(word: string): { lead: string; core: string; trail: string } {
+  let start = 0;
+  while (start < word.length && !HAS_WORD_CHARACTER.test(word[start])) start++;
+  if (start >= word.length) return { lead: word, core: "", trail: "" };
+  const end = trailingPunctuationStart(word);
+  return { lead: word.slice(0, start), core: word.slice(start, end), trail: word.slice(end) };
+}

@@ -20,9 +20,10 @@ const BUBBLE: Record<TrailSection["state"], string> = {
 };
 const ZIG = ["ml-0", "ml-[34px]", "ml-[68px]", "ml-[34px]"];
 
-// A path's sections as big bubbles (design_handoff_path_trail → PericopeMapScreen): each ringed by
-// how much of it is done in its pericope colour, zig-zagging down the page, the one you're on
-// with a Continue chip — tapping one opens its trail (SectionTrailScreen.tsx).
+// A path's sections as big bubbles (design_handoff_path_trail → PericopeMapScreen): each ringed in
+// sage by how much of it is done (one colour for done everywhere), its reference in its pericope
+// colour, zig-zagging down the page, the one you're on with a Continue chip — tapping one opens
+// its trail (SectionTrailScreen.tsx).
 export function PericopeMapScreen({ pathLabel, kindLabel, sections, onOpenSection }: PericopeMapScreenProps) {
   const total = sections.reduce((sum, section) => sum + section.stops.length, 0);
   const done = sections.reduce((sum, section) => sum + section.done, 0);
@@ -43,10 +44,10 @@ export function PericopeMapScreen({ pathLabel, kindLabel, sections, onOpenSectio
         {sections.map((section, index) => {
           const colour = pericopeColour(index);
           const due = new Set(section.stops.flatMap((stop) => stop.dueIds)).size;
-          const ring = { "--p": colour.base, "--k": colour.ink, "--fill": `${section.stops.length ? (section.done / section.stops.length) * 100 : 0}%` } as CSSProperties;
+          const ring = { "--p": colour.base, "--fill": `${section.stops.length ? (section.done / section.stops.length) * 100 : 0}%` } as CSSProperties;
           return (
             <button key={`${section.ref}-${index}`} type="button" style={ring} onClick={() => onOpenSection(index)} className={`flex shrink-0 items-center gap-3.5 text-left ${ZIG[index % 4]}`}>
-              <span className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(var(--p)_0_var(--fill),#DCD3C4_var(--fill)_100%)] dark:bg-[conic-gradient(var(--p)_0_var(--fill),#3f3f46_var(--fill)_100%)]">
+              <span className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#8FA073_0_var(--fill),#DCD3C4_var(--fill)_100%)] dark:bg-[conic-gradient(#8FA073_0_var(--fill),#3f3f46_var(--fill)_100%)]">
                 <span className={`press-6 -mt-1.5 flex h-[84px] w-[84px] items-center justify-center rounded-full ${BUBBLE[section.state]}`}>
                   {section.state === "complete" ? <Check size={34} strokeWidth={3.5} /> : section.state === "current" ? <Play size={30} fill="currentColor" strokeWidth={2.75} /> : <Lock size={28} strokeWidth={2.75} />}
                 </span>

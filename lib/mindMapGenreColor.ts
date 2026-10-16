@@ -49,9 +49,9 @@ export interface MindMapNodeColor {
 // property + a `bg-[var(--x)]` arbitrary-value class (see mindMapNodeColorVars below).
 export const ROOT_COLOR: MindMapNodeColor = { bg: "#2E2B25", text: "#F9F4ED" };
 // Door badges, hall plaques and gates: terracotta 700, with a ground-coloured rim.
-export const TOGGLE_BADGE_CLASS = "bg-[#8C491A] border-[#F5EAD8] dark:border-zinc-950";
+export const TOGGLE_BADGE_CLASS = "bg-[#8C491A] border-[#FAF3E8] dark:border-zinc-950";
 export const BRASS_PLAQUE_CLASS = "bg-[#8C491A]";
-export const CANVAS_BG_CLASS = "!bg-[#F5EAD8] dark:!bg-zinc-950";
+export const CANVAS_BG_CLASS = "!bg-[#FAF3E8] dark:!bg-zinc-950";
 export const LINK_STROKE_CLASS = "stroke-[#C0B6A5] dark:stroke-brand-700";
 export const SPINE_SOLID_BROWN_CLASS = "stroke-[#8C491A] dark:stroke-[#a3856c]";
 

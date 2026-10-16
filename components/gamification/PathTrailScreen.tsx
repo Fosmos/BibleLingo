@@ -38,9 +38,15 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   const toggles = useProgressStore((state) => state);
   // A verse path's trail is its one lesson's learning stages, in the order the reader has them on.
   const stageLabels = useMemo(() => {
-    const steps = buildSteps([0], toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.fillInTheBlankStageEnabled, toggles.kineticTextStageEnabled ?? true, toggles.rhythmStageEnabled ?? false);
+    const steps = buildSteps([0], [1], {
+      understand: toggles.understandStageEnabled,
+      visualize: toggles.visualizeStageEnabled,
+      rhythm: toggles.rhythmStageEnabled ?? false,
+      writeFirstLetter: toggles.writeFirstLetterStageEnabled,
+      fillInTheBlank: toggles.fillInTheBlankStageEnabled,
+    });
     return [...new Set(steps.filter((step) => step.phase !== "pray").map((step) => STAGE_LABELS[step.phase]))];
-  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.fillInTheBlankStageEnabled, toggles.kineticTextStageEnabled, toggles.rhythmStageEnabled]);
+  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.fillInTheBlankStageEnabled, toggles.rhythmStageEnabled]);
   const sections = useMemo(() => buildTrail(kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone), [kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone]);
   const [open, setOpen] = useState<TrailStop | null>(null);
   const toast = useArrivalToast();

@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { playLetterSfx, resetLetterCombo } from "@/lib/audio";
-import { tokenizeVerseWords, firstWordCharacter, firstLetterWithPunctuation } from "@/lib/verseWords";
-import { FIRST_LETTER_GAP_CLASS } from "@/lib/firstLetterGap";
+import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 import { blankIndicesImportantFirst } from "@/lib/wordImportance";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
@@ -14,7 +13,8 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
-import { PeekWord } from "@/components/drills/PeekWord";
+import { HiddenWord } from "@/components/drills/HiddenWord";
+import { useReferenceGate } from "@/components/gamification/ReferenceGate";
 
 interface FirstLetterBlankRepProps {
   verse: VerseSegment;
@@ -76,45 +76,23 @@ export function FirstLetterBlankRep({ verse, layout, onComplete }: FirstLetterBl
   }
 
   // No verse-number sup here — ChapterVerseRun.tsx already renders that verse's own real
-  // number unconditionally (see LessonPageCard.tsx's own doc comment). Called once per clause
-  // (see LessonPageCard.tsx's own renderActiveVerse doc comment).
-  // `indent-0` on the blank span below undoes something otherwise invisible — see
-  // FillInTheBlankRep.tsx's own identical doc comment on why an inline-block sibling of this
-  // one needs it against SenseLineRow.tsx's own hanging-indent `-indent-5`.
+  // number unconditionally. Called once per clause (see LessonPageCard.tsx's own
+  // renderActiveVerse doc comment). Every word keeps its punctuation and its length
+  // (HiddenWord.tsx): a word not blanked this rep, or already typed, shows its first letter; a
+  // blank shows just its underline — terracotta for the one asked for now, red after a miss.
+  // No blank is "next" while the stage's reference is entered first (ReferenceGate.tsx).
+  const referenceFirst = useReferenceGate() !== null;
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
     return (
       <>
         {words.slice(range.startIndex, range.endIndex).map((word, offset) => {
           const index = range.startIndex + offset;
           const slotPosition = blankIndices.indexOf(index);
-          // A word that isn't blanked this rep shows just its first letter too (with its own
-          // punctuation) — the whole stage reads as first letters, never the full text.
-          if (slotPosition === -1) {
-            return (
-              <span key={index} className={FIRST_LETTER_GAP_CLASS}>
-                {firstLetterWithPunctuation(word)}{" "}
-              </span>
-            );
-          }
-          const isFilled = slotPosition < filledCount;
-          // A filled blank is plain text again — just the typed letter with the word's own
-          // punctuation, one space from its neighbors, no box left around it.
-          if (isFilled) {
-            return (
-              <span key={index} className={`font-medium text-brand-700 dark:text-brand-300 ${FIRST_LETTER_GAP_CLASS}`}>
-                {firstLetterWithPunctuation(word)}{" "}
-              </span>
-            );
-          }
-          const isTarget = slotPosition === filledCount;
+          const isTarget = slotPosition === filledCount && !referenceFirst;
+          const tone = slotPosition === -1 ? "pending" : slotPosition < filledCount ? "filled" : isTarget && showError ? "error" : isTarget ? "target" : "pending";
           return (
-            <span
-              key={index}
-              className={`inline-block min-w-8 indent-0 whitespace-nowrap border-b-2 px-1 pb-0.5 mx-1 leading-none ${
-                isTarget && showError ? "border-heart-500" : isTarget ? "border-brand-400 dark:border-brand-600" : "border-dashed border-line dark:border-zinc-700"
-              }`}
-            >
-              <PeekWord word={word}>{" "}</PeekWord>
+            <span key={index}>
+              <HiddenWord word={word} firstLetter={slotPosition === -1 || slotPosition < filledCount} tone={tone} />{" "}
             </span>
           );
         })}

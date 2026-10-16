@@ -30,10 +30,11 @@ function stepVerse(step: FlatStep, day: MemorizationDay): VerseSegment | undefin
   return newest >= 0 ? day.newVerses[newest] : undefined;
 }
 
-// Learn only (reviews don't ask): each recall stage opens on its verse's reference.
+// Learn only (reviews don't ask): each recall stage opens on its verse's reference — on a
+// sense-line stage, only one that takes in the verse's first line, which the reference belongs to.
 export function useReferenceStep(step: FlatStep | undefined, stepIndex: number, day: MemorizationDay): ReferenceStep {
   const [answeredAt, setAnsweredAt] = useState<number | null>(null);
-  const mode = step ? MODES[step.phase] : undefined;
+  const mode = step && (!step.lines || step.lines[0] === 0) ? MODES[step.phase] : undefined;
   const verse = step ? stepVerse(step, day) : undefined;
   return {
     asking: mode && verse && answeredAt !== stepIndex ? { verse, mode } : null,

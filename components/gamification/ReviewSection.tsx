@@ -20,14 +20,14 @@ interface ReviewSectionProps {
   day: MemorizationDay;
   onComplete: () => void;
   sessionKey?: string;
-  // "previous" runs just the immediately preceding learn day's verses — a quick,
-  // recent-focused check that comes first in the lesson, across every path kind. "pre"
+  // "final" runs day.previousVerses — the verse just learned and up to 4 before it — as the
+  // lesson's closing "Review", across every path kind (VerseLessonFlow.tsx). "pre"
   // (default) runs day.reviewVerses as a single "Review" stage — VerseLessonFlow itself
   // never reaches this phase for a "learn" day anymore (see its own doc comment); the only
   // caller left is DaySessionController.tsx's weekly_review/monthly_review days, which have
   // no newVerses of their own anyway. "post" runs book mode's postLearnReviewStages instead
   // — see MemorizationDay.postLearnReviewStages.
-  phase?: "previous" | "pre" | "post";
+  phase?: "final" | "pre" | "post";
   // The reading view's own real page layout (see lib/useChapterScopedReadingLayout.ts) — set
   // by every caller that has one (VerseLessonFlow.tsx/DaySessionController.tsx), rendering
   // this phase's own verses on the SAME real reading-view page(s) browsing shows, blanking
@@ -48,12 +48,9 @@ interface ReviewSectionProps {
 
 export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layout, lessonLabel, version, onExit, embeddedInMindMap }: ReviewSectionProps) {
   let stages: StageWithCelebration[];
-  if (phase === "previous") {
-    const previousVerses = day.previousVerses ?? [];
-    stages =
-      previousVerses.length > 0
-        ? [{ label: "Previous Verses", verses: previousVerses, celebrationText: "Previous verses reviewed" }]
-        : [];
+  if (phase === "final") {
+    const verses = day.previousVerses ?? [];
+    stages = verses.length > 0 ? [{ label: "Review", verses, celebrationText: "Verses reviewed" }] : [];
   } else if (phase === "post") {
     const chapterStages = day.postLearnReviewStages?.filter((stage) => stage.verses.length > 0) ?? [];
     stages = chapterStages.map((stage) => ({ ...stage, celebrationText: "Previous chapter reviewed" }));
@@ -73,9 +70,9 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
 
   // Nothing to review (e.g. a path's very first lesson) skips straight past this section
   // instead of showing a placeholder the user has to click through — same "no stage the user
-  // can't act on" principle as VerseLessonFlow's own previousReview skip just above it.
+  // can't act on" principle.
   // Depends on stages.length rather than running mount-only: VerseLessonFlow renders this
-  // component at the same tree position for both its "previousReview" and "postReview"
+  // component at the same tree position for both its "finalReview" and "postReview"
   // phases, so React reuses the same instance across phases instead of remounting — a
   // mount-only effect would only ever see the FIRST phase's stage count and never re-check a
   // later phase's.
@@ -109,7 +106,7 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   // A complete, self-chromed screen — same LessonTopBar + fixed reading-view parchment every
   // Learn stage renders (see LessonChrome.tsx/LessonPageCard.tsx), not a bare, unconstrained
   // `ReviewChain` growing to the full viewport width: this section is rendered as a caller's
-  // own screen root (VerseLessonFlow.tsx's "previousReview"/"postReview" phases), the same way
+  // own screen root (VerseLessonFlow.tsx's "finalReview"/"postReview" phases), the same way
   // LearnSection.tsx renders its own {topBar} + width-capped wrapper, rather than being handed
   // one by a parent. The goal is the same verse text landing in the exact same spot on the
   // page every time a reader sees it — recognizing it there is part of what memorization

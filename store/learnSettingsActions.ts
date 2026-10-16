@@ -9,7 +9,6 @@ interface LearnSettingsActions {
   setFillInTheBlankStageEnabled: (value: boolean) => void;
   setFillInTheBlankReps: (value: FillReps) => void;
   setRhythmStageEnabled: (value: boolean) => void;
-  setKineticTextStageEnabled: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -48,11 +47,6 @@ export function createLearnSettingsActions(
     setRhythmStageEnabled: (value) => {
       const state = get();
       set(persist({ ...state, rhythmStageEnabled: value }));
-    },
-
-    setKineticTextStageEnabled: (value) => {
-      const state = get();
-      set(persist({ ...state, kineticTextStageEnabled: value }));
     },
   };
 }

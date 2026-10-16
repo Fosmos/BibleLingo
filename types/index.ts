@@ -21,6 +21,9 @@ export interface VerseSegment {
   // that isn't specifically rendering a paginated page (drilling/scoring/audio, which always
   // work from real, unfragmented verses fetched directly) never sees this set at all.
   wordOffset?: number;
+  // Set on a verse cut down to some of its sense lines for a Learn stage (lib/senseLineSlice.ts):
+  // the first and last of the verse's own sense lines its `text` holds (0-based, inclusive).
+  senseLines?: [number, number];
 }
 
 export interface WordDiffToken {
@@ -386,20 +389,8 @@ export interface UserProgress {
   // Undefined (saved before this existed) is 2.
   fillInTheBlankReps?: FillReps;
   // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
-  // Learn — OPTIONAL, defaulting off: Listen (kineticTextStageEnabled below) is the default
-  // introduction to a fresh verse now, and Rhythm is the deliberate, opt-in alternative/
-  // addition for a reader who still wants that per-verse tap-through pacing too.
-  // Off skips straight from Visualize to Write First Letter (or the Speak hint, if that's also
-  // off) for every verse that day — the same "just don't insert the step" convention every
-  // other optional stage here follows.
+  // Learn, before the verse's sense-line stages (lib/learnSteps.ts) — optional, off by default.
   rhythmStageEnabled: boolean;
-  // Whether each verse's own "Listen" stage (that ONE verse narrated aloud via the Web Speech
-  // API, each word highlighted in real time as it's spoken — see ListenVerseRep) runs at all.
-  // Opens every verse's own per-verse ladder — the DEFAULT introduction to a fresh verse (see
-  // rhythmStageEnabled above, its own now-optional counterpart). Off skips straight to
-  // whichever per-verse stage is next, same "just don't insert the step" convention every
-  // other optional stage here follows.
-  kineticTextStageEnabled: boolean;
   // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
   // set (the default — every day behaves as it always has). On that calendar day: a lapse in
   // streakActions.ts's evaluateStreakOnLoad that would otherwise cost the streak is forgiven

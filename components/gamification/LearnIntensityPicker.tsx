@@ -22,7 +22,8 @@ interface LearnIntensityPickerProps {
   onBack: () => void;
 }
 
-const DEFAULT_LEVEL = 3;
+// Sense lines only: the other stages are optional extras.
+const DEFAULT_LEVEL = 1;
 
 export function LearnIntensityPicker({ initialStages, initialMemoryPalace, initialFillReps, onContinue, onBack }: LearnIntensityPickerProps) {
   const [level, setLevel] = useState(DEFAULT_LEVEL);

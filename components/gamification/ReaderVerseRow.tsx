@@ -3,8 +3,6 @@
 import type { VerseSegment } from "@/types";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { parseToSenseLines } from "@/lib/senseLines";
-import { fitSenseLines } from "@/lib/fitSenseLines";
-import { useLineFit } from "@/lib/useLineFit";
 import { SrsSeal } from "@/components/ui/SrsSeal";
 
 interface ReaderVerseRowProps {
@@ -33,12 +31,11 @@ const NUMBER_CLASS: Record<VerseStatus, string> = {
 };
 
 // One verse in the chapter reader (design_handoff_bible_progress): its number circle, coloured by
-// state, beside its sense lines — fitted to the column at one fixed size (lib/fitSenseLines.ts).
+// state, beside its natural sense lines of about 4–6 words (lib/naturalSenseLines.ts).
 // Selecting tints the row and adds a left bar without moving anything.
 export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, run = "single", seal = null }: ReaderVerseRowProps) {
-  const [textRef, measure, width] = useLineFit<HTMLDivElement>();
   const highlighted = selected;
-  const lines = fitSenseLines(parseToSenseLines(verse.text), measure, width);
+  const lines = parseToSenseLines(verse.text);
 
   return (
     <div
@@ -55,7 +52,7 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, run 
           </span>
         )}
       </span>
-      <div ref={textRef} className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}>
+      <div className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}>
         {lines.map((line, index) => (
           <p key={index} className="pl-4 -indent-4">
             {line}

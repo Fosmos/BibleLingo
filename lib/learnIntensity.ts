@@ -1,14 +1,10 @@
 // Data table for the Learn intensity slider (see LearnIntensityPicker.tsx) — 5 preset levels
 // from least time/weakest encoding to most time/strongest encoding. Every level keeps the same
-// floor of per-verse stages (Speak with a first-letter hint, Fill in the Blank by first letter,
-// Speak with nothing) plus whatever stages it adds on top — these are the same four booleans
-// LearnSection.tsx's buildSteps/versePhases already gate the flattened step list on (see
-// UserProgress.understandStageEnabled etc. in types/index.ts). Listen and Rhythm are each a
-// separate, global Profile > Advanced toggle instead (see kineticTextStageEnabled/
-// rhythmStageEnabled) — not part of this per-path slider — so they're not represented in the
-// floor above either; Listen still runs by default (see its own doc comment), just not
-// something this particular picker controls. Review, Pray, and cumulative multiverse review
-// are unconditional at every level, by design — never touched here.
+// floor — every verse learned sense line by sense line (lib/learnSteps.ts) — plus whatever
+// optional stages it adds on top: the same four booleans buildSteps gates them on (see
+// UserProgress.understandStageEnabled etc. in types/index.ts). Rhythm is a separate, global
+// Profile > Advanced toggle instead (rhythmStageEnabled), not part of this per-path slider.
+// Review, Pray, and cumulative multiverse review are unconditional at every level, by design.
 export interface LearnIntensityLevel {
   level: number;
   label: string;
@@ -35,8 +31,8 @@ export type LearnIntensityStages = Pick<
 export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 1,
-    label: "Quick Pass",
-    description: "Speak with a first-letter hint, fill in the blanks by first letter, Speak with nothing.",
+    label: "Sense lines",
+    description: "Each verse a sense line at a time: listen and repeat, fill in the blank, say it with hints, type it by first letter, say it from memory.",
     estimateSecondsPerVerse: 135,
     understandStageEnabled: false,
     visualizeStageEnabled: false,
@@ -46,7 +42,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 2,
     label: "+ Fill in the Blank",
-    description: "Adds a word-bank tap exercise before the Speak hint, run twice (half blanked, then all blanked).",
+    description: "Adds a word-bank tap exercise on the whole verse once its lines are learned (half blanked, then all blanked).",
     estimateSecondsPerVerse: 325,
     understandStageEnabled: false,
     visualizeStageEnabled: false,
@@ -66,7 +62,7 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
   {
     level: 4,
     label: "+ Write First Letter",
-    description: "Adds a handwriting-recognition canvas for each word's first letter.",
+    description: "Adds a handwriting-recognition canvas for each word's first letter, once the verse's lines are learned.",
     estimateSecondsPerVerse: 490,
     understandStageEnabled: false,
     visualizeStageEnabled: true,

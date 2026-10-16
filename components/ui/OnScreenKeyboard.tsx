@@ -12,15 +12,16 @@ interface OnScreenKeyboardProps {
   disabled?: boolean;
 }
 
-// Same physical row-by-row shape as a real QWERTY keyboard (just letters — every drill this
-// serves only ever needs a-z), stretched to the FULL width of the screen with large touch
+// Same physical row-by-row shape as a real QWERTY keyboard, stretched to the FULL width of the screen with large touch
 // targets — this is now the one and only way a reader types a letter (see
 // FirstLetterTypingControls.tsx/ReviewChain.tsx/WordTypeEntry.tsx, which all still keep a
 // visually-hidden `sr-only` `<input>` alongside this purely for a real physical keyboard or a
 // screen reader — never a visible box the reader has to tap into first). Sits in every
 // keyboard-driven drill's own LessonControlBar; tapping a key here calls the exact same handler
 // a real keystroke would.
-const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+// A number row sits permanently on top (a verse reference's numbers, a numbered book, a digit in
+// the text) — its keys reach `onKey` the same way a letter does.
+const KEYBOARD_ROWS = ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 // Inside the Mind Map lesson sheet's drill zone (LessonBottomSheet.tsx tags it
 // `lesson-sheet-controls`) the keys are one fixed, larger size (48px tall, 22px letters) —

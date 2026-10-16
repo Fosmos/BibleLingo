@@ -31,7 +31,7 @@ interface InPlaceSrsReviewProps {
   onExit: () => void;
 }
 
-// SRS review inside the Mind Map sheet, run exactly like a lesson's Previous Verses / Chapter
+// SRS review inside the Mind Map sheet, run exactly like a lesson's closing Review / Chapter
 // Review stages (see ReviewSection.tsx): each due range is typed by first letter (or spoken aloud) through
 // ReviewChain on its own real chapter page, the canvas above following verse to verse (and
 // flying on to the next range's chapter — see lib/useMindMapFollowFocusBranch.ts). Each range's

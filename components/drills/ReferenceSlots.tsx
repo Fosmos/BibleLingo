@@ -6,10 +6,11 @@ interface ReferenceSlotsProps {
   correct: ReferenceAnswer;
 }
 
-const WIDTH: Record<ReferencePart, string> = { book: "min-w-[4.5em]", chapter: "min-w-[1.4em]", verse: "min-w-[1.4em]" };
+const WIDTH: Record<ReferencePart, string> = { number: "min-w-[1.1em]", book: "min-w-[4.5em]", chapter: "min-w-[1.4em]", verse: "min-w-[1.4em]" };
 
-// The reference being recalled as the verse's opening line — [Book] [chapter]:[verse], in the
-// lesson's word states (design_handoff_lesson_view): a part entered reads as plain reference text,
+// The reference being recalled as the verse's opening line — [Book] [chapter]:[verse], a numbered
+// book's number in a block of its own ([1] [Corinthians] …) — in the lesson's word states
+// (design_handoff_lesson_view): a part entered reads as plain reference text,
 // the part asked for now is ringed in terracotta, the rest wait in sand. A part answered wrongly
 // shows its answer faintly until it's entered right.
 export function ReferenceSlots({ entry, correct }: ReferenceSlotsProps) {
@@ -25,6 +26,7 @@ export function ReferenceSlots({ entry, correct }: ReferenceSlotsProps) {
   };
   return (
     <span className="inline-flex items-baseline gap-[.26em]" aria-live="polite">
+      {correct.number && slot("number")}
       {slot("book")}
       <span className="inline-flex items-baseline">
         {slot("chapter")}:{slot("verse")}

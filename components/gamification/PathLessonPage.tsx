@@ -20,7 +20,7 @@ const FALLBACK_DELAY_MS = 200;
 // under the top bar (MindMapSheetBreadcrumb.tsx) the header, then two zones and no scrolling —
 // the verse fills the top (SheetVerseZone.tsx fits it, with its reference and ghost lines, via
 // LessonPageCard.tsx), and the drill tray sits at the bottom at its natural height: the stage's
-// prompt with the Letters / Verse / Skip chips (DrillHelpChips.tsx), then whatever the stage
+// Letters / Verse / Skip chips (DrillHelpChips.tsx), then whatever the stage
 // needs (SheetDrillPortal.tsx). The lesson tree mounts in an invisible layer; a screen with no
 // drill controls of its own shows that layer instead.
 export function PathLessonPage({ onClose, children }: PathLessonPageProps) {

@@ -4,71 +4,67 @@ import type { Phase } from "@/components/gamification/LearnPhaseContent";
 // set for a single verse's own stages, including speak_verse's own (see buildSteps) — that
 // phase is intercepted before LearnSection.tsx's own flat-step machinery even matters.
 //
+// lines is set on a verse's sense-line stages: the first and last of its sense lines (0-based,
+// inclusive) the stage drills (lib/senseLineSlice.ts). Unset, a stage drills the whole verse.
+//
 // cumulativeVerseIndices is set only on type_cumulative_today steps — the explicit list of
 // day.newVerses indices that check covers.
 export interface FlatStep {
   phase: Phase;
   verseIndex?: number;
+  lines?: [number, number];
   cumulativeVerseIndices?: number[];
+}
+
+// The optional stages (Profile > Advanced, and the Learn intensity picker's presets).
+export interface LearnStageOptions {
+  understand: boolean;
+  visualize: boolean;
+  rhythm: boolean;
+  writeFirstLetter: boolean;
+  fillInTheBlank: boolean;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
 export const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 
-// One individual verse's own drilling stages — run once, in order, before moving to the next
-// verse (no repeated rounds). Listen (see ListenVerseRep.tsx — this ONE verse narrated aloud)
-// always opens the sequence when its setting (kineticTextEnabled) is on. Rhythm, Write First
-// Letter (the handwriting canvas),
-// and the word-bank Fill In The Blank each drop out entirely when their own setting is off — Rhythm
-// defaults off now that Listen is the default introduction to a fresh verse; a reader who wants
-// that per-verse tap-through pacing too opts back into it. The ladder runs from most scaffolding
-// to least: hear it (Listen) → read it (Rhythm, if on) → recall whole words with a word bank to
-// lean on (Fill In The Blank) → speak it with a first-letter hint (Speak hint) → recall words by
-// typing just their first letter (Fill In The Blank, first letter). That last one always runs —
-// it replaced the old separate "type it by first letter" stage, whose recall its own second rep
-// (every word blanked) already covers.
-function versePhases(
-  kineticTextEnabled: boolean,
-  rhythmEnabled: boolean,
-  writeFirstLetterEnabled: boolean,
-  fillInTheBlankEnabled: boolean,
-): Phase[] {
-  const phases: Phase[] = [];
-  if (kineticTextEnabled) phases.push("listen_verse");
-  if (rhythmEnabled) phases.push("rhythm");
-  if (writeFirstLetterEnabled) phases.push("draw_first_letters");
-  if (fillInTheBlankEnabled) phases.push("fill_in_the_blank");
-  phases.push("speak_hint");
-  phases.push("fill_in_the_blank_letters");
-  return phases;
+// One verse learned sense line by sense line. For each line in turn: hear it and say it back
+// (Listen & Repeat), tap every one of its words back in from a bank (Fill in the blank, all
+// blank), say it with first-letter hints — then type the first letters of every line so far, and
+// say every line so far from memory. So the verse builds up a line at a time, each new line
+// recalled together with the lines before it.
+function senseLineSteps(verseIndex: number, lineCount: number): FlatStep[] {
+  const steps: FlatStep[] = [];
+  for (let line = 0; line < lineCount; line++) {
+    steps.push({ phase: "listen_verse", verseIndex, lines: [line, line] });
+    steps.push({ phase: "fill_in_the_blank", verseIndex, lines: [line, line] });
+    steps.push({ phase: "speak_hint", verseIndex, lines: [line, line] });
+    steps.push({ phase: "fill_in_the_blank_letters", verseIndex, lines: [0, line] });
+    steps.push({ phase: "speak_verse", verseIndex, lines: [0, line] });
+  }
+  return steps;
 }
 
-// Each verse's stages, closed by speak_verse: that verse spoken from memory. A lesson of several
-// verses then types them all together once before Pray (ReviewChain in LearnCumulativeStage.tsx).
-// The pericope's earlier verses are reviewed before all this (VerseLessonFlow.tsx).
+// A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
+// optional Rhythm read-through, its sense-line ladder (above), then its optional whole-verse
+// Write First Letter and Fill in the blank — a typing check of all of today's verses together
+// when there are several, and Pray. The verses before it are reviewed after (VerseLessonFlow.tsx).
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
 // own gap verse (see lib/bibleProviders/esv.ts's note on Mark 11:26 and its siblings) rides
 // along in day.newVerses for day-ownership/reading-view purposes (see lib/chapterChunking.ts),
-// but never earns its own stages here: there's nothing there to drill.
-
-export function buildSteps(
-  verseIndices: number[],
-  understandEnabled: boolean,
-  visualizeEnabled: boolean,
-  writeFirstLetterEnabled: boolean,
-  fillInTheBlankEnabled: boolean,
-  kineticTextEnabled: boolean,
-  rhythmEnabled: boolean,
-): FlatStep[] {
+// but never earns its own stages here: there's nothing there to drill. `lineCounts` is each of
+// those verses' number of sense lines, in the same order.
+export function buildSteps(verseIndices: number[], lineCounts: number[], options: LearnStageOptions): FlatStep[] {
   const steps: FlatStep[] = [];
-  if (understandEnabled) steps.push({ phase: "orientation" });
-  if (visualizeEnabled) steps.push({ phase: "orientation_summary" });
-  const phases = versePhases(kineticTextEnabled, rhythmEnabled, writeFirstLetterEnabled, fillInTheBlankEnabled);
-  for (const verseIndex of verseIndices) {
-    for (const phase of phases) steps.push({ phase, verseIndex });
-    steps.push({ phase: "speak_verse", verseIndex });
-  }
+  if (options.understand) steps.push({ phase: "orientation" });
+  if (options.visualize) steps.push({ phase: "orientation_summary" });
+  verseIndices.forEach((verseIndex, position) => {
+    if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
+    steps.push(...senseLineSteps(verseIndex, Math.max(1, lineCounts[position] ?? 1)));
+    if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });
+    if (options.fillInTheBlank) steps.push({ phase: "fill_in_the_blank", verseIndex });
+  });
   if (verseIndices.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
   steps.push({ phase: "pray" });
   return steps;

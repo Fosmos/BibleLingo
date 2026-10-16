@@ -9,7 +9,6 @@ import { useReportSheetStage } from "@/lib/useReportSheetStage";
 import { formatVerseRangeLabel, formatVerseSpanLabel } from "@/lib/chapterContent";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useExpandedVerseZone } from "@/lib/useExpandedVerseZone";
-import { useElementWidth } from "@/lib/useElementWidth";
 import { SenseLineVerse } from "@/components/gamification/SenseLineVerse";
 import { SheetVerseZone } from "@/components/gamification/SheetVerseZone";
 import { SheetDrillPortal } from "@/components/gamification/SheetDrillPortal";
@@ -41,7 +40,6 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
   const verseZone = useLessonSessionStore((state) => state.senseCardPortalNode);
   const drillZone = useLessonSessionStore((state) => state.drillPortalNode);
   useExpandedVerseZone();
-  const [columnRef, columnWidthPx] = useElementWidth<HTMLDivElement>();
   useReportSheetStage(
     verse ? { label: learned ? "Learned" : "Preview", reference: formatVerseSpanLabel(verse.book, verse.chapter, verse.verseNumber, verse.verseNumber), step: 0, steps: 1 } : null,
     true,
@@ -54,7 +52,7 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
         createPortal(
           <SheetVerseZone fitKey={verse.id} reference={formatVerseRangeLabel([verse])}>
             {() => (
-              <div ref={columnRef} className="font-reading text-lg font-medium">
+              <div className="font-reading text-lg font-medium">
                 <SenseLineVerse
                   verse={verse}
                   dayNumber={undefined}
@@ -63,7 +61,6 @@ export function MindMapVersePreview({ verse, learned, actionLabel, onAction, sec
                   iconTags={NO_TAGS}
                   pegActive={false}
                   onSelect={() => {}}
-                  columnWidthPx={columnWidthPx}
                 />
               </div>
             )}

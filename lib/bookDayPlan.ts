@@ -9,8 +9,8 @@ export const DEFAULT_VERSES_PER_DAY = 5;
 // chunk's first verse, since review happens before that chunk is learned. Deliberately
 // scoped to just this chapter — the post-learn "Chapter Review" stage below is meant to
 // drill the chapter actually being worked on, not drag the previous chapter's verses back
-// in every lesson (that carryover happens instead via the "Previous Verses" pre-lesson
-// check, which just reviews yesterday's own lesson — see buildBookDayPlan's previousChunk).
+// in every lesson (the lesson's closing "Review" covers the verses just before it — see
+// VerseLessonFlow.tsx).
 function currentChapterReview(verses: VerseSegment[], chunk: VerseSegment[]): VerseSegment[] {
   const anchor = chunk[0];
   return verses.filter((verse) => verse.chapter === anchor.chapter && verse.verseNumber < anchor.verseNumber);

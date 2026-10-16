@@ -5,7 +5,6 @@ import type { MindMapData } from "@/lib/useMindMapData";
 import type { LessonFocusVerse } from "@/store/useLessonSessionStore";
 import { useProgressStore } from "@/store/useProgressStore";
 import { findVerseLessonDay, verseLessonAction, type VerseLessonAction } from "@/lib/verseLessonAction";
-import { useYesterdayReview } from "@/lib/useYesterdayReview";
 import { activePathScope } from "@/lib/mindMapPathTarget";
 import { resolvePathLabel } from "@/lib/memorizationContent";
 
@@ -59,18 +58,7 @@ export function useVerseLessonSource(page: LessonSource, mapData: MindMapData, t
   // its first checkpoint, written during render, re-rendered the sheet mid-lesson (a React
   // setState-in-render warning).
   const hasCheckpoint = previewing && !!source && !!lessonDay && `${source.pathKey}:${lessonDay.dayNumber}` in useProgressStore.getState().sessionCheckpoints;
-  // While today's lesson still owes a review of yesterday's verses (lib/useYesterdayReview.ts), a
-  // tap on one of those verses, or on today's, leads into today's lesson — which starts with that
-  // review — rather than a practice run or a jump straight to the new verses.
-  const reviewSource = source ?? page;
-  const review = useYesterdayReview(reviewSource.pathKey, reviewSource.days, reviewSource.completedDays, reviewSource.todaysDay);
-  const tappedKey = tapped ? `${tapped.book}:${tapped.chapter}:${tapped.verseNumber}` : "";
-  const reviewFirst = review.pending && (review.verseKeys.has(tappedKey) || lessonDay?.dayNumber === reviewSource.todaysDay);
-  const action: VerseLessonAction | null = reviewFirst
-    ? { dayNumber: reviewSource.todaysDay, mode: "select", label: "Review yesterday's verses first" }
-    : lessonDay && source
-      ? verseLessonAction(lessonDay, source.completedDays, hasCheckpoint)
-      : null;
-  const canLearnSingleVerse = !reviewFirst && (lessonDay?.newVerses.length ?? 0) > 1 && action?.mode === "select" && activePathScope(source?.pathKey ?? null)?.kind !== "verse";
+  const action: VerseLessonAction | null = lessonDay && source ? verseLessonAction(lessonDay, source.completedDays, hasCheckpoint) : null;
+  const canLearnSingleVerse = (lessonDay?.newVerses.length ?? 0) > 1 && action?.mode === "select" && activePathScope(source?.pathKey ?? null)?.kind !== "verse";
   return { source, previewVerse, lessonDay, action, canLearnSingleVerse };
 }

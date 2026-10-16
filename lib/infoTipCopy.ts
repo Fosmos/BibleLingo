@@ -75,13 +75,11 @@ export const INFO_TIPS = {
   visualizeStageToggle:
     "When off, a Learn day skips straight to Listen (or each verse's own first stage, if that's off too) — no Loci/Peg + Who/Action/scene step. Verses learned with it off just show no room item, peg word, or scene wherever those would otherwise appear (their circle, SRS review, etc.). Turn it back on any time to bring it back for later lessons.",
   writeFirstLetterStageToggle:
-    "When off, each verse's Learn stages skip straight from Rhythm (or straight to Speak, the first-letter hint, if Rhythm is off too) — no handwriting-recognition canvas. Turn it back on any time to bring it back for later lessons.",
+    "When on, once each verse's sense lines are learned you draw each word's first letter on a handwriting canvas. Off by default.",
   fillInTheBlankStageToggle:
-    "When off, each verse's Learn stages skip straight to the Speak hint (from Rhythm or Write First Letter, whichever ran last) — no word-bank tap exercise beforehand. Turn it back on any time to bring it back for later lessons.",
-  kineticTextStageToggle:
-    "When on, adds a \"Listen\" step at the start of every verse — that one verse read aloud with each word highlighted as it's spoken. On by default, as the introduction to each fresh verse. Uses your browser's own built-in voice — no audio files, nothing downloaded.",
+    "When on, once each verse's sense lines are learned you tap the whole verse's missing words back in from a word bank. Off by default — each line already gets its own word bank.",
   rhythmStageToggle:
-    "When on, adds a \"Rhythm\" step for each verse — tap through its words at your own pace before Write First Letter/Speak. Off by default now that Listen (above) is the default whole-day introduction to a fresh verse; turn this back on for the per-verse tap-through pacing too.",
+    "When on, adds a \"Rhythm\" step for each verse — tap through its words at your own pace before learning its lines. Off by default.",
   srsPromotionThresholdSlider:
     "How high an SRS review's first-letter typing accuracy must be to promote a verse group up a box (Sword of the Spirit) instead of dropping it back one box. Defaults to 90%.",
   srsSpeakModeToggle:

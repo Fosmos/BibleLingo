@@ -32,9 +32,8 @@ const MIC_BLOCKED_REASON: Record<MicBlocked, string> = {
   unsupported: "no speech recognition here",
 };
 
-// Listen & Repeat — the automatic FIRST stage of every verse's drilling sequence (see
-// lib/learnSteps.ts's versePhases), gated by kineticTextStageEnabled (Profile > Advanced). The
-// verse goes line by line (its sense lines): each is read aloud with its words lit as they're
+// Listen & Repeat — the first stage for each of a verse's sense lines (lib/learnSteps.ts). The
+// text goes line by line (its sense lines): each is read aloud with its words lit as they're
 // heard, then the reader says it back, each word lighting green as the mic hears it, and the next
 // line follows on its own, then the whole verse together (see lib/useListenRepeat.ts). Not graded:
 // Continue is always there.

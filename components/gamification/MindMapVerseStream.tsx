@@ -17,8 +17,6 @@ import { MindMapHallEmblem } from "@/components/gamification/MindMapHallEmblem";
 
 interface MindMapVerseStreamProps {
   pericope: MindMapPericopeDatum;
-  // Verses due their review in today's lesson (see lib/useYesterdayReview.ts) — yellow checks.
-  reviewDueKeys?: Set<string>;
   // Where this hall's landmark stands beside its verses (see MindMapHallEmblem.tsx) — none drawn
   // when undefined.
   emblem?: LayoutPoint & { size: number };
@@ -47,7 +45,7 @@ interface MindMapVerseStreamProps {
 // The Organic restyle's chip: the geometry's verse-length size plus 6px, at least 28px.
 const chipSize = (size: number | undefined) => Math.max(28, (size ?? VERSE_CHIP_SIZE_PX) + 6);
 
-export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips, hallNumber, pinVerseNumber, todayVerseKeys, onSelectVerse }: MindMapVerseStreamProps) {
+export function MindMapVerseStream({ pericope, emblem, verseChips, hallNumber, pinVerseNumber, todayVerseKeys, onSelectVerse }: MindMapVerseStreamProps) {
   const color = verseChipColor(pericope);
   // Verses the reader had to peek at in review (see lib/flagPeekedVerse.ts) — read off one
   // subscription for the whole stream rather than one per chip.
@@ -102,7 +100,7 @@ export function MindMapVerseStream({ pericope, reviewDueKeys, emblem, verseChips
               />
             )}
             {memorized(chip.verseNumber) && (
-              <MindMapMemorizedCheck size="sm" reviewDue={reviewDueKeys?.has(`${pericope.book}:${pericope.chapter}:${chip.verseNumber}`)} />
+              <MindMapMemorizedCheck size="sm" />
             )}
             {chip.verseNumber === pinVerseNumber && <MindMapActivePin variant="chip" />}
             {problem && <MindMapProblemMark />}

@@ -4,8 +4,7 @@ import type { ReactNode } from "react";
 import { Lightbulb, MapPin } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import type { RunState } from "@/lib/chapterReadingRuns";
-import { mergeRangesToFit, senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
-import { FIXED_PARCHMENT_FONT_PX } from "@/lib/parchmentFontRange";
+import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { locationTagKey } from "@/lib/locationTags";
 import { verseIconById } from "@/lib/verseIcons";
 import { isStructuralWord } from "@/lib/structuralWords";
@@ -34,10 +33,6 @@ interface SenseLineVerseProps {
   renderVerseWords?: (verse: VerseSegment, range: SenseLineWordRange) => ReactNode | undefined;
   isVerseNumberVisible?: (verse: VerseSegment) => boolean;
   onSelect: (dayNumber: number | undefined) => void;
-  // The text column's own measured width and font size — when set, clauses short enough to
-  // share a line are joined onto one (see lib/senseLineWordRanges.ts's mergeRangesToFit).
-  columnWidthPx?: number;
-  fontSizePx?: number;
 }
 
 // A clause opening with a quotation mark (curly or straight, single or double — e.g. Mark 1:2's
@@ -95,8 +90,6 @@ export function SenseLineVerse({
   renderVerseWords,
   isVerseNumberVisible,
   onSelect,
-  columnWidthPx = 0,
-  fontSizePx = FIXED_PARCHMENT_FONT_PX,
 }: SenseLineVerseProps) {
   const numberColor =
     state === "completed" ? "text-green-600 dark:text-green-500" : state === "today" ? "text-brand-600 dark:text-brand-400" : "text-ink-muted";
@@ -121,7 +114,7 @@ export function SenseLineVerse({
   // marks its own active state (a highlighted word, a dashed blank), so nothing is lost by
   // leaving it off there.
   const underline = state === "today";
-  const ranges = mergeRangesToFit(senseLineWordRanges(verse.text), columnWidthPx, fontSizePx);
+  const ranges = senseLineWordRanges(verse.text);
 
   return (
     <div

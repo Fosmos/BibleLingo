@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { VerseSegment, MemorizationDay } from "@/types";
 import { getAdjacentVerse } from "@/lib/chapterContent";
 import { paginateVerseWindow } from "@/lib/chapterPagination";
@@ -17,7 +17,8 @@ import { learnSheetStage } from "@/lib/learnSheetStage";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { useReferenceStep } from "@/lib/useReferenceStep";
-import { LearnReferenceStep } from "@/components/gamification/LearnReferenceStep";
+import { senseLineSlice } from "@/lib/senseLineSlice";
+import { ReferenceGate } from "@/components/gamification/ReferenceGate";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
 import { LearnCumulativeStage } from "@/components/gamification/LearnCumulativeStage";
 import { LearnSpeakVerseStage } from "@/components/gamification/LearnSpeakVerseStage";
@@ -49,8 +50,8 @@ const LONGER_PRAYER_DURATION_S = 60;
 function noopAnnotationsChange() {}
 
 // A day's new verses go through Orientation ONCE, then each verse runs its stages one at a time
-// (lib/learnSteps.ts) — every recall stage opening on the verse's reference, entered the same way
-// (lib/useReferenceStep.ts) — and a prayer timer closes it out. The session shares ONE top bar and
+// (lib/learnSteps.ts) — every recall stage drilling the verse's reference as its opening, entered
+// the same way (lib/useReferenceStep.ts, ReferenceGate.tsx) — and a prayer timer closes it out. The session shares ONE top bar and
 // ONE fixed set of `contextVerses` (today's real verses plus a neighbour each side), paginated
 // per stage to the page holding the active verse, so the parchment never resizes.
 export function LearnSection({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: LearnSectionProps) {
@@ -87,8 +88,8 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   );
   const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
 
-  const steps = useLearnSteps(realVerseIndices);
-  const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnStepIndex", 0);
+  const steps = useLearnSteps(realVerseIndices, day.newVerses);
+  const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnLineStep", 0); // Not the old "learnStepIndex": saved under the pre-sense-line steps.
   useReportSheetStage(learnSheetStage(steps, stepIndex, day), embeddedInMindMap);
   useRecordLearnedVerseCount(sessionKey, steps, stepIndex);
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
@@ -119,33 +120,32 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
     />
   );
 
-  if (reference.asking) {
-    return (
-      <>
-        {topBar}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3"><LearnReferenceStep key={stepIndex} verse={reference.asking.verse} mode={reference.asking.mode} layout={layout} onDone={reference.done} /></div>
-      </>
-    );
-  }
+  // Every stage sits inside the reference gate, so a recall stage drills its reference first.
+  const gated = (content: ReactNode) => (
+    <ReferenceGate key={stepIndex} asking={reference.asking} onDone={reference.done}>
+      {content}
+    </ReferenceGate>
+  );
 
   if (step.phase === "speak_verse") {
-    return (
+    return gated(
       <LearnSpeakVerseStage
         day={day}
         verseIndex={step.verseIndex}
+        lines={step.lines}
         contextVerses={contextVerses}
         heading={heading}
         layout={layout}
         topBar={topBar}
         onAdvance={advance}
-      />
+      />,
     );
   }
 
   if (step.phase === "type_cumulative_today") {
     // Never day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this
     // one's.
-    return (
+    return gated(
       <LearnCumulativeStage
         day={day}
         cumulativeVerseIndices={step.cumulativeVerseIndices ?? []}
@@ -153,24 +153,28 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
         topBar={topBar}
         embeddedInMindMap={embeddedInMindMap}
         onAdvance={advance}
-      />
+      />,
     );
   }
 
   const wholeDayPhase = step.verseIndex === undefined;
-  const verse = wholeDayPhase ? wholeDay : day.newVerses[step.verseIndex!];
+  const fullVerse = wholeDayPhase ? wholeDay : day.newVerses[step.verseIndex!];
+  // A sense-line stage drills just its lines of the verse (lib/senseLineSlice.ts).
+  const verse = step.lines ? senseLineSlice(fullVerse, step.lines) : fullVerse;
   const annotations = wholeDayPhase
     ? wordAnnotations
-    : sliceWordAnnotations(wordAnnotations, verseOffsets[step.verseIndex!], tokenizeVerseWords(verse.text).length);
+    : step.lines
+      ? {}
+      : sliceWordAnnotations(wordAnnotations, verseOffsets[step.verseIndex!], tokenizeVerseWords(verse.text).length);
   const verseMarkers = wholeDayPhase ? verseNumberMarkers(day.newVerses) : {};
 
-  const stageKey = `${step.phase}-${step.verseIndex ?? "day"}`;
+  const stageKey = `${step.phase}-${step.verseIndex ?? "day"}-${step.lines?.join("-") ?? "all"}`;
   // The reading view's own pagination budget, run over this fixed page and keyed to whichever
   // verse is active — left unbounded, a normal day's verses can overflow the fixed, non-
   // scrolling parchment box the same way an unpaginated reading-view chapter would.
-  const verseWindow = wholeDayPhase ? undefined : paginateVerseWindow(contextVerses, heading, verse.id, layout.pageBudget);
+  const verseWindow = wholeDayPhase ? undefined : paginateVerseWindow(contextVerses, heading, fullVerse.id, layout.pageBudget);
 
-  return (
+  return gated(
     <>
       {topBar}
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
@@ -186,10 +190,11 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
           onWordAnnotationsChange={step.phase === "orientation" ? setWordAnnotations : noopAnnotationsChange}
           contextVerses={verseWindow?.verses}
           layout={layout}
+          senseLine={step.lines !== undefined}
           prayDurationSeconds={realVerseIndices.length > PRAY_LONGER_VERSE_THRESHOLD ? LONGER_PRAYER_DURATION_S : undefined}
           onAdvance={advance}
         />
       </div>
-    </>
+    </>,
   );
 }

@@ -93,7 +93,6 @@ interface ProgressActions {
   setFillInTheBlankStageEnabled: (value: boolean) => void;
   setFillInTheBlankReps: (value: FillReps) => void;
   setRhythmStageEnabled: (value: boolean) => void;
-  setKineticTextStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 

@@ -63,6 +63,8 @@ interface LearnPhaseContentProps {
   // `layout` prop) so their own parchment matches the Path screen's reading view exactly,
   // instead of a smaller/differently-sized excerpt. Stages not yet converted just ignore it.
   layout: ChapterReadingLayout;
+  // A sense-line stage (lib/learnSteps.ts): Fill in the blank blanks every word, once.
+  senseLine?: boolean;
   onAdvance: () => void;
 }
 
@@ -81,6 +83,7 @@ export function LearnPhaseContent({
   contextVerses,
   prayDurationSeconds,
   layout,
+  senseLine = false,
   onAdvance,
 }: LearnPhaseContentProps) {
   // Read unconditionally regardless of phase — a whole-day phase's `verse` stands in for the
@@ -148,7 +151,7 @@ export function LearnPhaseContent({
       />
     );
   } else if (phase === "fill_in_the_blank") {
-    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} reps={fillReps} onComplete={onAdvance} />;
+    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} reps={senseLine ? 1 : fillReps} allBlank={senseLine} onComplete={onAdvance} />;
   } else if (phase === "fill_in_the_blank_letters") {
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else {

@@ -5,10 +5,13 @@ import type { VerseSegment, MemorizationDay } from "@/types";
 import { paginateVerseWindow } from "@/lib/chapterPagination";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { SpeakRep } from "@/components/drills/SpeakRep";
+import { senseLineSlice } from "@/lib/senseLineSlice";
 
 interface LearnSpeakVerseStageProps {
   day: MemorizationDay;
   verseIndex: number | undefined;
+  // The sense lines said (lib/learnSteps.ts) — the whole verse when unset.
+  lines?: [number, number];
   contextVerses: VerseSegment[];
   heading: string | undefined;
   layout: ChapterReadingLayout;
@@ -16,16 +19,18 @@ interface LearnSpeakVerseStageProps {
   onAdvance: () => void;
 }
 
-// LearnSection.tsx's own "speak_verse" step — just the one verse this stage follows, spoken
+// LearnSection.tsx's own "speak_verse" step — the lines learned so far of the one verse (or the
+// whole verse) this stage follows, spoken
 // aloud from memory on its own, not folded into everything learned so far (that's
 // ReviewSection's job). Same mechanic ChapterReviewStage's own "Recite it all" stage uses.
 // firstLettersOnMistake keeps a miss from handing back the answer it's testing.
 // contextVerses/heading windowed like every per-verse stage LearnSection.tsx itself renders.
 // Split out purely to keep that file under this codebase's own 200-line cap (see CLAUDE.md),
 // no behavior difference from having it inline there.
-export function LearnSpeakVerseStage({ day, verseIndex, contextVerses, heading, layout, topBar, onAdvance }: LearnSpeakVerseStageProps) {
-  const verseForStage = day.newVerses[verseIndex ?? day.newVerses.length - 1];
-  const speakWindow = paginateVerseWindow(contextVerses, heading, verseForStage.id, layout.pageBudget);
+export function LearnSpeakVerseStage({ day, verseIndex, lines, contextVerses, heading, layout, topBar, onAdvance }: LearnSpeakVerseStageProps) {
+  const fullVerse = day.newVerses[verseIndex ?? day.newVerses.length - 1];
+  const verseForStage = lines ? senseLineSlice(fullVerse, lines) : fullVerse;
+  const speakWindow = paginateVerseWindow(contextVerses, heading, fullVerse.id, layout.pageBudget);
   return (
     <>
       {topBar}

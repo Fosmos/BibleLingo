@@ -99,8 +99,7 @@ export function DrawFirstLetterRep({ verse, layout, onComplete }: DrawFirstLette
   // bucketed into THIS clause (see tokenIndicesByClause above) so a multi-clause verse still
   // renders through the same hanging-indent line structure a non-active verse gets.
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {
-    // A rendered line can hold several clauses (short ones get joined — see
-    // lib/senseLineWordRanges.ts's mergeRangesToFit), so gather every clause starting inside it.
+    // Gathers every clause starting inside the rendered line (one, now lines aren't merged).
     const tokenIndices = clauseRanges.flatMap((clause, clauseIndex) =>
       clause.startIndex >= range.startIndex && clause.startIndex < range.endIndex ? (tokenIndicesByClause[clauseIndex] ?? []) : [],
     );

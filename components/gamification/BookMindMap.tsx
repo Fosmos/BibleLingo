@@ -18,7 +18,6 @@ import { useLocateOnArrival } from "@/lib/useLocateOnArrival";
 import { useMindMapArrival } from "@/lib/useMindMapArrival";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useMindMapLocate } from "@/lib/useMindMapLocate";
-import { useYesterdayReview } from "@/lib/useYesterdayReview";
 import { useMindMapFollowFocusBranch } from "@/lib/useMindMapFollowFocusBranch";
 import { useMindMapLessonLearnedTree } from "@/lib/mindMapLessonLearnedTree";
 import { useMindMapCompletionCelebration } from "@/lib/useMindMapCompletionCelebration";
@@ -103,9 +102,8 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
   const arrivalVerse = useLessonSessionStore((state) => state.arrivalVerse);
   useMindMapFollowFocusBranch({ focusVerse: focusVerse ?? arrivalVerse ?? undefined, tree, activePath, setActivePath });
   const todayVerseKeys = useMemo(() => todaysLessonVerseKeys(bookLabel, chapters, todaysDay, focusVerse), [bookLabel, chapters, todaysDay, focusVerse]);
-  // The pin: yesterday's verses while their review is owed, else the next lesson's once today's is done.
-  const yesterday = useYesterdayReview(pathKey, useMemo(() => chapters.flatMap((chapter) => chapter.days), [chapters]), completedDays, todaysDay);
-  const nextVerse = yesterday.first ?? (bookLabel && completedDays >= todaysDay ? nextPathVerse(bookLabel, chapters, completedDays) : undefined);
+  // The pin: the next lesson's verse once today's is done.
+  const nextVerse = bookLabel && completedDays >= todaysDay ? nextPathVerse(bookLabel, chapters, completedDays) : undefined;
   const pinTarget = mapPinTarget(treePericopes(tree), focusVerse, todayVerseKeys, nextVerse, bookLabel ? nextPathVerse(bookLabel, chapters, Math.max(completedDays, todaysDay)) : undefined);
   const pinnedId = pinnedRingId(pinTarget, layout, parentMap);
 
@@ -186,7 +184,6 @@ export function BookMindMap({ pathKey, bookLabel, chapters, completedDays, today
                       emblem={node.emblem}
                       pinVerseNumber={pinVerseNumber(node.data, pinTarget)}
                       todayVerseKeys={todayVerseKeys}
-                      reviewDueKeys={yesterday.verseKeys}
                       onSelectVerse={(_chapter, verseNumber) => onSelectVerse(node.data, verseNumber)}
                     />
                   ))}

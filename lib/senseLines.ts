@@ -1,18 +1,8 @@
-// Deterministic sense-line parsing for Bible verse text — breaks a passage into syntactically
-// balanced lines (one clause/phrase per line, the way a printed sense-line Bible does). Two
-// passes, in order, PUNCTUATION ONLY — nothing else, no line-length fallback of any kind (see
-// lib/senseLineSplitting.ts for the actual implementation, split out purely to keep this file
-// under this codebase's own 200-line cap):
-//
-// Pass 1 (sentence ends): split at a real SENTENCE end — . ? ! only — since a full stop is a
-// genuine sentence boundary regardless of how short either side is. The mark (and any closing
-// quote right after it) stays attached to the word before it.
-//
-// Pass 2 (every minor pause): EVERY comma, semicolon, colon, or em-dash within a Pass-1 sentence
-// becomes its own line, matching the classic "sense-line Bible" convention of one clause per
-// line. A clause with no punctuation of its own inside it (rare) stays whole, however long — the
-// browser's own real wrap (see SenseLineRow.tsx's own hanging indent) handles it if it ever
-// genuinely doesn't fit; this file no longer measures or cares about line length at all.
+// Deterministic sense-line parsing for Bible verse text — breaks a passage into lines of about
+// 4–6 words that read as natural phrases, the way a printed sense-line Bible does: every
+// sentence starts a new line, and within it lines break at pauses and phrase openings (see
+// lib/senseLineSplitting.ts and lib/naturalSenseLines.ts). A line too long for the column still
+// wraps under its own hanging indent (SenseLineRow.tsx).
 
 import { splitIntoLines } from "@/lib/senseLineSplitting";
 
