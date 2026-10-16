@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
@@ -17,6 +18,11 @@ import { MemorizedLibraryTabs } from "@/components/gamification/MemorizedLibrary
 export function MemorizedOverviewScreen() {
   const mounted = useHasMounted();
   const entities = useProgressStore((state) => state.memorizedEntities);
+  const catchUpMemorized = useProgressStore((state) => state.catchUpMemorized);
+  // Verses learned before each stone counted on its own (a book path's part-done chapter) join now.
+  useEffect(() => {
+    if (mounted) catchUpMemorized();
+  }, [mounted, catchUpMemorized]);
   useMemorizedChaptersLoaded(entities);
   if (!mounted) return <FetchLoading label="Loading…" />;
 

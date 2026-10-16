@@ -1,4 +1,4 @@
-import type { MemorizationDay, MemorizedEntity, PathProgress, VerseSegment } from "@/types";
+import type { MemorizedEntity, PathProgress, VerseSegment } from "@/types";
 import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
 import { parsePathKey, resolvePath } from "@/lib/memorizationContent";
 import { buildPathDayPlan } from "@/lib/dayPlan";
@@ -17,10 +17,10 @@ export interface MemorizedVerseEntry {
   version: string;
 }
 
-// A chapter/verse/topic path's verses move into "memorized" (spaced review) as soon as the
-// lesson that teaches them is done — a single-verse path's one verse the moment its lesson
-// finishes, not only after the path's final boss battle. Book mode graduates a whole chapter at
-// a time instead (see getMemorizedBookVerses below). Each verse is paired
+// A path's verses move into "memorized" (spaced review) as soon as the lesson that teaches them
+// is done — each verse the moment its stone on the trail is finished (lib/dayVerseProgress.ts's
+// learnedVersesOfDay counts a day's verses learned so far), every path kind alike, book mode
+// included. Each verse is paired
 // with the translation it was actually completed in — a book+chapter's cache slot holds only
 // one translation at a time (see lib/bibleContentCache.ts), so entities built from these need
 // to remember which one this specific path used, rather than trusting whatever happens to be
@@ -34,11 +34,9 @@ export function getMemorizedVerses(paths: Record<string, PathProgress>): Memoriz
     const pathKind = parsePathKey(key).kind;
 
     const earned =
-      pathKind === "book"
-        ? getMemorizedBookVerses(resolved.verses, days, plan)
-        : plan.completedDays >= days.length
-          ? resolved.verses.map((verse) => ({ verse, version: plan.version }))
-          : days.flatMap((day) => learnedVersesOfDay(day, plan).map((verse) => ({ verse, version: plan.version })));
+      pathKind !== "book" && plan.completedDays >= days.length
+        ? resolved.verses.map((verse) => ({ verse, version: plan.version }))
+        : days.flatMap((day) => learnedVersesOfDay(day, plan).map((verse) => ({ verse, version: plan.version })));
     memorized.push(...earned);
     // Verses the reader said they already knew when choosing this path (see
     // PathProgress.priorKnownVerseCount) are memorized from the start — straight into spaced
@@ -49,29 +47,6 @@ export function getMemorizedVerses(paths: Record<string, PathProgress>): Memoriz
     }
   }
   return memorized;
-}
-
-// Book mode has no per-chapter path day left to gate on (the old daily-rotation review and
-// chapter boss battle were removed in favor of SRS handling that recall instead) — so a
-// chapter counts as memorized once every "learn" day tagged with it has completed, found by
-// the highest dayNumber among that chapter's learn days.
-function getMemorizedBookVerses(verses: VerseSegment[], days: MemorizationDay[], plan: PathProgress): MemorizedVerseEntry[] {
-  const lastLearnDayByChapter = new Map<number, number>();
-  for (const day of days) {
-    if (day.kind !== "learn" || day.chapterGroup === undefined) continue;
-    // Every chapter the lesson has verses in — a lesson can run across a chapter boundary.
-    for (const chapter of new Set(day.newVerses.map((verse) => verse.chapter))) {
-      lastLearnDayByChapter.set(chapter, Math.max(lastLearnDayByChapter.get(chapter) ?? 0, day.dayNumber));
-    }
-  }
-
-  const completedChapters = new Set(
-    [...lastLearnDayByChapter.entries()]
-      .filter(([, lastDayNumber]) => plan.completedDays >= lastDayNumber)
-      .map(([chapter]) => chapter),
-  );
-
-  return verses.filter((verse) => completedChapters.has(verse.chapter)).map((verse) => ({ verse, version: plan.version }));
 }
 
 // A memorized entity (see lib/memorizedEntities.ts) — manual or path-derived alike, every

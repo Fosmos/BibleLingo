@@ -100,6 +100,18 @@ export function addChapterVersesToEntities(
   return built.map((entity) => existingById.get(entity.id) ?? entity);
 }
 
+// Adds every verse learned on a path that isn't in a range yet, and changes nothing else — a
+// catch-up for progress made before verses counted the moment their stone finished (book paths
+// used to wait for a whole chapter). Unlike syncMemorizedEntities it never drops a range, so it's
+// safe even while some chapters aren't in the local cache. Unchanged ranges keep their schedule.
+export function addLearnedVersesToEntities(paths: Record<string, PathProgress>, existingEntities: MemorizedEntity[]): MemorizedEntity[] {
+  let built = existingEntities;
+  for (const { verse, version } of getMemorizedVerses(paths)) built = addVerseToEntities(built, verse, version);
+  if (built === existingEntities) return existingEntities;
+  const existingById = new Map(existingEntities.map((entity) => [entity.id, entity]));
+  return built.map((entity) => existingById.get(entity.id) ?? entity);
+}
+
 // Rebuilds the path-derived portion of the entity list from current path progress. An
 // entity whose verse range is unchanged from before keeps its existing SRS schedule
 // (matched by id, which encodes the range); a range that just merged/grew gets a fresh SRS

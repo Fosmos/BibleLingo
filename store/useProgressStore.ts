@@ -36,6 +36,7 @@ interface ProgressActions {
   setActivePath: (pathKey: string) => void;
   removeActivePath: (pathKey: string) => void;
   retireLearnedPath: (pathKey: string) => void;
+  catchUpMemorized: () => void;
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
   learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
   completeTrailReview: (pathKey: string, reviewKey: string) => void;
