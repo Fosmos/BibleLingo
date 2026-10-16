@@ -59,9 +59,13 @@ export function useVerseFit(fitKey: string) {
     let height = el.clientHeight;
     const observer = new ResizeObserver(() => {
       if (el.clientWidth === width && el.clientHeight === height) return;
+      // Going compact hides the header's stage label, which hands the zone a little more height.
+      // Starting over on that would bring the label back, shrink the zone and go compact again —
+      // the verse bouncing up and down for good. A compact fit just keeps the extra room.
+      const grewOnly = el.clientWidth === width && el.clientHeight > height;
       width = el.clientWidth;
       height = el.clientHeight;
-      setFit((current) => fresh(current.key));
+      setFit((current) => (grewOnly && current.compact ? current : fresh(current.key)));
     });
     observer.observe(el);
     return () => observer.disconnect();

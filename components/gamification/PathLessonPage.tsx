@@ -49,7 +49,7 @@ export function PathLessonPage({ onClose, children }: PathLessonPageProps) {
           <div className="flex shrink-0 flex-col gap-3.5 pb-6 pt-4">
             <DrillHelpChips />
             {/* `lesson-sheet-controls` is a styling hook — OnScreenKeyboard.tsx and friends switch to their in-card layouts under it. */}
-            <div ref={drillSlotRef} className="lesson-sheet-controls lesson-page-tray flex w-full flex-col px-4" />
+            <div ref={drillSlotRef} className="lesson-sheet-controls lesson-page-tray flex w-full flex-col px-2.5" />
           </div>
         </div>
       </div>

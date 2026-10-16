@@ -6,6 +6,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LOCAL_USER_ID } from "@/lib/authConfig";
 import { ProfileStatsCard } from "@/components/gamification/ProfileStatsCard";
+import { RankCard } from "@/components/gamification/RankCard";
 import { ProfileAdvancedSettings } from "@/components/gamification/ProfileAdvancedSettings";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { InfoTip } from "@/components/ui/InfoTip";
@@ -47,6 +48,8 @@ export default function ProfilePage() {
       </div>
 
       <ProfileStatsCard />
+
+      <RankCard />
 
       <section className="flex flex-col gap-2.5">
         <h2 className="text-[22px] text-ink dark:text-zinc-100">Settings</h2>

@@ -31,7 +31,7 @@ const NUMBER_CLASS: Record<VerseStatus, string> = {
 };
 
 // One verse in the chapter reader (design_handoff_bible_progress): its number circle, coloured by
-// state, beside its natural sense lines of about 4–6 words (lib/naturalSenseLines.ts).
+// state, beside its natural sense lines of about 5–8 words (lib/naturalSenseLines.ts).
 // Selecting tints the row and adds a left bar without moving anything.
 export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, run = "single", seal = null }: ReaderVerseRowProps) {
   const highlighted = selected;

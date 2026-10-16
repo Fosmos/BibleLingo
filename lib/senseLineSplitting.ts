@@ -3,7 +3,7 @@
 // 1. Sentences: split AFTER a real sentence end (. ? ! + any closing quote), so a new sentence
 //    always starts a new line, however short either side is. Semicolons and colons are only a
 //    pause, handled in step 2.
-// 2. Natural lines: each sentence is divided into lines of about 4–6 words where a reader would
+// 2. Natural lines: each sentence is divided into lines of about 5–8 words where a reader would
 //    pause — at punctuation, before "and"/"that"/"who", before a preposition — never leaving a
 //    line hanging on "the" or "of" (lib/naturalSenseLines.ts).
 //

@@ -21,6 +21,7 @@ import { createLearnSettingsActions } from "@/store/learnSettingsActions";
 import { createPathActions } from "@/store/pathActions";
 import { createStumbleTrackingActions } from "@/store/stumbleTrackingActions";
 import { createVespersActions } from "@/store/vespersActions";
+import { createRankActions } from "@/store/rankActions";
 
 export type { StreakLoadStatus };
 
@@ -77,6 +78,7 @@ interface ProgressActions {
   recordWordStumbles: (verse: VerseSegment, wrongIndices: number[]) => void;
   setVespersHour: (hour: number | null) => void;
   dismissVespersPromptToday: () => void;
+  markRankCelebrated: (index: number) => void;
   setPegMasterWord: (key: string, value: string) => void;
   clearPegMasterWord: (key: string) => void;
   upsertCustomClauseRole: (book: string, role: CustomClauseRole) => void;
@@ -129,6 +131,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   ...createPathActions(set, get, persist),
   ...createStumbleTrackingActions(set, get, persist),
   ...createVespersActions(set, get, persist),
+  ...createRankActions(set, get, persist),
   ...createSrsReviewActions(set, get, persist),
 
   hydrate: (userId) => {

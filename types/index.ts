@@ -245,6 +245,9 @@ export interface UserProgress {
   // finishing (see lib/useMindMapCompletionCelebration.ts) — a bigger, separate celebration tier,
   // keyed by the Mind Map's own stable `book:{name}` id.
   celebratedMindMapBooks: string[];
+  // The highest rank (lib/ranks.ts, by index) whose rank-up has been celebrated — undefined until
+  // first seen, when it's set to the current rank without a celebration (RankUpWatcher.tsx).
+  rankCelebrated?: number;
   // The FOCUSED path — the one the Path tab and the Mind Map open on.
   activePathKey: string | null;
   // Every path the reader is currently working through, the focused one included — each keeps

@@ -5,6 +5,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { StreakLossModal } from "@/components/gamification/StreakLossModal";
 import { useRetireLearnedPaths } from "@/lib/useRetireLearnedPaths";
+import { RankUpWatcher } from "@/components/gamification/RankUpWatcher";
 
 interface StreakLossState {
   open: boolean;
@@ -34,10 +35,13 @@ export function ProgressInitializer() {
   }, [currentUserId]);
 
   return (
-    <StreakLossModal
-      open={streakLoss.open}
-      previousStreak={streakLoss.previousStreak}
-      onClose={() => setStreakLoss((prev) => ({ ...prev, open: false }))}
-    />
+    <>
+      <StreakLossModal
+        open={streakLoss.open}
+        previousStreak={streakLoss.previousStreak}
+        onClose={() => setStreakLoss((prev) => ({ ...prev, open: false }))}
+      />
+      <RankUpWatcher />
+    </>
   );
 }

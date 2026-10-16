@@ -1,10 +1,10 @@
-// Natural sense lines: one sentence divided into lines of about 4–6 words, broken where a reader
+// Natural sense lines: one sentence divided into lines of about 5–8 words, broken where a reader
 // would pause. Every possible break between two words gets a cost, and so does every line's
 // length; dynamic programming then picks the division with the lowest total. A break is cheap at
 // punctuation, before a word that opens a clause ("and", "that", "who"...) and, a little less,
 // before a preposition ("in", "through"...).
 // It is dear after a word that can't end a phrase ("the", "of", "his"...), because those leave the
-// line hanging. Lengths of 4–6 words cost nothing, 3 or 7 a little, and anything else a lot.
+// line hanging. Lengths of 5–8 words cost nothing, 4 or 9 a little, and anything else a lot.
 
 // A unit of the sentence: a word, or the part of a dashed word from its em-dash on
 // ("witness—look," → "witness", "—look,"), so a line can break at the dash.
@@ -47,8 +47,8 @@ const ENDS_SENTENCE = /[.?!]['"’”)]*$/;
 // The word with its punctuation stripped, lower-cased ("“Behold," → "behold").
 const bare = (text: string) => text.toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, "");
 
-// Each line length's cost: 4–6 words is the aim.
-const LENGTH_COST = [Infinity, 20, 10, 4, 0, 0, 0, 6, 12, 20];
+// Each line length's cost: 5–8 words is the aim.
+const LENGTH_COST = [Infinity, 24, 14, 9, 4, 0, 0, 0, 0, 6, 12, 20];
 const MAX_LINE = LENGTH_COST.length - 1;
 
 // The cost of a line break just before units[index].
@@ -65,6 +65,8 @@ function breakCost(units: Unit[], index: number): number {
   else if (STARTS_PREDICATE.has(next)) cost = 4;
   else if (next === "of") cost = 18;
   if (NEEDS_MORE.has(bare(before))) cost += 14;
+  // A name mid-phrase ("…who love / God all things…") belongs with the words before it.
+  if (/^[^A-Za-z]*[A-Z]/.test(after.text) && !["i", "o"].includes(next)) cost += 8;
   return cost;
 }
 
@@ -82,7 +84,7 @@ function unitsOf(sentence: string): Unit[] {
 
 const join = (units: Unit[]) => units.map((unit, index) => (index > 0 && unit.spaced ? ` ${unit.text}` : unit.text)).join("");
 
-// One sentence's lines, each about 4–6 words, broken where a reader would naturally pause.
+// One sentence's lines, each about 5–8 words, broken where a reader would naturally pause.
 export function naturalSenseLines(sentence: string): string[] {
   const units = unitsOf(sentence);
   if (units.length <= 3) return units.length ? [join(units)] : [];

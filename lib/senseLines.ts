@@ -1,5 +1,5 @@
 // Deterministic sense-line parsing for Bible verse text — breaks a passage into lines of about
-// 4–6 words that read as natural phrases, the way a printed sense-line Bible does: every
+// 5–8 words that read as natural phrases, the way a printed sense-line Bible does: every
 // sentence starts a new line, and within it lines break at pauses and phrase openings (see
 // lib/senseLineSplitting.ts and lib/naturalSenseLines.ts). A line too long for the column still
 // wraps under its own hanging indent (SenseLineRow.tsx).
