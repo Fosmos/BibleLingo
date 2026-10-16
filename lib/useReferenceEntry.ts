@@ -18,11 +18,12 @@ export interface ReferenceEntry {
 }
 
 // The book's number (if it has one), book, chapter, then verse (lib/referenceAnswer.ts) — `onDone`
-// once they're all right.
-export function useReferenceEntry(correct: ReferenceAnswer, onDone: () => void): ReferenceEntry {
+// once they're all right, told whether any part was missed on the way.
+export function useReferenceEntry(correct: ReferenceAnswer, onDone: (hadMiss: boolean) => void): ReferenceEntry {
   const [index, setIndex] = useState(0);
   // Read synchronously, so one spoken phrase can fill book, chapter and verse in a single call.
   const indexRef = useRef(0);
+  const missedRef = useRef(false);
   const [entered, setEntered] = useState<Partial<Record<ReferencePart, string>>>({});
   const [shown, setShown] = useState<Set<ReferencePart>>(new Set());
   const parts = referenceParts(correct);
@@ -34,10 +35,11 @@ export function useReferenceEntry(correct: ReferenceAnswer, onDone: () => void):
     const next = parts.indexOf(target) + 1;
     indexRef.current = next;
     setIndex(next);
-    if (next >= parts.length) setTimeout(onDone, 450);
+    if (next >= parts.length) setTimeout(() => onDone(missedRef.current), 450);
   }
 
   function miss(target: ReferencePart) {
+    missedRef.current = true;
     playIncorrectSfx();
     setShown((prev) => new Set(prev).add(target));
     setEntered((prev) => ({ ...prev, [target]: "" }));

@@ -11,7 +11,7 @@ export const INFO_TIPS = {
   fillInTheBlankRep:
     "Two rounds: first about half the verse is blanked (the meaningful words first), then every word is. Tap the missing ones, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
   firstLetterBlankRep:
-    "Two rounds: first about half the verse is blanked (the meaningful words first), then every word is. The rest show only their first letters. Type each blanked word's own first letter, in order, to reveal it. A wrong letter flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
+    "Every word is blank. Type each word's first letter, in order, to fill it in. A wrong letter flashes red — try again.",
   drawFirstLetterRep:
     "Write the verse from memory, one word at a time: draw the first letter of the underlined word with your finger, Apple Pencil, or mouse. Handwriting recognition moves on once it detects something legible (it only checks that something was drawn, never whether it's correct). Each drawn word fills in as its first letter, together with its own punctuation — nothing shows ahead of what you've written. Tap Next yourself any time if recognition is slow.",
   prayRep:

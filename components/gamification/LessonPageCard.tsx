@@ -37,13 +37,12 @@ interface LessonPageCardProps {
   allowManualFlip?: boolean;
   // SRS review only — hides the pericope title until it returns true.
   isHeadingVisible?: (segment: PericopeSegment) => boolean;
-  // Blind-recall drills — a verse's number stays hidden until this returns true.
-  isVerseNumberVisible?: (verse: VerseSegment) => boolean;
-  // The word the reader's on — for an `activeVerse` that splits across a page break.
-  activeWordIndex?: number;
-  // Hides the trailing ghost line (it previews words beyond what's being recalled) — the lesson
-  // page's verse zone also hides it for every review, showing it only on a Learn teaching stage.
+  isVerseNumberVisible?: (verse: VerseSegment) => boolean; // Blind recall: a verse number shows once true.
+  activeWordIndex?: number; // The word the reader's on, for a verse split across a page break.
+  // Hides the trailing ghost line (the verse zone shows it only on a Learn teaching stage anyway).
   showNextGhost?: boolean;
+  // Hides the verse zone's reference and both ghost lines — a question asking where the verse is from.
+  hideWhereFrom?: boolean;
   // The verses the lesson page's verse zone shows (no pagination there) — `[activeVerse]` by
   // default; LessonWholeDayPageCard.tsx passes its own list through.
   embeddedVerses?: VerseSegment[];
@@ -69,6 +68,7 @@ export function LessonPageCard({
   isVerseNumberVisible,
   activeWordIndex,
   showNextGhost = true,
+  hideWhereFrom = false,
   embeddedVerses,
 }: LessonPageCardProps) {
   // A Learn recall stage's reference while it's being entered, in the reference's own place.
@@ -109,9 +109,9 @@ export function LessonPageCard({
     return createPortal(
       <SheetVerseZone
         fitKey={`${stageLabel}|${activeVerse.id}|${shown.map((verse) => verse.id).join(",")}`}
-        reference={referenceSlot ?? formatVerseRangeLabel(shown)}
-        ghostPrev={edgeGhost(shown[0], "previous")}
-        ghostNext={showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
+        reference={referenceSlot ?? (hideWhereFrom ? undefined : formatVerseRangeLabel(shown))}
+        ghostPrev={hideWhereFrom ? undefined : edgeGhost(shown[0], "previous")}
+        ghostNext={!hideWhereFrom && showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
       >
         {(fontSizePx) => (
           <ChapterPageContent

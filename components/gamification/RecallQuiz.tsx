@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { X } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import { ensureChapterLoaded } from "@/lib/bibleApiClient";
-import { formatChapterLabel } from "@/lib/chapterContent";
+import { formatVerseSpanLabel } from "@/lib/chapterContent";
 import { useHideTabBarWhile } from "@/lib/useHideTabBarWhile";
+import { useReportSheetStage } from "@/lib/useReportSheetStage";
+import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
+import { useWholeChapterReadingLayout } from "@/lib/useWholeChapterReadingLayout";
 import { pickRecall, type RecallItem, type RecallMode } from "@/lib/recallQuiz";
 import { ReviewChain } from "@/components/drills/ReviewChain";
+import { PathLessonPage } from "@/components/gamification/PathLessonPage";
 import { RecallReferenceQuestion } from "@/components/gamification/RecallReferenceQuestion";
 import { FetchLoading } from "@/components/ui/FetchStatus";
 
@@ -18,15 +21,20 @@ interface RecallQuizProps {
   onClose: () => void;
 }
 
-// The Path tab's Recall Quiz, over the whole screen: a random verse you know, either as its
-// reference (type the verse by first letters — ReviewChain, scored like a review) or as its text
-// (type the reference). Practice only — it never touches spaced review.
+// The Path tab's Recall Quiz, on a lesson page (PathLessonPage.tsx) so a verse looks just as it
+// does in a lesson: a random verse you know, either as its reference (type the verse by first
+// letters — ReviewChain, scored like a review) or as its text (enter the reference in its blocks
+// — RecallReferenceQuestion.tsx). Practice only — it never touches spaced review.
 export function RecallQuiz({ pool, scopeLabel, onClose }: RecallQuizProps) {
   useHideTabBarWhile(true);
   const [question, setQuestion] = useState<{ item: RecallItem; mode: RecallMode } | null>(() => pickRecall(pool, null));
-  const [verse, setVerse] = useState<VerseSegment | null>(null);
+  // The question's whole chapter (the verse zone's page and ghost lines), and the verse itself.
+  const [chapter, setChapter] = useState<{ verses: VerseSegment[]; verse: VerseSegment } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [score, setScore] = useState({ right: 0, asked: 0 });
+  const [fillHeightPx, columnWidthPx] = useEmbeddedSenseCardOverride(true);
+  const layout = useWholeChapterReadingLayout(chapter?.verses ?? NO_VERSES, fillHeightPx, columnWidthPx);
+  useReportSheetStage({ label: `Recall quiz · ${scopeLabel} · ${score.right}/${score.asked}`, reference: "", step: 0, steps: 1 }, true);
 
   useEffect(() => {
     if (!question) return;
@@ -36,7 +44,7 @@ export function RecallQuiz({ pool, scopeLabel, onClose }: RecallQuizProps) {
       .then((verses) => {
         if (cancelled) return;
         const found = verses.find((candidate) => candidate.verseNumber === item.verseNumber && candidate.text.trim());
-        if (found) setVerse(found);
+        if (found) setChapter({ verses, verse: found });
         else setError("Couldn't find that verse.");
       })
       .catch(() => !cancelled && setError("Couldn't load that verse."));
@@ -46,29 +54,16 @@ export function RecallQuiz({ pool, scopeLabel, onClose }: RecallQuizProps) {
   }, [question]);
 
   const next = useCallback(() => {
-    setVerse(null);
+    setChapter(null);
     setError(null);
     setQuestion((previous) => pickRecall(pool, previous?.item ?? null));
   }, [pool]);
   const answered = (correct: boolean) => setScore((prev) => ({ right: prev.right + (correct ? 1 : 0), asked: prev.asked + 1 }));
+  const verse = chapter?.verse;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-paper dark:bg-zinc-950">
-      <header className="flex shrink-0 items-center gap-3 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-        <button type="button" onClick={onClose} aria-label="Close quiz" className="flex h-9 w-9 items-center justify-center rounded-full bg-sand-200 text-sand-800 hover:bg-sand-300 dark:bg-zinc-800 dark:text-zinc-200">
-          <X size={18} strokeWidth={2.75} />
-        </button>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-sage-800 dark:text-sage-300">Recall quiz · {scopeLabel}</span>
-          <span className="font-heading text-xl leading-tight text-ink dark:text-zinc-100">
-            {question?.mode === "verse" ? `${formatChapterLabel(question.item.book, question.item.chapter)}:${question.item.verseNumber}` : "Name the verse"}
-          </span>
-        </div>
-        <span className="rounded-full bg-sage-100 px-3 py-1 text-sm font-extrabold text-sage-900">
-          {score.right}/{score.asked}
-        </span>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-[18px] pb-8">
+    <PathLessonPage onClose={onClose}>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-3">
         {!question && <p className="pt-10 text-center text-ink-muted">Memorize a verse to start the quiz.</p>}
         {error && (
           <div className="flex flex-col items-center gap-3 pt-10 text-center">
@@ -82,8 +77,9 @@ export function RecallQuiz({ pool, scopeLabel, onClose }: RecallQuizProps) {
         {question && verse && question.mode === "verse" && (
           <ReviewChain
             key={`${verse.id}:verse`}
-            label={`Type ${formatChapterLabel(question.item.book, question.item.chapter)}:${question.item.verseNumber}`}
+            label={`Type ${formatVerseSpanLabel(verse.book, verse.chapter, verse.verseNumber, verse.verseNumber)}`}
             verses={[verse]}
+            layout={layout}
             restartOnMistake={false}
             onComplete={(accuracy) => {
               answered(accuracy >= 90);
@@ -91,8 +87,12 @@ export function RecallQuiz({ pool, scopeLabel, onClose }: RecallQuizProps) {
             }}
           />
         )}
-        {question && verse && question.mode === "reference" && <RecallReferenceQuestion key={`${verse.id}:reference`} item={question.item} verse={verse} onAnswered={answered} onNext={next} />}
+        {question && verse && question.mode === "reference" && (
+          <RecallReferenceQuestion key={`${verse.id}:reference`} verse={verse} layout={layout} onAnswered={answered} onNext={next} />
+        )}
       </div>
-    </div>
+    </PathLessonPage>
   );
 }
+
+const NO_VERSES: VerseSegment[] = [];

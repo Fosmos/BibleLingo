@@ -25,7 +25,8 @@ export const useReferenceGate = () => useContext(ReferenceGateContext);
 
 interface ReferenceGateProps {
   asking: { verse: VerseSegment; mode: ReferenceMode } | null;
-  onDone: () => void;
+  // The reference is in — whether any part was missed (or skipped) on the way.
+  onDone: (hadMiss: boolean) => void;
   children: ReactNode;
 }
 
@@ -56,7 +57,7 @@ export function ReferenceGate({ asking, onDone, children }: ReferenceGateProps) 
           <>
             {!lessonPage && <p className="text-center text-caption font-semibold uppercase tracking-wide text-brand-500">{PROMPT[asking.mode]}</p>}
             <Entry entry={entry} correct={correct} />
-            <AutoCompleteButton onClick={onDone} />
+            <AutoCompleteButton onClick={() => onDone(true)} />
           </>
         ),
       }
