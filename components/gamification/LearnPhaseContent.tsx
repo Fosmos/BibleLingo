@@ -63,8 +63,6 @@ interface LearnPhaseContentProps {
   // `layout` prop) so their own parchment matches the Path screen's reading view exactly,
   // instead of a smaller/differently-sized excerpt. Stages not yet converted just ignore it.
   layout: ChapterReadingLayout;
-  // A sense-line stage (lib/learnSteps.ts): Fill in the blank blanks every word, once.
-  senseLine?: boolean;
   onAdvance: () => void;
 }
 
@@ -83,14 +81,12 @@ export function LearnPhaseContent({
   contextVerses,
   prayDurationSeconds,
   layout,
-  senseLine = false,
   onAdvance,
 }: LearnPhaseContentProps) {
   // Read unconditionally regardless of phase — a whole-day phase's `verse` stands in for the
   // whole day (see LearnSection.tsx) but keeps the first new verse's own identity, a
   // reasonable single anchor for a combined screen.
   const poa = useProgressStore((state) => state.versePOA[verseKey(verse.book, verse.chapter, verse.verseNumber)]);
-  const fillReps = useProgressStore((state) => state.fillInTheBlankReps ?? 2);
   const locationTag = useProgressStore((state) => state.locationTags[locationTagKey({ level: "verse", book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber })]);
   // Once the reader has visualized this lesson (i.e. every phase after orientation_summary),
   // a small badge pins their own mnemonic pieces — the location tag plus their POA — to the
@@ -151,7 +147,7 @@ export function LearnPhaseContent({
       />
     );
   } else if (phase === "fill_in_the_blank") {
-    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} reps={senseLine ? 1 : fillReps} allBlank={senseLine} onComplete={onAdvance} />;
+    content = <FillInTheBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else if (phase === "fill_in_the_blank_letters") {
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else {

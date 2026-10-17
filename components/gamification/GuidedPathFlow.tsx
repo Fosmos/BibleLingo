@@ -122,7 +122,6 @@ export function GuidedPathFlow({ mode, onBack, preset }: GuidedPathFlowProps) {
       <LearnIntensityPicker
         initialStages={intensityFlow.initialStages}
         initialMemoryPalace={intensityFlow.initialMemoryPalace}
-        initialFillReps={intensityFlow.initialFillReps}
         onContinue={intensityFlow.handleIntensityContinue}
         onBack={intensityFlow.resetPendingVersesPerDay}
       />

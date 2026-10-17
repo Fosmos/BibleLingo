@@ -13,12 +13,11 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const understand = useProgressStore((state) => state.understandStageEnabled);
   const visualize = useProgressStore((state) => state.visualizeStageEnabled);
   const writeFirstLetter = useProgressStore((state) => state.writeFirstLetterStageEnabled);
-  const fillInTheBlank = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   // `?? false`: self-healing for progress saved before this field existed.
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
 
   return useMemo(
-    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, fillInTheBlank }),
-    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, fillInTheBlank],
+    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter }),
+    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter],
   );
 }

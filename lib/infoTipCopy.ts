@@ -9,7 +9,7 @@ export const INFO_TIPS = {
   rhythmRep:
     "Every noun and verb in the verse is shown in bold capitals. One word is highlighted at a time — tap the bar below to move to the next word (it plays aloud as you go), bold words included.",
   fillInTheBlankRep:
-    "Two rounds: first about half the verse is blanked (the meaningful words first), then every word is. Tap the missing ones, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red and reverts to the last checkpoint (every 4 blanks) rather than all the way back to the start.",
+    "Every word of the line is blank. Tap them back in, in order, from the bank below — tiles are listed alphabetically with punctuation stripped, so their position never hints at the answer. A wrong tap flashes red; try again.",
   firstLetterBlankRep:
     "Every word is blank. Type each word's first letter, in order, to fill it in. A wrong letter flashes red — try again.",
   drawFirstLetterRep:
@@ -76,8 +76,6 @@ export const INFO_TIPS = {
     "When off, a Learn day skips straight to Listen (or each verse's own first stage, if that's off too) — no Loci/Peg + Who/Action/scene step. Verses learned with it off just show no room item, peg word, or scene wherever those would otherwise appear (their circle, SRS review, etc.). Turn it back on any time to bring it back for later lessons.",
   writeFirstLetterStageToggle:
     "When on, once each verse's sense lines are learned you draw each word's first letter on a handwriting canvas. Off by default.",
-  fillInTheBlankStageToggle:
-    "When on, once each verse's sense lines are learned you tap the whole verse's missing words back in from a word bank. Off by default — each line already gets its own word bank.",
   rhythmStageToggle:
     "When on, adds a \"Rhythm\" step for each verse — tap through its words at your own pace before learning its lines. Off by default.",
   srsPromotionThresholdSlider:

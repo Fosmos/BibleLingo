@@ -25,9 +25,8 @@ interface ReviewSectionProps {
   // (default) runs day.reviewVerses as a single "Review" stage — VerseLessonFlow itself
   // never reaches this phase for a "learn" day anymore (see its own doc comment); the only
   // caller left is DaySessionController.tsx's weekly_review/monthly_review days, which have
-  // no newVerses of their own anyway. "post" runs book mode's postLearnReviewStages instead
-  // — see MemorizationDay.postLearnReviewStages.
-  phase?: "final" | "pre" | "post";
+  // no newVerses of their own anyway.
+  phase?: "final" | "pre";
   // The reading view's own real page layout (see lib/useChapterScopedReadingLayout.ts) — set
   // by every caller that has one (VerseLessonFlow.tsx/DaySessionController.tsx), rendering
   // this phase's own verses on the SAME real reading-view page(s) browsing shows, blanking
@@ -51,9 +50,6 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   if (phase === "final") {
     const verses = day.previousVerses ?? [];
     stages = verses.length > 0 ? [{ label: "Review", verses, celebrationText: "Verses reviewed" }] : [];
-  } else if (phase === "post") {
-    const chapterStages = day.postLearnReviewStages?.filter((stage) => stage.verses.length > 0) ?? [];
-    stages = chapterStages.map((stage) => ({ ...stage, celebrationText: "Previous chapter reviewed" }));
   } else {
     const preStages = day.reviewVerses.length > 0 ? [{ label: "Review", verses: day.reviewVerses }] : [];
     stages = preStages.map((stage) => ({ ...stage, celebrationText: "Previous verses reviewed" }));
@@ -70,12 +66,7 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
 
   // Nothing to review (e.g. a path's very first lesson) skips straight past this section
   // instead of showing a placeholder the user has to click through — same "no stage the user
-  // can't act on" principle.
-  // Depends on stages.length rather than running mount-only: VerseLessonFlow renders this
-  // component at the same tree position for both its "finalReview" and "postReview"
-  // phases, so React reuses the same instance across phases instead of remounting — a
-  // mount-only effect would only ever see the FIRST phase's stage count and never re-check a
-  // later phase's.
+  // can't act on" principle. Keyed on stages.length, so it re-checks if the stages change.
   useEffect(() => {
     if (stages.length === 0) onComplete();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +97,7 @@ export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layo
   // A complete, self-chromed screen — same LessonTopBar + fixed reading-view parchment every
   // Learn stage renders (see LessonChrome.tsx/LessonPageCard.tsx), not a bare, unconstrained
   // `ReviewChain` growing to the full viewport width: this section is rendered as a caller's
-  // own screen root (VerseLessonFlow.tsx's "finalReview"/"postReview" phases), the same way
+  // own screen root (VerseLessonFlow.tsx's "finalReview" phase), the same way
   // LearnSection.tsx renders its own {topBar} + width-capped wrapper, rather than being handed
   // one by a parent. The goal is the same verse text landing in the exact same spot on the
   // page every time a reader sees it — recognizing it there is part of what memorization

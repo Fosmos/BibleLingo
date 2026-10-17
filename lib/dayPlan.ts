@@ -1,4 +1,4 @@
-import type { LocationTagLevel, MemorizationDay, PathKind, PathProgress, ReviewStage, VerseSegment } from "@/types";
+import type { LocationTagLevel, MemorizationDay, PathKind, PathProgress, VerseSegment } from "@/types";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { buildBookDayPlan, DEFAULT_VERSES_PER_DAY } from "@/lib/bookDayPlan";
 import { chunkVersesRespectingChapters } from "@/lib/chapterChunking";
@@ -12,14 +12,10 @@ import { pericopeAnchoredPreviousVerses } from "@/lib/previousVerseReview";
 // lib/chapterChunking.ts), which every path kind here is single-chapter for anyway (a
 // multi-chapter selection is book mode's own buildBookDayPlan, below).
 //
-// `includePostLearnChapterReview` (chapter mode only — see buildPathDayPlan below) gives each
-// "learn" day the SAME sliding-window post-lesson review book mode's own buildBookDayPlan
-// already runs: everything learned in the chapter so far, including today's own new chunk,
-// typed first-letter from the beginning right after the lesson (see
-// MemorizationDay.postLearnReviewStages, consumed by VerseLessonFlow.tsx's own "postReview"
-// phase → ReviewSection → ReviewChain). Verse/topic mode paths skip it — their own `verses`
-// can span several books/chapters, so "review the chapter from the beginning" has no single
-// chapter to mean.
+// `includePostLearnChapterReview` (chapter mode only — see buildPathDayPlan below) leaves each
+// "learn" day's reviewVerses empty, as book mode's buildBookDayPlan does: a lesson ends on its
+// own closing review of the verse and the few before it (VerseLessonFlow.tsx), not a review of
+// the chapter so far. Verse/topic mode paths keep the verses learned so far there.
 export function buildDayPlan(
   verses: VerseSegment[],
   versesPerDay = 1,
@@ -55,22 +51,11 @@ export function buildDayPlan(
   let consumed = priorKnownVerseCount;
   for (const chunk of chunks) {
     const learnedSoFar = verses.slice(0, consumed);
-    // Only when there's real PRIOR content to review alongside today's new chunk — a lesson
-    // whose own chunk starts at the chapter's own verse 1 (learnedSoFar empty — no prior known
-    // prefix, no earlier chunk) has nothing to recap beyond what it just taught a moment ago;
-    // see lib/bookDayPlan.ts's own identical fix for the book-mode equivalent.
-    const postLearnReviewStages: ReviewStage[] =
-      includePostLearnChapterReview && learnedSoFar.length > 0
-        ? [{ label: "Chapter Review", verses: [...learnedSoFar, ...chunk] }]
-        : [];
     days.push({
       dayNumber: days.length + 1,
       kind: "learn",
       newVerses: chunk,
-      // Empty (not learnedSoFar) once the post-learn stage above covers that same ground —
-      // same "don't review it twice" convention buildBookDayPlan's own reviewVerses follows.
       reviewVerses: includePostLearnChapterReview ? [] : learnedSoFar,
-      postLearnReviewStages: postLearnReviewStages.length > 0 ? postLearnReviewStages : undefined,
       previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
     });
     previousChunk = chunk;

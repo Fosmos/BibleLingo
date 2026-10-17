@@ -63,11 +63,6 @@ export interface MemorizationDay {
   kind: DayKind;
   newVerses: VerseSegment[];
   reviewVerses: VerseSegment[];
-  // Book mode only: the sliding-window chapter review (previous chapter in full, plus the
-  // current chapter's progress so far) — run AFTER today's new verse is learned rather than
-  // before it, so review of what's already known doesn't stand between the user and the
-  // new material.
-  postLearnReviewStages?: ReviewStage[];
   // Book-mode only: the chapter this day belongs to, used to group the path into
   // one-chapter-at-a-time views. Undefined for the final whole-book capstone (and for
   // every non-book path kind, which has no chapter grouping concept).
@@ -87,7 +82,6 @@ export interface MemorizationDay {
 // at once, turned on/off globally from Settings (see UserProgress.locationTagLevels).
 export type LocationTagLevel = "book" | "chapter" | "pericope" | "verse";
 
-export type FillReps = 2 | 3;
 
 export interface PathProgress {
   version: string;
@@ -381,16 +375,6 @@ export interface UserProgress {
   // Rhythm itself is off — see rhythmStageEnabled) to the Speak (first-letter hint) stage for
   // every verse that day.
   writeFirstLetterStageEnabled: boolean;
-  // Whether each verse's Fill in the Blank pair (the word-bank tap exercise — see
-  // FillInTheBlankRep — and the type-the-first-letter exercise right after it — see
-  // FirstLetterBlankRep, both run twice: about half the verse blanked, then all of it) runs
-  // during Learn, before the Speak hint. Off skips straight to the Speak hint (from Rhythm, or
-  // from Write First Letter if that's on) for every verse that day.
-  fillInTheBlankStageEnabled: boolean;
-  // How many word-bank Fill in the Blank reps each verse gets in all — 2 (half blanked, then all) or
-  // 3 (another all-blanked) — chosen on the Learn intensity slider (LearnIntensityPicker.tsx).
-  // Undefined (saved before this existed) is 2.
-  fillInTheBlankReps?: FillReps;
   // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
   // Learn, before the verse's sense-line stages (lib/learnSteps.ts) — optional, off by default.
   rhythmStageEnabled: boolean;

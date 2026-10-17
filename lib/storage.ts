@@ -45,7 +45,6 @@ export function getDefaultProgress(): UserProgress {
     understandStageEnabled: false,
     visualizeStageEnabled: false,
     writeFirstLetterStageEnabled: false,
-    fillInTheBlankStageEnabled: false,
     rhythmStageEnabled: false,
     restDayOfWeek: null,
     vespersHour: null,

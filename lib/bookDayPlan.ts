@@ -1,20 +1,9 @@
-import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
+import type { MemorizationDay, VerseSegment } from "@/types";
 import { computeBucketStatesPerLesson } from "@/lib/bookReviewSchedule";
 import { chunkVersesAcrossChapters, chunkVersesRespectingChapters } from "@/lib/chapterChunking";
 import { pericopeAnchoredPreviousVerses } from "@/lib/previousVerseReview";
 
 export const DEFAULT_VERSES_PER_DAY = 5;
-
-// The current chapter's verses up to (not including) today's new chunk — anchored on the
-// chunk's first verse, since review happens before that chunk is learned. Deliberately
-// scoped to just this chapter — the post-learn "Chapter Review" stage below is meant to
-// drill the chapter actually being worked on, not drag the previous chapter's verses back
-// in every lesson (the lesson's closing "Review" covers the verses just before it — see
-// VerseLessonFlow.tsx).
-function currentChapterReview(verses: VerseSegment[], chunk: VerseSegment[]): VerseSegment[] {
-  const anchor = chunk[0];
-  return verses.filter((verse) => verse.chapter === anchor.chapter && verse.verseNumber < anchor.verseNumber);
-}
 
 function versesForChapters(verses: VerseSegment[], chapters: number[]): VerseSegment[] {
   const wanted = new Set(chapters);
@@ -87,30 +76,13 @@ export function buildBookDayPlan(verses: VerseSegment[], versesPerDay: number, u
   chunks.forEach((chunk, index) => {
     const state = bucketStates[index];
     const chapterGroup = chunk[0].chapter;
-    // Today's own newly-learned chunk is appended last — the post-learn recap should cover
-    // everything memorized in-window, including what was JUST learned this lesson, not only
-    // what came before it.
-    const priorChapterVerses = currentChapterReview(verses, chunk);
-    const windowReview = [...priorChapterVerses, ...chunk];
-
-    // Only when there's real PRIOR content in this chapter to review alongside today's new
-    // chunk — a lesson whose own chunk starts at the chapter's own verse 1 (priorChapterVerses
-    // empty) has nothing to recap beyond what it just taught a moment ago; "review the chapter
-    // so far" would just silently re-run the exact same verses a second time in the same
-    // lesson.
-    const postLearnReviewStages: ReviewStage[] = [];
-    if (priorChapterVerses.length > 0) postLearnReviewStages.push({ label: "Chapter Review", verses: windowReview });
-
     days.push({
       dayNumber: dayNumber++,
       kind: "learn",
       newVerses: chunk,
-      // Empty, not windowReview: that content already runs post-learn via
-      // postLearnReviewStages below — putting it here too would review it twice, since
-      // ReviewSection falls back to building a "pre" stage from reviewVerses whenever
-      // reviewStages is absent (as it now always is for book-mode learn days).
+      // Empty: a lesson ends on its own closing review of the verse and the few before it
+      // (VerseLessonFlow.tsx), not a review of the chapter so far.
       reviewVerses: [],
-      postLearnReviewStages,
       previousVerses: pericopeAnchoredPreviousVerses(verses, previousChunk, usePericopeAnchor),
       chapterGroup,
     });

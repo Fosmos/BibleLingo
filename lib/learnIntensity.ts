@@ -1,7 +1,7 @@
-// Data table for the Learn intensity slider (see LearnIntensityPicker.tsx) — 5 preset levels
+// Data table for the Learn intensity slider (see LearnIntensityPicker.tsx) — 4 preset levels
 // from least time/weakest encoding to most time/strongest encoding. Every level keeps the same
 // floor — every verse learned sense line by sense line (lib/learnSteps.ts) — plus whatever
-// optional stages it adds on top: the same four booleans buildSteps gates them on (see
+// optional stages it adds on top: the same three booleans buildSteps gates them on (see
 // UserProgress.understandStageEnabled etc. in types/index.ts). Rhythm is a separate, global
 // Profile > Advanced toggle instead (rhythmStageEnabled), not part of this per-path slider.
 // Review, Pray, and cumulative multiverse review are unconditional at every level, by design.
@@ -17,15 +17,14 @@ export interface LearnIntensityLevel {
   understandStageEnabled: boolean;
   visualizeStageEnabled: boolean;
   writeFirstLetterStageEnabled: boolean;
-  fillInTheBlankStageEnabled: boolean;
 }
 
-// The four stage booleans alone, without a level's label/description/estimate — what
+// The three stage booleans alone, without a level's label/description/estimate — what
 // LearnIntensityPicker's "Customize" checkboxes edit directly, and what GuidedPathFlow hands
-// off to the four setter actions in store/learnSettingsActions.ts.
+// off to the three setter actions in store/learnSettingsActions.ts.
 export type LearnIntensityStages = Pick<
   LearnIntensityLevel,
-  "understandStageEnabled" | "visualizeStageEnabled" | "writeFirstLetterStageEnabled" | "fillInTheBlankStageEnabled"
+  "understandStageEnabled" | "visualizeStageEnabled" | "writeFirstLetterStageEnabled"
 >;
 
 export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
@@ -37,47 +36,33 @@ export const LEARN_INTENSITY_LEVELS: LearnIntensityLevel[] = [
     understandStageEnabled: false,
     visualizeStageEnabled: false,
     writeFirstLetterStageEnabled: false,
-    fillInTheBlankStageEnabled: false,
   },
   {
     level: 2,
-    label: "+ Fill in the Blank",
-    description: "Adds a word-bank tap exercise on the whole verse once its lines are learned (half blanked, then all blanked).",
-    estimateSecondsPerVerse: 325,
+    label: "+ Visualize",
+    description: "Adds a Loci/Peg + Who/Action/scene step at the start of the day.",
+    estimateSecondsPerVerse: 210,
     understandStageEnabled: false,
-    visualizeStageEnabled: false,
+    visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: false,
-    fillInTheBlankStageEnabled: true,
   },
   {
     level: 3,
-    label: "+ Visualize",
-    description: "Adds a Loci/Peg + Who/Action/scene step at the start of the day.",
-    estimateSecondsPerVerse: 400,
+    label: "+ Write First Letter",
+    description: "Adds a handwriting-recognition canvas for each word's first letter, once the verse's lines are learned.",
+    estimateSecondsPerVerse: 300,
     understandStageEnabled: false,
     visualizeStageEnabled: true,
-    writeFirstLetterStageEnabled: false,
-    fillInTheBlankStageEnabled: true,
+    writeFirstLetterStageEnabled: true,
   },
   {
     level: 4,
-    label: "+ Write First Letter",
-    description: "Adds a handwriting-recognition canvas for each word's first letter, once the verse's lines are learned.",
-    estimateSecondsPerVerse: 490,
-    understandStageEnabled: false,
-    visualizeStageEnabled: true,
-    writeFirstLetterStageEnabled: true,
-    fillInTheBlankStageEnabled: true,
-  },
-  {
-    level: 5,
     label: "+ Understand",
     description: "Adds a clause-tagging step at the start of the day — the strongest encoding.",
-    estimateSecondsPerVerse: 580,
+    estimateSecondsPerVerse: 390,
     understandStageEnabled: true,
     visualizeStageEnabled: true,
     writeFirstLetterStageEnabled: true,
-    fillInTheBlankStageEnabled: true,
   },
 ];
 
@@ -87,24 +72,16 @@ export function formatIntensityEstimate(secondsPerVerse: number): string {
   return `~${minutes} min / verse`;
 }
 
-// Level 1's own 135s/verse floor, then each optional stage's own additive share worked out
-// from the gap between consecutive LEARN_INTENSITY_LEVELS entries above (e.g. level 2 minus
-// level 1 = Fill in the Blank's own 60s). Reconstructed this way, rather than looked up from
-// the preset table directly, because a reader's actual four booleans (Customize Stages) don't
-// have to match any single preset level — DayPathDiagram.tsx's own "Today's Lesson" estimate
-// needs to work for any combination, not just the five named presets.
+// Level 1's 135s/verse floor, then each optional stage's own share (the gaps between the levels
+// above). Built up this way rather than read off the table because a reader's own stages
+// (Customize Stages) needn't match any one level — DayPathDiagram.tsx's lesson estimate needs any mix.
 const BASE_SECONDS_PER_VERSE = 135;
-// Now covers FOUR total passes over the verse (see lib/learnSteps.ts's versePhases): the
-// word-bank tap exercise's own 2 reps (FillInTheBlankRep.tsx) plus the type-the-first-letter
-// exercise's own 2 reps (FirstLetterBlankRep.tsx), both gated on this one setting.
-const FILL_IN_THE_BLANK_SECONDS_PER_VERSE = 190;
 const VISUALIZE_SECONDS_PER_VERSE = 75;
 const WRITE_FIRST_LETTER_SECONDS_PER_VERSE = 90;
 const UNDERSTAND_SECONDS_PER_VERSE = 90;
 
 export function estimateLessonSeconds(verseCount: number, stages: LearnIntensityStages): number {
   let perVerse = BASE_SECONDS_PER_VERSE;
-  if (stages.fillInTheBlankStageEnabled) perVerse += FILL_IN_THE_BLANK_SECONDS_PER_VERSE;
   if (stages.visualizeStageEnabled) perVerse += VISUALIZE_SECONDS_PER_VERSE;
   if (stages.writeFirstLetterStageEnabled) perVerse += WRITE_FIRST_LETTER_SECONDS_PER_VERSE;
   if (stages.understandStageEnabled) perVerse += UNDERSTAND_SECONDS_PER_VERSE;

@@ -75,7 +75,6 @@ export function DayPathDiagram({
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const visualizeStageEnabled = useProgressStore((state) => state.visualizeStageEnabled);
   const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
-  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
   const { bodyTopRef, dockRef, fillHeightPx } = useParchmentFillHeight();
   const pagination = useChapterPagination(days, completedDays, todaysDayNumber, fillHeightPx);
   useTargetVerseOverride(pagination.pages, targetVerse, pagination.goToPage);
@@ -97,7 +96,6 @@ export function DayPathDiagram({
     understandStageEnabled,
     visualizeStageEnabled,
     writeFirstLetterStageEnabled,
-    fillInTheBlankStageEnabled,
   });
   const verseLabel =
     todaysVerses.length === 0

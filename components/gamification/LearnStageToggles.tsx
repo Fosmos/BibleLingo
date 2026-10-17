@@ -2,7 +2,6 @@
 
 import { useProgressStore } from "@/store/useProgressStore";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
-import { FillRepsSlider } from "@/components/ui/FillRepsSlider";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
@@ -17,10 +16,6 @@ export function LearnStageToggles() {
   const setVisualizeStageEnabled = useProgressStore((state) => state.setVisualizeStageEnabled);
   const writeFirstLetterStageEnabled = useProgressStore((state) => state.writeFirstLetterStageEnabled);
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
-  const fillInTheBlankStageEnabled = useProgressStore((state) => state.fillInTheBlankStageEnabled);
-  const setFillInTheBlankStageEnabled = useProgressStore((state) => state.setFillInTheBlankStageEnabled);
-  const fillInTheBlankReps = useProgressStore((state) => state.fillInTheBlankReps ?? 2);
-  const setFillInTheBlankReps = useProgressStore((state) => state.setFillInTheBlankReps);
   const rhythmStageEnabled = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
 
@@ -54,18 +49,6 @@ export function LearnStageToggles() {
         />
         <InfoTip text={INFO_TIPS.writeFirstLetterStageToggle} />
       </div>
-      <div className="flex items-start gap-1.5">
-        <ToggleSwitch
-          checked={fillInTheBlankStageEnabled}
-          onChange={setFillInTheBlankStageEnabled}
-          label="Whole-verse Fill in the Blank"
-          description="A word-bank tap exercise on the whole verse once its lines are learned"
-        />
-        <InfoTip text={INFO_TIPS.fillInTheBlankStageToggle} />
-      </div>
-      {fillInTheBlankStageEnabled && (
-        <FillRepsSlider value={fillInTheBlankReps} onChange={setFillInTheBlankReps} />
-      )}
       <div className="flex items-start gap-1.5">
         <ToggleSwitch
           checked={rhythmStageEnabled}

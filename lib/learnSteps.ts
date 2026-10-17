@@ -22,7 +22,6 @@ export interface LearnStageOptions {
   visualize: boolean;
   rhythm: boolean;
   writeFirstLetter: boolean;
-  fillInTheBlank: boolean;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
@@ -46,9 +45,9 @@ function senseLineSteps(verseIndex: number, lineCount: number): FlatStep[] {
 }
 
 // A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
-// optional Rhythm read-through, its sense-line ladder (above), then its optional whole-verse
-// Write First Letter and Fill in the blank — a typing check of all of today's verses together
-// when there are several, and Pray. The verses before it are reviewed after (VerseLessonFlow.tsx).
+// optional Rhythm read-through, its sense-line ladder (above), then its optional Write First
+// Letter — a typing check of all of today's verses together when there are several, and Pray.
+// The verses before it are reviewed after (VerseLessonFlow.tsx).
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
 // own gap verse (see lib/bibleProviders/esv.ts's note on Mark 11:26 and its siblings) rides
@@ -63,7 +62,6 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
     if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
     steps.push(...senseLineSteps(verseIndex, Math.max(1, lineCounts[position] ?? 1)));
     if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });
-    if (options.fillInTheBlank) steps.push({ phase: "fill_in_the_blank", verseIndex });
   });
   if (verseIndices.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
   steps.push({ phase: "pray" });

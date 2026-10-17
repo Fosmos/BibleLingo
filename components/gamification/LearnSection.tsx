@@ -190,7 +190,6 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
           onWordAnnotationsChange={step.phase === "orientation" ? setWordAnnotations : noopAnnotationsChange}
           contextVerses={verseWindow?.verses}
           layout={layout}
-          senseLine={step.lines !== undefined}
           prayDurationSeconds={realVerseIndices.length > PRAY_LONGER_VERSE_THRESHOLD ? LONGER_PRAYER_DURATION_S : undefined}
           onAdvance={advance}
         />

@@ -6,7 +6,6 @@ import type { VerseSegment } from "@/types";
 import { playCorrectSfx, playIncorrectSfx } from "@/lib/audio";
 import { TAP_SCALE } from "@/lib/motionTokens";
 import { tokenizeVerseWords, stripPunctuation, splitWordPunctuation } from "@/lib/verseWords";
-import { blankIndicesImportantFirst } from "@/lib/wordImportance";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
@@ -22,34 +21,19 @@ interface FillInTheBlankRepProps {
   // only caller, so always set; the verse renders on the SAME real reading-view page/size/
   // position as browsing, via LessonPageCard.tsx.
   layout: ChapterReadingLayout;
-  // Reps in all (the Learn intensity slider's choice, 2 or 3) — any after the second blank every word.
-  reps?: number;
-  // Every word blank from the first rep (a sense-line stage — lib/learnSteps.ts).
-  allBlank?: boolean;
   onComplete: () => void;
 }
 
-// Two passes: the first blanks about half the verse's own words (content/meaning-bearing ones
-// prioritized — see lib/wordImportance.ts), leaving enough visible to anchor the reader; the
-// second blanks every word, the full recall check. Same "progressively less scaffolding" shape
-// this app's other 2-rep drills already follow. A third rep (`reps`) repeats the all-blanked pass.
+// One pass with every word blank — a sense line's words, tapped back in (lib/learnSteps.ts).
 
 // Tap the missing words, in order, from a bank below — only the current sense line's words at a
 // time, in a grid across the full width, alphabetized (punctuation stripped) rather than shuffled
 // so their position never hints at the answer. A wrong tap just
 // flashes red and stays available to try again — every tile already placed correctly stays
 // placed, so one slip never costs any real progress (see handleTileClick).
-export function FillInTheBlankRep({ verse, layout, reps = 2, allBlank = false, onComplete }: FillInTheBlankRepProps) {
-  const repCount = reps;
+export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
-  const [repIndex, setRepIndex] = useState(0);
-  const blankIndices = useMemo(
-    () => blankIndicesImportantFirst(words, repIndex === 0 && !allBlank ? Math.ceil(words.length / 2) : words.length),
-    // Re-derived only on a real verse/rep change, not on every placement — a re-shuffle mid-round
-    // would shuffle tiles the reader hasn't tapped yet.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [verse.id, repIndex],
-  );
+  const blankIndices = useMemo(() => words.map((_, index) => index), [words]);
   const [usedTileIds, setUsedTileIds] = useState<Set<number>>(new Set());
   const [wrongTileId, setWrongTileId] = useState<number | null>(null);
 
@@ -58,10 +42,7 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, allBlank = false, o
       blankIndices
         .map((index) => ({ tileId: index, word: words[index] }))
         .sort((a, b) => stripPunctuation(a.word).localeCompare(stripPunctuation(b.word))),
-    // Re-derived only when the verse or rep changes, not on every placement — a re-sort mid-round
-    // would shuffle tiles the reader hasn't tapped yet.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [verse.id, repIndex],
+    [blankIndices, words],
   );
 
   const placedCount = usedTileIds.size;
@@ -83,14 +64,7 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, allBlank = false, o
       setWrongTileId(null);
       const next = placedCount + 1;
       setUsedTileIds((prev) => new Set(prev).add(tileId));
-      if (next >= blankIndices.length) {
-        if (repIndex + 1 >= repCount) {
-          onComplete();
-        } else {
-          setRepIndex((prev) => prev + 1);
-          setUsedTileIds(new Set());
-        }
-      }
+      if (next >= blankIndices.length) onComplete();
     } else {
       playIncorrectSfx();
       setWrongTileId(tileId);
@@ -159,9 +133,6 @@ export function FillInTheBlankRep({ verse, layout, reps = 2, allBlank = false, o
       <LessonControlBar dockRef={layout.dockRef} verseText={verse.text}>
         <p className="flex items-center gap-1.5 self-center text-caption font-semibold uppercase tracking-wide text-brand-500 [.lesson-sheet-controls_&]:hidden">
           Fill in the blanks
-          <span className="font-normal normal-case tracking-normal text-ink-muted">
-            · Rep {repIndex + 1} of {repCount}
-          </span>
           <InfoTip text={INFO_TIPS.fillInTheBlankRep} />
         </p>
         {/* Inside the Mind Map sheet's drill zone (tagged `lesson-sheet-controls` — see

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, FillReps, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -93,8 +93,6 @@ interface ProgressActions {
   setUnderstandStageEnabled: (value: boolean) => void;
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
-  setFillInTheBlankStageEnabled: (value: boolean) => void;
-  setFillInTheBlankReps: (value: FillReps) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
