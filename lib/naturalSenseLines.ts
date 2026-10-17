@@ -2,7 +2,7 @@
 // would pause. Every possible break between two words gets a cost, and so does every line's
 // length; dynamic programming then picks the division with the lowest total. A break is cheap at
 // punctuation, before a word that opens a clause ("and", "that", "who"...) and, a little less,
-// before a preposition ("in", "through"...).
+// before a helping verb or a preposition ("has", "in", "through"...).
 // It is dear after a word that can't end a phrase ("the", "of", "his"...), because those leave the
 // line hanging. Lengths of 5–8 words cost nothing, 4 or 9 a little, and anything else a lot.
 
@@ -14,10 +14,12 @@ interface Unit {
   spaced: boolean;
 }
 
-// Words that open a clause (conjunctions, relatives) — the best place to start a line.
+// Words that open a clause (conjunctions, relatives) — the best place to start a line. "for" and
+// "as" are left to the prepositions below: mid-sentence they're usually one ("pray for those",
+// "glory as of the only Son"), and as conjunctions they follow punctuation, a cheap break anyway.
 const OPENS_CLAUSE = new Set([
-  "and", "but", "or", "nor", "for", "so", "yet", "that", "who", "whom", "whose", "which", "what", "because", "when", "whenever",
-  "where", "while", "if", "though", "although", "unless", "until", "till", "since", "as", "lest", "how", "then", "therefore",
+  "and", "but", "or", "nor", "so", "yet", "that", "who", "whom", "whose", "which", "what", "because", "when", "whenever",
+  "where", "while", "if", "though", "although", "unless", "until", "till", "since", "lest", "how", "then", "therefore",
   "neither", "according",
 ]);
 
@@ -25,7 +27,7 @@ const OPENS_CLAUSE = new Set([
 // "the law of the Spirit of life" holds together, so breaking before it costs more instead.
 const OPENS_PHRASE = new Set([
   "in", "into", "with", "within", "without", "through", "by", "from", "to", "unto", "upon", "on", "before", "after", "against",
-  "among", "over", "under", "above", "beyond", "toward", "towards", "even", "not",
+  "among", "over", "under", "above", "beyond", "toward", "towards", "even", "not", "for", "as",
 ]);
 
 const PRONOUNS = new Set(["him", "her", "me", "you", "us", "them", "it", "thee", "himself", "themselves"]);
@@ -48,7 +50,7 @@ const ENDS_SENTENCE = /[.?!]['"’”)]*$/;
 const bare = (text: string) => text.toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, "");
 
 // Each line length's cost: 5–8 words is the aim.
-const LENGTH_COST = [Infinity, 24, 14, 9, 4, 0, 0, 0, 0, 6, 12, 20];
+const LENGTH_COST = [Infinity, 24, 14, 9, 4, 0, 0, 0, 0, 6, 16, 24];
 const MAX_LINE = LENGTH_COST.length - 1;
 
 // The cost of a line break just before units[index].
@@ -59,10 +61,12 @@ function breakCost(units: Unit[], index: number): number {
   if (!after.spaced) return -3;
   const next = bare(after.text);
   let cost = 7;
-  if (OPENS_CLAUSE.has(next)) cost = 1;
+  // A word with punctuation after it ends a phrase ("things hoped / for, the…") — never an opener.
+  const opener = !ENDS_PAUSE.test(after.text) && !ENDS_SENTENCE.test(after.text);
+  if (opener && OPENS_CLAUSE.has(next)) cost = 1;
   // "believes in him" — a preposition with just a pronoun after it stays with the word before.
-  else if (OPENS_PHRASE.has(next)) cost = PRONOUNS.has(bare(units[index + 1]?.text ?? "")) ? 7 : 3;
-  else if (STARTS_PREDICATE.has(next)) cost = 4;
+  else if (opener && OPENS_PHRASE.has(next)) cost = PRONOUNS.has(bare(units[index + 1]?.text ?? "")) ? 7 : 4;
+  else if (STARTS_PREDICATE.has(next)) cost = 3;
   else if (next === "of") cost = 18;
   if (NEEDS_MORE.has(bare(before))) cost += 14;
   // A name mid-phrase ("…who love / God all things…") belongs with the words before it.
@@ -73,7 +77,8 @@ function breakCost(units: Unit[], index: number): number {
 function unitsOf(sentence: string): Unit[] {
   return sentence
     .split(/\s+/)
-    .filter(Boolean)
+    // A translation's paragraph mark (the KJV's "¶") isn't a word to show or count.
+    .filter((word) => word && word !== "¶")
     .flatMap((word) =>
       word
         .split(/(?=—)/)
