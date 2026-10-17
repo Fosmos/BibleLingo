@@ -22,6 +22,8 @@ export interface LearnStageOptions {
   visualize: boolean;
   rhythm: boolean;
   writeFirstLetter: boolean;
+  // Learn each verse whole rather than a sense line at a time (UserProgress.wholeVerseLearning).
+  wholeVerse?: boolean;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
@@ -44,9 +46,15 @@ function senseLineSteps(verseIndex: number, lineCount: number): FlatStep[] {
   return steps;
 }
 
+// The same stages run once over the whole verse — the way verses were learned before sense lines.
+function wholeVerseSteps(verseIndex: number): FlatStep[] {
+  return (["listen_verse", "fill_in_the_blank", "speak_hint", "fill_in_the_blank_letters", "speak_verse"] as const).map((phase) => ({ phase, verseIndex }));
+}
+
 // A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
-// optional Rhythm read-through, its sense-line ladder (above), then its optional Write First
-// Letter — a typing check of all of today's verses together when there are several, and Pray.
+// optional Rhythm read-through, its sense-line ladder (above; or, with the whole-verse option, its
+// stages over the whole verse), then its optional Write First Letter — a typing check of all of
+// today's verses together when there are several, and Pray.
 // The verses before it are reviewed after (VerseLessonFlow.tsx).
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
@@ -60,7 +68,7 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
   if (options.visualize) steps.push({ phase: "orientation_summary" });
   verseIndices.forEach((verseIndex, position) => {
     if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
-    steps.push(...senseLineSteps(verseIndex, Math.max(1, lineCounts[position] ?? 1)));
+    steps.push(...(options.wholeVerse ? wholeVerseSteps(verseIndex) : senseLineSteps(verseIndex, Math.max(1, lineCounts[position] ?? 1))));
     if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });
   });
   if (verseIndices.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });

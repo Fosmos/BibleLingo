@@ -43,9 +43,10 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
       visualize: toggles.visualizeStageEnabled,
       rhythm: toggles.rhythmStageEnabled ?? false,
       writeFirstLetter: toggles.writeFirstLetterStageEnabled,
+      wholeVerse: toggles.wholeVerseLearning,
     });
     return [...new Set(steps.filter((step) => step.phase !== "pray").map((step) => STAGE_LABELS[step.phase]))];
-  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled]);
+  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.wholeVerseLearning]);
   const sections = useMemo(() => buildTrail(kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone), [kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone]);
   const [open, setOpen] = useState<TrailStop | null>(null);
   const toast = useArrivalToast();

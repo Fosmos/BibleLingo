@@ -6,9 +6,10 @@ import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 
 // The optional Learn stages — split out of ProfileAdvancedSettings.tsx purely to keep that file
-// under this codebase's 200-line cap. Every lesson learns each verse sense line by sense line
-// (Listen & Repeat, Fill in the blank, Say it with hints, Type it by first letter, Say it from
-// memory — lib/learnSteps.ts); these add to that, and are all off by default.
+// under this codebase's 200-line cap. Every lesson runs Listen & Repeat, Fill in the blank, Say it
+// with hints, Type it by first letter and Say it from memory (lib/learnSteps.ts) — sense line by
+// sense line, or over the whole verse with "Learn line by line" off; the rest add to that, off
+// by default.
 export function LearnStageToggles() {
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
   const setUnderstandStageEnabled = useProgressStore((state) => state.setUnderstandStageEnabled);
@@ -18,10 +19,18 @@ export function LearnStageToggles() {
   const setWriteFirstLetterStageEnabled = useProgressStore((state) => state.setWriteFirstLetterStageEnabled);
   const rhythmStageEnabled = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
+  const lineByLine = !(useProgressStore((state) => state.wholeVerseLearning) ?? false);
+  const setWholeVerseLearning = useProgressStore((state) => state.setWholeVerseLearning);
 
   return (
     <>
-      <p className="text-sm text-ink-muted">Each verse is learned a sense line at a time. Add any of these extra stages:</p>
+      <ToggleSwitch
+        checked={lineByLine}
+        onChange={(value) => setWholeVerseLearning(!value)}
+        label="Learn line by line"
+        description="Each verse a sense line at a time, each new line recalled with the lines before it. Off learns the whole verse at once — the same stages over the full verse."
+      />
+      <p className="text-sm text-ink-muted">Add any of these extra stages:</p>
       <div className="flex items-start gap-1.5">
         <ToggleSwitch
           checked={understandStageEnabled}

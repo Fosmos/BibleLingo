@@ -378,6 +378,9 @@ export interface UserProgress {
   // Whether each verse's own "Rhythm" stage (tap-through-the-words pacing drill) runs during
   // Learn, before the verse's sense-line stages (lib/learnSteps.ts) — optional, off by default.
   rhythmStageEnabled: boolean;
+  // Learn each verse whole instead of sense line by sense line (lib/learnSteps.ts) — the same
+  // stages, run once over the full verse. Undefined (the default) is line by line.
+  wholeVerseLearning?: boolean;
   // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
   // set (the default — every day behaves as it always has). On that calendar day: a lapse in
   // streakActions.ts's evaluateStreakOnLoad that would otherwise cost the streak is forgiven

@@ -7,6 +7,7 @@ interface LearnSettingsActions {
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setRhythmStageEnabled: (value: boolean) => void;
+  setWholeVerseLearning: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -35,6 +36,11 @@ export function createLearnSettingsActions(
     setRhythmStageEnabled: (value) => {
       const state = get();
       set(persist({ ...state, rhythmStageEnabled: value }));
+    },
+
+    setWholeVerseLearning: (value) => {
+      const state = get();
+      set(persist({ ...state, wholeVerseLearning: value }));
     },
   };
 }

@@ -94,6 +94,7 @@ interface ProgressActions {
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setRhythmStageEnabled: (value: boolean) => void;
+  setWholeVerseLearning: (value: boolean) => void;
   resetProgress: () => void;
 }
 
