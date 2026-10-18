@@ -8,6 +8,8 @@ import { buildSteps } from "@/lib/learnSteps";
 import { STAGE_LABELS } from "@/lib/learnSheetStage";
 import { buildTrail, type TrailStop } from "@/lib/trailStops";
 import { readerHref } from "@/lib/readerHref";
+import { mapThemePages } from "@/lib/mapThemePages";
+import { parsePathKey } from "@/lib/memorizationContent";
 import { PATH_TYPE_META } from "@/lib/pathTypeMeta";
 import { useArrivalToast } from "@/lib/useArrivalToast";
 import { PericopeMapScreen } from "@/components/gamification/PericopeMapScreen";
@@ -58,6 +60,15 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
 
   const sectionParam = params.get("section");
   const currentIndex = Math.max(0, sections.findIndex((section) => section.state !== "complete"));
+  // A long book's map has a page per theme — opening on the one you're on, kept in `?theme=`.
+  const pages = useMemo(() => (kind === "book" ? mapThemePages(parsePathKey(pathKey).identifier, sections) : null), [kind, pathKey, sections]);
+  const themeParam = params.get("theme");
+  const page = pages ? (themeParam !== null ? Math.min(Number(themeParam) || 0, pages.length - 1) : Math.max(0, pages.findIndex((entry) => entry.indices.includes(currentIndex)))) : 0;
+  const showPage = (next: number) => {
+    const query = new URLSearchParams(params.toString());
+    query.set("theme", String(next));
+    router.replace(`${pathname}?${query}`);
+  };
   const index = kind === "verse" ? 0 : sectionParam === "current" ? currentIndex : sectionParam !== null ? Math.min(Number(sectionParam) || 0, sections.length - 1) : null;
   const showSection = (next: number | null) => {
     // A chapter review is one stop: the map opens it straight away.
@@ -77,7 +88,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : index === null ? (
-        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} />
+        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} />
       ) : (
         <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} />
       )}
