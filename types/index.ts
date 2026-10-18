@@ -381,6 +381,17 @@ export interface UserProgress {
   // Learn each verse whole instead of sense line by sense line (lib/learnSteps.ts) — the same
   // stages, run once over the full verse. Undefined (the default) is line by line.
   wholeVerseLearning?: boolean;
+  // Whether each line's Fill in the vowels stage, and the Last letters stage (type the first
+  // letters with each word's last letter showing), run during Learn (lib/learnSteps.ts).
+  // Undefined (the default) is on.
+  vowelsStageEnabled?: boolean;
+  lastLettersStageEnabled?: boolean;
+  // The end-of-verse challenges (lib/learnSteps.ts): first letters against the clock, saying the
+  // verse while holding a number and color in mind, and first letters with math breaks between
+  // sense lines. Undefined (the default) is on.
+  timedTypeStageEnabled?: boolean;
+  payloadStageEnabled?: boolean;
+  mathBreakStageEnabled?: boolean;
   // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
   // set (the default — every day behaves as it always has). On that calendar day: a lapse in
   // streakActions.ts's evaluateStreakOnLoad that would otherwise cost the streak is forgiven

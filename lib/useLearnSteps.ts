@@ -16,9 +16,15 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   // `?? false`: self-healing for progress saved before this field existed.
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
+  // On unless turned off — undefined for progress saved before these stages existed.
+  const vowels = useProgressStore((state) => state.vowelsStageEnabled) ?? true;
+  const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
+  const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
+  const payload = useProgressStore((state) => state.payloadStageEnabled) ?? true;
+  const mathBreaks = useProgressStore((state) => state.mathBreakStageEnabled) ?? true;
 
   return useMemo(
-    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, wholeVerse }),
-    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, wholeVerse],
+    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, vowels, lastLetters, timedType, payload, mathBreaks, wholeVerse }),
+    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, vowels, lastLetters, timedType, payload, mathBreaks, wholeVerse],
   );
 }

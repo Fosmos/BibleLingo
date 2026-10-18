@@ -8,6 +8,11 @@ interface LearnSettingsActions {
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   setWholeVerseLearning: (value: boolean) => void;
+  setVowelsStageEnabled: (value: boolean) => void;
+  setLastLettersStageEnabled: (value: boolean) => void;
+  setTimedTypeStageEnabled: (value: boolean) => void;
+  setPayloadStageEnabled: (value: boolean) => void;
+  setMathBreakStageEnabled: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -42,5 +47,19 @@ export function createLearnSettingsActions(
       const state = get();
       set(persist({ ...state, wholeVerseLearning: value }));
     },
+
+    setVowelsStageEnabled: (value) => {
+      const state = get();
+      set(persist({ ...state, vowelsStageEnabled: value }));
+    },
+
+    setLastLettersStageEnabled: (value) => {
+      const state = get();
+      set(persist({ ...state, lastLettersStageEnabled: value }));
+    },
+
+    setTimedTypeStageEnabled: (value) => set(persist({ ...get(), timedTypeStageEnabled: value })),
+    setPayloadStageEnabled: (value) => set(persist({ ...get(), payloadStageEnabled: value })),
+    setMathBreakStageEnabled: (value) => set(persist({ ...get(), mathBreakStageEnabled: value })),
   };
 }

@@ -8,7 +8,8 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 // The optional Learn stages — split out of ProfileAdvancedSettings.tsx purely to keep that file
 // under this codebase's 200-line cap. Every lesson runs Listen & Repeat, Fill in the blank, Say it
 // with hints, Type it by first letter and Say it from memory (lib/learnSteps.ts) — sense line by
-// sense line, or over the whole verse with "Learn line by line" off; the rest add to that, off
+// sense line, or over the whole verse with "Learn line by line" off. Fill in the vowels, Last
+// letters and the end-of-verse challenges run too unless turned off; the rest add to that, off
 // by default.
 export function LearnStageToggles() {
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
@@ -21,6 +22,16 @@ export function LearnStageToggles() {
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
   const lineByLine = !(useProgressStore((state) => state.wholeVerseLearning) ?? false);
   const setWholeVerseLearning = useProgressStore((state) => state.setWholeVerseLearning);
+  const vowelsStageEnabled = useProgressStore((state) => state.vowelsStageEnabled) ?? true;
+  const setVowelsStageEnabled = useProgressStore((state) => state.setVowelsStageEnabled);
+  const lastLettersStageEnabled = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
+  const setLastLettersStageEnabled = useProgressStore((state) => state.setLastLettersStageEnabled);
+  const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
+  const payload = useProgressStore((state) => state.payloadStageEnabled) ?? true;
+  const mathBreaks = useProgressStore((state) => state.mathBreakStageEnabled) ?? true;
+  const setTimedType = useProgressStore((state) => state.setTimedTypeStageEnabled);
+  const setPayload = useProgressStore((state) => state.setPayloadStageEnabled);
+  const setMathBreaks = useProgressStore((state) => state.setMathBreakStageEnabled);
 
   return (
     <>
@@ -30,6 +41,27 @@ export function LearnStageToggles() {
         label="Learn line by line"
         description="Each verse a sense line at a time, each new line recalled with the lines before it. Off learns the whole verse at once — the same stages over the full verse."
       />
+      <ToggleSwitch
+        checked={vowelsStageEnabled}
+        onChange={setVowelsStageEnabled}
+        label="Fill in the vowels"
+        description="Each line with its vowels blank — type the missing vowels in, in order."
+      />
+      <ToggleSwitch
+        checked={lastLettersStageEnabled}
+        onChange={setLastLettersStageEnabled}
+        label="Last letters"
+        description="Only each word's last letter shows — type every word's first letter, before the first letters are typed with nothing showing."
+      />
+      <p className="text-sm text-ink-muted">Once each verse is learned, the whole verse:</p>
+      <ToggleSwitch checked={timedType} onChange={setTimedType} label="Against the clock" description="Type it by first letter with a timer that starts on your first letter." />
+      <ToggleSwitch
+        checked={payload}
+        onChange={setPayload}
+        label="Hold the code"
+        description="A number and color flash up for 2 seconds before you say it from memory — pick them both after to move on."
+      />
+      <ToggleSwitch checked={mathBreaks} onChange={setMathBreaks} label="Math breaks" description="Type it by first letter, with a quick math problem to answer after each sense line." />
       <p className="text-sm text-ink-muted">Add any of these extra stages:</p>
       <div className="flex items-start gap-1.5">
         <ToggleSwitch

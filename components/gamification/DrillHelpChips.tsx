@@ -10,7 +10,9 @@ import type { Peek } from "@/lib/peek";
 // The lesson page tray's first row (design_handoff_lesson_view): three chips at the right —
 // Letters and Verse open a tab over the lesson with the verse in its sense lines, as just its
 // first letters or in full (one at a time; tap again to close, and it closes when the stage
-// changes), and Skip moves past the stage (its testing shortcut, AutoCompleteButton.tsx). No
+// changes), and Skip moves past the stage (its testing shortcut, AutoCompleteButton.tsx). On a
+// drill said aloud or typed by first letter, "Speak instead" / "Type instead" first switches the
+// rest of the lesson's such drills to the other way (lib/useInputSwap.ts). No
 // chips on Listen and Pray.
 export function DrillHelpChips() {
   const stage = useLessonSessionStore((state) => state.sheetStage);
@@ -18,6 +20,7 @@ export function DrillHelpChips() {
   const setPeek = useLessonSessionStore((state) => state.setPeek);
   const skip = useLessonSessionStore((state) => state.skipStage);
   const verseText = useLessonSessionStore((state) => state.helpVerseText);
+  const inputSwap = useLessonSessionStore((state) => state.inputSwap);
   const stageKey = stage ? `${stage.label}|${stage.reference}|${stage.step}` : "";
 
   // A new stage (or a new step within one, which brings its own Skip) starts with the tab shut.
@@ -39,6 +42,11 @@ export function DrillHelpChips() {
             </p>
           ))}
         </div>
+      )}
+      {inputSwap && (
+        <Chip on={false} onClick={() => inputSwap.choose(inputSwap.to)}>
+          {inputSwap.to === "type" ? "Type instead" : "Speak instead"}
+        </Chip>
       )}
       <Chip on={peek === "letters"} onClick={() => toggle("letters")}>
         Letters

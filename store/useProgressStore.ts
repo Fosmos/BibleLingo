@@ -95,6 +95,11 @@ interface ProgressActions {
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   setWholeVerseLearning: (value: boolean) => void;
+  setVowelsStageEnabled: (value: boolean) => void;
+  setLastLettersStageEnabled: (value: boolean) => void;
+  setTimedTypeStageEnabled: (value: boolean) => void;
+  setPayloadStageEnabled: (value: boolean) => void;
+  setMathBreakStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 

@@ -81,6 +81,9 @@ interface LessonSessionState {
   verseCompactFit: boolean;
   // The current stage's skip (its AutoCompleteButton.tsx callback), for the Skip chip.
   skipStage: (() => void) | null;
+  // The Speak / Type chip on a drill that can be done either way (lib/useInputSwap.ts): which way
+  // it switches to, and how.
+  inputSwap: { to: "speak" | "type"; choose: (input: "speak" | "type") => void } | null;
   // The verse the lesson page shows (lib/usePublishHelpVerse.ts), for the help chips' tabs.
   helpVerseText: string | null;
 }
@@ -107,6 +110,7 @@ interface LessonSessionActions {
   setPeek: (peek: Peek) => void;
   setVerseCompactFit: (compact: boolean) => void;
   setSkipStage: (skip: (() => void) | null) => void;
+  setInputSwap: (swap: LessonSessionState["inputSwap"]) => void;
   setHelpVerseText: (text: string | null) => void;
 }
 
@@ -138,6 +142,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   peek: null,
   verseCompactFit: false,
   skipStage: null,
+  inputSwap: null,
   helpVerseText: null,
   begin: () => set((state) => ({ activeCount: state.activeCount + 1 })),
   end: () => set((state) => ({ activeCount: Math.max(0, state.activeCount - 1) })),
@@ -159,6 +164,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   setPeek: (peek) => set({ peek }),
   setVerseCompactFit: (compact) => set({ verseCompactFit: compact }),
   setSkipStage: (skip) => set({ skipStage: skip }),
+  setInputSwap: (swap) => set({ inputSwap: swap }),
   setHelpVerseText: (text) => set({ helpVerseText: text }),
   setCompletedPath: (pathKey) => set({ completedPath: pathKey }),
 }));

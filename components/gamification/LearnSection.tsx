@@ -17,6 +17,7 @@ import { learnSheetStage } from "@/lib/learnSheetStage";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { useReferenceStep } from "@/lib/useReferenceStep";
+import { useInputSwap } from "@/lib/useInputSwap";
 import { senseLineSlice } from "@/lib/senseLineSlice";
 import { ReferenceGate } from "@/components/gamification/ReferenceGate";
 import { LearnPhaseContent } from "@/components/gamification/LearnPhaseContent";
@@ -41,13 +42,11 @@ interface LearnSectionProps {
   embeddedInMindMap?: boolean;
 }
 
-// A heavier day's worth of new verses gets a longer prayer timer — see PrayRep.tsx's own
-// default (30s) for everything at or under this threshold.
+// A heavier day's worth of new verses gets a longer prayer timer (PrayRep.tsx's default is 30s).
 const PRAY_LONGER_VERSE_THRESHOLD = 3;
 const LONGER_PRAYER_DURATION_S = 60;
 
-// Only the orientation phase ever calls this — every other phase gets this no-op.
-function noopAnnotationsChange() {}
+function noopAnnotationsChange() {} // Only the orientation phase changes annotations.
 
 // A day's new verses go through Orientation ONCE, then each verse runs its stages one at a time
 // (lib/learnSteps.ts) — every recall stage drilling the verse's reference as its opening, entered
@@ -80,8 +79,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const lastReal = realVerses[realVerses.length - 1];
   const previousVerse = firstReal ? getAdjacentVerse(firstReal.book, firstReal.chapter, firstReal.verseNumber, -1) : undefined;
   const nextVerse = lastReal ? getAdjacentVerse(lastReal.book, lastReal.chapter, lastReal.verseNumber, 1) : undefined;
-  // The fixed "page" every per-verse stage renders against — see this component's own doc
-  // comment on why this is computed once rather than per stage.
+  // The fixed "page" every per-verse stage renders against (computed once — see the doc comment).
   const contextVerses = useMemo(
     () => [previousVerse, ...realVerses, nextVerse].filter((entry): entry is VerseSegment => entry !== undefined),
     [previousVerse, realVerses, nextVerse],
@@ -95,11 +93,12 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
   const { pending, celebrate, finish } = useCelebration();
   const advance = () => (stepIndex + 1 >= steps.length ? celebrate(onComplete, "New Verses Learned") : celebrate(() => setStepIndex(stepIndex + 1)));
-  const reference = useReferenceStep(steps[stepIndex], stepIndex, day);
+  // The step as it runs — a spoken drill may be typed instead, or the other way (Speak / Type chip).
+  const { step, typedPayload } = useInputSwap(steps[stepIndex]);
+  const reference = useReferenceStep(step, stepIndex, day);
 
   if (pending) return <SectionCompleteOverlay text={pending.text} onDone={finish} />;
 
-  const step = steps[stepIndex];
   if (!step) return null;
 
   const topBar = (
@@ -127,7 +126,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
     </ReferenceGate>
   );
 
-  if (step.phase === "speak_verse") {
+  if (step.phase === "speak_verse" || step.phase === "speak_payload") {
     return gated(
       <LearnSpeakVerseStage
         day={day}
@@ -137,6 +136,8 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
         heading={heading}
         layout={layout}
         topBar={topBar}
+        payload={step.phase === "speak_payload"}
+        typed={typedPayload}
         onAdvance={advance}
       />,
     );
