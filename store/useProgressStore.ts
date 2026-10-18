@@ -17,7 +17,7 @@ import { createCustomClauseRoleActions } from "@/store/customClauseRoleActions";
 import { createSessionCheckpointActions } from "@/store/sessionCheckpointActions";
 import { createProblemVerseActions } from "@/store/problemVerseActions";
 import { createReviewSettingsActions } from "@/store/reviewSettingsActions";
-import { createLearnSettingsActions } from "@/store/learnSettingsActions";
+import { createLearnSettingsActions, type LearnSettingsActions } from "@/store/learnSettingsActions";
 import { createPathActions } from "@/store/pathActions";
 import { createStumbleTrackingActions } from "@/store/stumbleTrackingActions";
 import { createVespersActions } from "@/store/vespersActions";
@@ -90,20 +90,11 @@ interface ProgressActions {
   setSrsSpeakModeEnabled: (value: boolean) => void;
   setSrsPromotionThreshold: (value: number) => void;
   setRestDayOfWeek: (value: number | null) => void;
-  setUnderstandStageEnabled: (value: boolean) => void;
-  setVisualizeStageEnabled: (value: boolean) => void;
-  setWriteFirstLetterStageEnabled: (value: boolean) => void;
-  setRhythmStageEnabled: (value: boolean) => void;
-  setWholeVerseLearning: (value: boolean) => void;
-  setPrayStageEnabled: (value: boolean) => void;
-  setLastLettersStageEnabled: (value: boolean) => void;
-  setTimedTypeStageEnabled: (value: boolean) => void;
-  setPayloadStageEnabled: (value: boolean) => void;
-  setMathBreakStageEnabled: (value: boolean) => void;
   resetProgress: () => void;
 }
 
-export type ProgressStore = UserProgress & ProgressActions;
+// The Learn settings' setters (store/learnSettingsActions.ts) are declared there.
+export type ProgressStore = UserProgress & ProgressActions & LearnSettingsActions;
 
 // Reads the signed-in user id at save time rather than threading it through every action —
 // every action runs only while signed in (AuthGate gates every route), so never null here.

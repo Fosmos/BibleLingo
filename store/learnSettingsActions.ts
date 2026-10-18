@@ -2,7 +2,7 @@ import type { StoreApi } from "zustand";
 import type { UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 
-interface LearnSettingsActions {
+export interface LearnSettingsActions {
   setUnderstandStageEnabled: (value: boolean) => void;
   setVisualizeStageEnabled: (value: boolean) => void;
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
@@ -13,6 +13,7 @@ interface LearnSettingsActions {
   setTimedTypeStageEnabled: (value: boolean) => void;
   setPayloadStageEnabled: (value: boolean) => void;
   setMathBreakStageEnabled: (value: boolean) => void;
+  setPreviousLineShown: (value: boolean) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -58,5 +59,6 @@ export function createLearnSettingsActions(
     setTimedTypeStageEnabled: (value) => set(persist({ ...get(), timedTypeStageEnabled: value })),
     setPayloadStageEnabled: (value) => set(persist({ ...get(), payloadStageEnabled: value })),
     setMathBreakStageEnabled: (value) => set(persist({ ...get(), mathBreakStageEnabled: value })),
+    setPreviousLineShown: (value) => set(persist({ ...get(), previousLineShown: value })),
   };
 }

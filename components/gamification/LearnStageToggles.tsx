@@ -22,6 +22,8 @@ export function LearnStageToggles() {
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
   const lineByLine = !(useProgressStore((state) => state.wholeVerseLearning) ?? false);
   const setWholeVerseLearning = useProgressStore((state) => state.setWholeVerseLearning);
+  const previousLineShown = useProgressStore((state) => state.previousLineShown) ?? true;
+  const setPreviousLineShown = useProgressStore((state) => state.setPreviousLineShown);
   const prayStageEnabled = useProgressStore((state) => state.prayStageEnabled) ?? false;
   const setPrayStageEnabled = useProgressStore((state) => state.setPrayStageEnabled);
   const lastLettersStageEnabled = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
@@ -46,6 +48,12 @@ export function LearnStageToggles() {
         onChange={setLastLettersStageEnabled}
         label="Last letters"
         description="Only each word's last letter shows — type every word's first letter, before the first letters are typed with nothing showing."
+      />
+      <ToggleSwitch
+        checked={previousLineShown}
+        onChange={setPreviousLineShown}
+        label="Show the line before"
+        description="Every drill shows the last sense line of the verse before, above the reference, as a lead-in."
       />
       <p className="text-sm text-ink-muted">Once each verse is learned, the whole verse:</p>
       <ToggleSwitch checked={timedType} onChange={setTimedType} label="Against the clock" description="Type it by first letter with a timer that starts on your first letter." />

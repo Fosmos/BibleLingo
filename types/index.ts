@@ -393,6 +393,9 @@ export interface UserProgress {
   timedTypeStageEnabled?: boolean;
   payloadStageEnabled?: boolean;
   mathBreakStageEnabled?: boolean;
+  // Whether every drill shows the last sense line of the verse before, above the reference
+  // (LessonPageCard.tsx). Undefined (the default) is shown.
+  previousLineShown?: boolean;
   // The reader's own weekly day off (0 = Sunday ... 6 = Saturday), or null for no rest day
   // set (the default — every day behaves as it always has). On that calendar day: a lapse in
   // streakActions.ts's evaluateStreakOnLoad that would otherwise cost the streak is forgiven

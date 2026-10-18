@@ -11,6 +11,7 @@ import { pageIndexForVerse } from "@/lib/chapterPagination";
 import { computeGhostContext } from "@/lib/ghostContext";
 import { buildEmbeddedChapterPage } from "@/lib/buildEmbeddedChapterPage";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
+import { useProgressStore } from "@/store/useProgressStore";
 import { ChapterPageContent } from "@/components/gamification/ChapterPageContent";
 import { PericopeTitle } from "@/components/gamification/PericopeTitle";
 import { GhostContextLine } from "@/components/gamification/GhostContextLine";
@@ -27,8 +28,7 @@ interface LessonPageCardProps {
   layout: ChapterReadingLayout;
   // The verse drilled — for a multi-verse stage (`isActive`), whichever decides the page shown.
   activeVerse: VerseSegment;
-  // Which verse(s) get `renderActiveVerse` (default `activeVerse` alone) — for a stage drilling
-  // several verses on one page at once (ReviewChain.tsx's own combine stage).
+  // Which verse(s) get `renderActiveVerse` (default `activeVerse` alone) — ReviewChain.tsx's combine stage.
   isActive?: (verse: VerseSegment) => boolean;
   // What to show in the active verse's place, called once per clause (senseLineWordRanges) — the
   // full verse, first letters, or blanks, in the same sense-line structure as every other verse.
@@ -43,8 +43,7 @@ interface LessonPageCardProps {
   showNextGhost?: boolean;
   // Hides the verse zone's reference and both ghost lines — a question asking where the verse is from.
   hideWhereFrom?: boolean;
-  // The verses the lesson page's verse zone shows (no pagination there) — `[activeVerse]` by
-  // default; LessonWholeDayPageCard.tsx passes its own list through.
+  // The verses the lesson page's verse zone shows — `[activeVerse]` by default (LessonWholeDayPageCard.tsx passes its own).
   embeddedVerses?: VerseSegment[];
 }
 
@@ -80,10 +79,11 @@ export function LessonPageCard({
   const shownVerses = slice ? [slice.whole] : (embeddedVerses ?? [activeVerse]);
   usePublishHelpVerse(senseCardPortalNode ? shownVerses.map((verse) => verse.text).join(" ") : null);
   const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
+  // The verse before's last sense line above the reference — optional (Profile > Advanced).
+  const showPrevious = useProgressStore((state) => state.previousLineShown) ?? true;
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
   const [lastAutoPageIndex, setLastAutoPageIndex] = useState(autoPageIndex);
-  // A manual flip snaps back once recall moves to a new page (adjusted during render).
   if (autoPageIndex !== lastAutoPageIndex) {
     setLastAutoPageIndex(autoPageIndex);
     setManualPageIndex(null);
@@ -110,7 +110,7 @@ export function LessonPageCard({
       <SheetVerseZone
         fitKey={`${stageLabel}|${activeVerse.id}|${shown.map((verse) => verse.id).join(",")}`}
         reference={referenceSlot ?? (hideWhereFrom ? undefined : formatVerseRangeLabel(shown))}
-        ghostPrev={hideWhereFrom ? undefined : edgeGhost(shown[0], "previous")}
+        ghostPrev={hideWhereFrom || !showPrevious ? undefined : edgeGhost(shown[0], "previous")}
         ghostNext={!hideWhereFrom && showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
       >
         {(fontSizePx) => (
@@ -155,7 +155,7 @@ export function LessonPageCard({
       {referenceSlot && <div className="px-4 pb-2 font-serif text-xl text-brand-700 dark:text-brand-300">{referenceSlot}</div>}
 
       <GhostContextLine
-        verse={previousEdgeVerse}
+        verse={showPrevious ? previousEdgeVerse : undefined}
         text={prevGhostText}
         ellipsis="leading"
         align="left"
