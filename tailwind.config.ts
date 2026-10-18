@@ -47,11 +47,11 @@ const config: Config = {
         // (`brand` — buttons, active states, focus), a sage second accent (`sage`) and a warm neutral
         // ramp (`sand`). The older names below are kept and re-pointed so every existing class
         // picks the new palette up without per-file edits.
-        paper: "#FAF3E8",
+        paper: "#FAF9F6",
         mist: "#EEE7DB",
         line: "#DCD3C4",
         parchment: {
-          DEFAULT: "#FAF3E8",
+          DEFAULT: "#FAF9F6",
           heading: "#474238",
         },
         ink: {

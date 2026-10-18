@@ -15,7 +15,7 @@ export function MindMapMemorizedCheck({ size }: MindMapMemorizedCheckProps) {
   return (
     <span
       aria-label="Memorized"
-      className={`pointer-events-none absolute flex items-center justify-center rounded-full border-2 border-[#FAF3E8] text-white bg-sage-600 dark:border-zinc-950 ${SIZE_CLASS[size]}`}
+      className={`pointer-events-none absolute flex items-center justify-center rounded-full border-2 border-[#FAF9F6] text-white bg-sage-600 dark:border-zinc-950 ${SIZE_CLASS[size]}`}
     >
       <Check size={ICON_SIZE[size]} strokeWidth={3.5} />
     </span>
