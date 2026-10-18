@@ -10,11 +10,16 @@ import { buildTrail, type TrailStop } from "@/lib/trailStops";
 import { readerHref } from "@/lib/readerHref";
 import { mapThemePages } from "@/lib/mapThemePages";
 import { parsePathKey } from "@/lib/memorizationContent";
+import { pathTags, sectionTags } from "@/lib/trailTags";
+import type { LocationTagLevel } from "@/types";
+import type { TrailSection } from "@/lib/trailStops";
 import { PATH_TYPE_META } from "@/lib/pathTypeMeta";
 import { useArrivalToast } from "@/lib/useArrivalToast";
 import { PericopeMapScreen } from "@/components/gamification/PericopeMapScreen";
 import { SectionTrailScreen } from "@/components/gamification/SectionTrailScreen";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
+
+const PASSAGE_TAG_LEVELS: LocationTagLevel[] = ["book", "chapter", "pericope"];
 
 interface PathTrailScreenProps {
   pathKey: string;
@@ -64,6 +69,12 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   const pages = useMemo(() => (kind === "book" ? mapThemePages(parsePathKey(pathKey).identifier, sections) : null), [kind, pathKey, sections]);
   const themeParam = params.get("theme");
   const page = pages ? (themeParam !== null ? Math.min(Number(themeParam) || 0, pages.length - 1) : Math.max(0, pages.findIndex((entry) => entry.indices.includes(currentIndex)))) : 0;
+  // Memory Palace tags on a book or chapter path's map and trail, for the scopes turned on — book,
+  // chapter and pericope until the reader has chosen in Settings.
+  const tagLevels = useProgressStore((state) => state.locationTagLevels) ?? PASSAGE_TAG_LEVELS;
+  const passagePath = kind === "book" || kind === "chapter";
+  const headerTags = useMemo(() => (passagePath ? pathTags(kind, sections, tagLevels) : []), [passagePath, kind, sections, tagLevels]);
+  const tagsFor = passagePath ? (section: TrailSection) => sectionTags(section, tagLevels) : undefined;
   const showPage = (next: number) => {
     const query = new URLSearchParams(params.toString());
     query.set("theme", String(next));
@@ -88,9 +99,9 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : index === null ? (
-        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} />
+        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} headerTags={headerTags} tagsFor={tagsFor} />
       ) : (
-        <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} />
+        <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} tagsFor={tagsFor} />
       )}
       {open && (
         <TrailNodeSheet

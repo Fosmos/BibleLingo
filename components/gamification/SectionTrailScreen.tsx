@@ -7,6 +7,8 @@ import { layoutSectionTrail, roadPath, TRAIL_WIDTH } from "@/lib/trailLayout";
 import { pericopeColour } from "@/lib/chapterPathPalette";
 import { TrailStone } from "@/components/gamification/TrailStone";
 import { TrailNextBanner } from "@/components/gamification/TrailNextBanner";
+import type { TrailTag } from "@/lib/trailTags";
+import { TrailTagRow } from "@/components/gamification/TrailTagRow";
 
 interface SectionTrailScreenProps {
   pathLabel: string;
@@ -15,6 +17,8 @@ interface SectionTrailScreenProps {
   onBack: () => void;
   onTapStop: (stop: TrailStop) => void;
   onOpenSection: (index: number) => void;
+  // Memory Palace tags (lib/trailTags.ts) for a section, shown under its header.
+  tagsFor?: (section: TrailSection) => TrailTag[];
 }
 
 const at = (x: number, y: number) => ({ "--x": `${x}px`, "--y": `${y}px` }) as CSSProperties;
@@ -23,7 +27,7 @@ const at = (x: number, y: number) => ({ "--x": `${x}px`, "--y": `${y}px` }) as C
 // section's pericope colour with just its reference and title, the stones on a winding road (solid
 // sage up to the stop that's up next, dotted after), and the next section — or the finish — below,
 // scrolled so the stop that's up next sits about 200px down.
-export function SectionTrailScreen({ pathLabel, sections, index, onBack, onTapStop, onOpenSection }: SectionTrailScreenProps) {
+export function SectionTrailScreen({ pathLabel, sections, index, onBack, onTapStop, onOpenSection, tagsFor }: SectionTrailScreenProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const section = sections[index];
   const { stones, bannerTop, height } = layoutSectionTrail(section);
@@ -49,6 +53,7 @@ export function SectionTrailScreen({ pathLabel, sections, index, onBack, onTapSt
             <span className="font-heading text-[21px] leading-[1.05]">{section.title}</span>
           </div>
         </div>
+        {tagsFor && <TrailTagRow tags={tagsFor(section)} className="mt-3 px-1" />}
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pb-[120px] [scrollbar-width:none]">
         <div style={{ "--h": `${height}px` } as CSSProperties} className="relative mx-auto h-[var(--h)] w-[370px] max-w-full">

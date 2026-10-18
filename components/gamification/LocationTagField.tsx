@@ -7,16 +7,18 @@ import { useProgressStore } from "@/store/useProgressStore";
 interface LocationTagFieldProps {
   tagKey: string;
   className?: string;
+  // The unset button's text — "Add location tag" by default.
+  addLabel?: string;
 }
 
 // One scope's free-text location tag — a plain "+ Add location tag" button until set, then a
 // small chip showing whatever was typed (click either to edit). No suggestions, no predefined
-// list of any kind: this is the one place every level (book/chapter/verse — a pericope now
-// edits its own tag in the Mind Map hall editor instead, see MindMapHallEditor.tsx)
-// reads and writes UserProgress.locationTags — see lib/locationTags.ts's locationTagKey.
-export function LocationTagField({ tagKey, className }: LocationTagFieldProps) {
+// list of any kind: this is the one place every level (book/chapter/pericope/verse — the Mind Map's
+// pericope hall editor, MindMapHallEditor.tsx, writes the same keys) reads and writes UserProgress.locationTags — see lib/locationTags.ts's locationTagKey.
+export function LocationTagField({ tagKey, className, addLabel = "Add location tag" }: LocationTagFieldProps) {
   const value = useProgressStore((state) => state.locationTags[tagKey]);
   const setLocationTag = useProgressStore((state) => state.setLocationTag);
+  const clearLocationTag = useProgressStore((state) => state.clearLocationTag);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const sizeClass = "gap-1 px-3 py-1 text-xs";
@@ -29,7 +31,9 @@ export function LocationTagField({ tagKey, className }: LocationTagFieldProps) {
 
   function save() {
     const trimmed = draft.trim();
+    // Emptied out, the tag is removed.
     if (trimmed) setLocationTag(tagKey, trimmed);
+    else if (value) clearLocationTag(tagKey);
     setEditing(false);
   }
 
@@ -69,7 +73,7 @@ export function LocationTagField({ tagKey, className }: LocationTagFieldProps) {
       onClick={startEditing}
       className={`inline-flex items-center rounded-full border border-dashed border-line font-medium text-ink-muted hover:border-brand-500 hover:text-brand-600 dark:border-zinc-700 ${sizeClass} ${className ?? ""}`}
     >
-      <Plus size={iconSize} /> Add location tag
+      <Plus size={iconSize} /> {addLabel}
     </button>
   );
 }
