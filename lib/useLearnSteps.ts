@@ -17,14 +17,14 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
   // On unless turned off — undefined for progress saved before these stages existed.
-  const vowels = useProgressStore((state) => state.vowelsStageEnabled) ?? true;
   const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
   const payload = useProgressStore((state) => state.payloadStageEnabled) ?? true;
   const mathBreaks = useProgressStore((state) => state.mathBreakStageEnabled) ?? true;
+  const pray = useProgressStore((state) => state.prayStageEnabled) ?? false;
 
   return useMemo(
-    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, vowels, lastLetters, timedType, payload, mathBreaks, wholeVerse }),
-    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, vowels, lastLetters, timedType, payload, mathBreaks, wholeVerse],
+    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse }),
+    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse],
   );
 }

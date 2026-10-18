@@ -4,7 +4,8 @@
 // optional stages it adds on top: the same three booleans buildSteps gates them on (see
 // UserProgress.understandStageEnabled etc. in types/index.ts). Rhythm is a separate, global
 // Profile > Advanced toggle instead (rhythmStageEnabled), not part of this per-path slider.
-// Review, Pray, and cumulative multiverse review are unconditional at every level, by design.
+// Review and cumulative multiverse review are unconditional at every level, by design; Pray is a
+// separate Profile > Advanced toggle (prayStageEnabled), off by default.
 export interface LearnIntensityLevel {
   level: number;
   label: string;

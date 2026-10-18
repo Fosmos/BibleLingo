@@ -43,7 +43,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
       visualize: toggles.visualizeStageEnabled,
       rhythm: toggles.rhythmStageEnabled ?? false,
       writeFirstLetter: toggles.writeFirstLetterStageEnabled,
-      vowels: toggles.vowelsStageEnabled ?? true,
+      pray: toggles.prayStageEnabled ?? false,
       lastLetters: toggles.lastLettersStageEnabled ?? true,
       timedType: toggles.timedTypeStageEnabled ?? true,
       payload: toggles.payloadStageEnabled ?? true,
@@ -51,7 +51,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
       wholeVerse: toggles.wholeVerseLearning,
     });
     return [...new Set(steps.filter((step) => step.phase !== "pray").map((step) => STAGE_LABELS[step.phase]))];
-  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.vowelsStageEnabled, toggles.lastLettersStageEnabled, toggles.timedTypeStageEnabled, toggles.payloadStageEnabled, toggles.mathBreakStageEnabled, toggles.wholeVerseLearning]);
+  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.prayStageEnabled, toggles.lastLettersStageEnabled, toggles.timedTypeStageEnabled, toggles.payloadStageEnabled, toggles.mathBreakStageEnabled, toggles.wholeVerseLearning]);
   const sections = useMemo(() => buildTrail(kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone), [kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone]);
   const [open, setOpen] = useState<TrailStop | null>(null);
   const toast = useArrivalToast();

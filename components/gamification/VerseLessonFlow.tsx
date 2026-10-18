@@ -28,8 +28,9 @@ interface VerseLessonFlowProps {
 
 const PHASES = ["learn", "finalReview"] as const;
 
-// A single verse lesson: learn the verse, then review it together with up to the 4 learned verses
-// just before it (every path kind). Nothing after — no review of the chapter so far.
+// A single verse lesson: learn the verse, then review it with the learned verse just before it,
+// then with up to the 4 learned verses before it (every path kind). Nothing after — no review of
+// the chapter so far.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);
@@ -37,7 +38,10 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
   // The closing review: the verses before this lesson's (learning 8:9, it reviews 8:5–8) and then
   // the lesson's own verses, typed through in order.
   const prior = usePriorLearnedVerses(day);
-  const reviewDay = useMemo(() => ({ ...day, previousVerses: [...prior, ...day.newVerses.filter((verse) => verse.text.trim().length > 0)] }), [day, prior]);
+  const learned = useMemo(() => day.newVerses.filter((verse) => verse.text.trim().length > 0), [day.newVerses]);
+  const reviewDay = useMemo(() => ({ ...day, previousVerses: [...prior, ...learned] }), [day, prior, learned]);
+  // First the verse just before with the lesson's own — only when the whole run is longer than that.
+  const pairVerses = useMemo(() => (prior.length > 1 ? [prior[prior.length - 1], ...learned] : undefined), [prior, learned]);
   // Only used by the review below (LearnSection computes its own for "learn") — called
   // unconditionally regardless, since hooks can't be called after an early return.
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
@@ -66,6 +70,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
       onComplete={onComplete}
       sessionKey={sessionKey}
       phase="final"
+      pairVerses={pairVerses}
       layout={layout}
       lessonLabel={label}
       version={version}

@@ -20,8 +20,6 @@ export const INFO_TIPS = {
     "The whole verse, every word blank. After each sense line a quick math problem pops up — type the answer on the number row, then carry on with the next line's first letters.",
   payloadRecall:
     "A number and a color flash up for 2 seconds before you say the verse. Hold them in mind while you recite it from memory — then pick them both to move on.",
-  vowelBlankRep:
-    "Every vowel (a, e, i, o, u) is blank. Type them in, in order, to fill each word back in. A wrong letter flashes red — try again.",
   drawFirstLetterRep:
     "Write the verse from memory, one word at a time: draw the first letter of the underlined word with your finger, Apple Pencil, or mouse. Handwriting recognition moves on once it detects something legible (it only checks that something was drawn, never whether it's correct). Each drawn word fills in as its first letter, together with its own punctuation — nothing shows ahead of what you've written. Tap Next yourself any time if recognition is slow.",
   prayRep:

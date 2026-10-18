@@ -8,8 +8,8 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 // The optional Learn stages — split out of ProfileAdvancedSettings.tsx purely to keep that file
 // under this codebase's 200-line cap. Every lesson runs Listen & Repeat, Fill in the blank, Say it
 // with hints, Type it by first letter and Say it from memory (lib/learnSteps.ts) — sense line by
-// sense line, or over the whole verse with "Learn line by line" off. Fill in the vowels, Last
-// letters and the end-of-verse challenges run too unless turned off; the rest add to that, off
+// sense line, or over the whole verse with "Learn line by line" off. Last letters and the
+// end-of-verse challenges run too unless turned off; the rest (Pray among them) add to that, off
 // by default.
 export function LearnStageToggles() {
   const understandStageEnabled = useProgressStore((state) => state.understandStageEnabled);
@@ -22,8 +22,8 @@ export function LearnStageToggles() {
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
   const lineByLine = !(useProgressStore((state) => state.wholeVerseLearning) ?? false);
   const setWholeVerseLearning = useProgressStore((state) => state.setWholeVerseLearning);
-  const vowelsStageEnabled = useProgressStore((state) => state.vowelsStageEnabled) ?? true;
-  const setVowelsStageEnabled = useProgressStore((state) => state.setVowelsStageEnabled);
+  const prayStageEnabled = useProgressStore((state) => state.prayStageEnabled) ?? false;
+  const setPrayStageEnabled = useProgressStore((state) => state.setPrayStageEnabled);
   const lastLettersStageEnabled = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const setLastLettersStageEnabled = useProgressStore((state) => state.setLastLettersStageEnabled);
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
@@ -40,12 +40,6 @@ export function LearnStageToggles() {
         onChange={(value) => setWholeVerseLearning(!value)}
         label="Learn line by line"
         description="Each verse a sense line at a time, each new line recalled with the lines before it. Off learns the whole verse at once — the same stages over the full verse."
-      />
-      <ToggleSwitch
-        checked={vowelsStageEnabled}
-        onChange={setVowelsStageEnabled}
-        label="Fill in the vowels"
-        description="Each line with its vowels blank — type the missing vowels in, in order."
       />
       <ToggleSwitch
         checked={lastLettersStageEnabled}
@@ -99,6 +93,7 @@ export function LearnStageToggles() {
         />
         <InfoTip text={INFO_TIPS.rhythmStageToggle} />
       </div>
+      <ToggleSwitch checked={prayStageEnabled} onChange={setPrayStageEnabled} label="Pray stage" description="A short prayer timer to close each Learn lesson" />
     </>
   );
 }

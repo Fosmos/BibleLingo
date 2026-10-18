@@ -49,9 +49,9 @@ const LONGER_PRAYER_DURATION_S = 60;
 function noopAnnotationsChange() {} // Only the orientation phase changes annotations.
 
 // A day's new verses go through Orientation ONCE, then each verse runs its stages one at a time
-// (lib/learnSteps.ts) — every recall stage drilling the verse's reference as its opening, entered
-// the same way (lib/useReferenceStep.ts, ReferenceGate.tsx) — and a prayer timer closes it out. The session shares ONE top bar and
-// ONE fixed set of `contextVerses` (today's real verses plus a neighbour each side), paginated
+// (lib/learnSteps.ts) — every recall stage drilling the verse's reference as its opening
+// (lib/useReferenceStep.ts, ReferenceGate.tsx) — and an optional prayer timer closes it out. ONE
+// top bar and ONE fixed set of `contextVerses` (today's verses plus a neighbour each side), paged
 // per stage to the page holding the active verse, so the parchment never resizes.
 export function LearnSection({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: LearnSectionProps) {
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
@@ -79,7 +79,6 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const lastReal = realVerses[realVerses.length - 1];
   const previousVerse = firstReal ? getAdjacentVerse(firstReal.book, firstReal.chapter, firstReal.verseNumber, -1) : undefined;
   const nextVerse = lastReal ? getAdjacentVerse(lastReal.book, lastReal.chapter, lastReal.verseNumber, 1) : undefined;
-  // The fixed "page" every per-verse stage renders against (computed once — see the doc comment).
   const contextVerses = useMemo(
     () => [previousVerse, ...realVerses, nextVerse].filter((entry): entry is VerseSegment => entry !== undefined),
     [previousVerse, realVerses, nextVerse],
@@ -87,7 +86,9 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const heading = usePericopeHeading(firstReal?.book ?? "", firstReal?.chapter ?? 0, firstReal?.verseNumber ?? 0);
 
   const steps = useLearnSteps(realVerseIndices, day.newVerses);
-  const [stepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnLineStep", 0); // Not the old "learnStepIndex": saved under the pre-sense-line steps.
+  // Not the old "learnStepIndex" (pre-sense-line steps); held in range when stages are turned off.
+  const [savedStepIndex, setStepIndex] = useCheckpointField(sessionKey, "learnLineStep", 0);
+  const stepIndex = Math.min(savedStepIndex, Math.max(0, steps.length - 1));
   useReportSheetStage(learnSheetStage(steps, stepIndex, day), embeddedInMindMap);
   useRecordLearnedVerseCount(sessionKey, steps, stepIndex);
   const [wordAnnotations, setWordAnnotations] = useState<WordAnnotationMap>({});
@@ -170,9 +171,8 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   const verseMarkers = wholeDayPhase ? verseNumberMarkers(day.newVerses) : {};
 
   const stageKey = `${step.phase}-${step.verseIndex ?? "day"}-${step.lines?.join("-") ?? "all"}`;
-  // The reading view's own pagination budget, run over this fixed page and keyed to whichever
-  // verse is active — left unbounded, a normal day's verses can overflow the fixed, non-
-  // scrolling parchment box the same way an unpaginated reading-view chapter would.
+  // The reading view's own pagination budget, run over this fixed page and keyed to the active
+  // verse — unbounded, a normal day's verses can overflow the fixed, non-scrolling parchment.
   const verseWindow = wholeDayPhase ? undefined : paginateVerseWindow(contextVerses, heading, fullVerse.id, layout.pageBudget);
 
   return gated(

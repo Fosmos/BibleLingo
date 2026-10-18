@@ -22,9 +22,9 @@ export interface LearnStageOptions {
   visualize: boolean;
   rhythm: boolean;
   writeFirstLetter: boolean;
-  // Fill in the vowels and Last letters (UserProgress.vowelsStageEnabled/lastLettersStageEnabled).
-  vowels: boolean;
+  // Last letters (UserProgress.lastLettersStageEnabled), and Pray (UserProgress.prayStageEnabled).
   lastLetters: boolean;
+  pray: boolean;
   // The end-of-verse challenges (UserProgress.timedTypeStageEnabled/payloadStageEnabled/
   // mathBreakStageEnabled).
   timedType: boolean;
@@ -39,7 +39,7 @@ export const CONTEXT_LESS_PHASES: Phase[] = ["draw_first_letters"];
 
 // One verse learned sense line by sense line. For each line in turn: hear it and say it back
 // (Listen & Repeat), tap every one of its words back in from a bank (Fill in the blank, all
-// blank), type its missing vowels (optional), say it with first-letter hints — then type the
+// blank), say it with first-letter hints — then type the
 // first letters of every line so far with only their last letters showing (optional), then with
 // nothing showing, and say every line so far from memory. So the verse builds up a line at a
 // time, each new line recalled together with the lines before it.
@@ -48,7 +48,6 @@ function senseLineSteps(verseIndex: number, lineCount: number, options: LearnSta
   for (let line = 0; line < lineCount; line++) {
     steps.push({ phase: "listen_verse", verseIndex, lines: [line, line] });
     steps.push({ phase: "fill_in_the_blank", verseIndex, lines: [line, line] });
-    if (options.vowels) steps.push({ phase: "fill_in_the_vowels", verseIndex, lines: [line, line] });
     steps.push({ phase: "speak_hint", verseIndex, lines: [line, line] });
     if (options.lastLetters) steps.push({ phase: "type_from_last_letters", verseIndex, lines: [0, line] });
     steps.push({ phase: "fill_in_the_blank_letters", verseIndex, lines: [0, line] });
@@ -59,9 +58,7 @@ function senseLineSteps(verseIndex: number, lineCount: number, options: LearnSta
 
 // The same stages run once over the whole verse — the way verses were learned before sense lines.
 function wholeVerseSteps(verseIndex: number, options: LearnStageOptions): FlatStep[] {
-  const phases: Phase[] = ["listen_verse", "fill_in_the_blank"];
-  if (options.vowels) phases.push("fill_in_the_vowels");
-  phases.push("speak_hint");
+  const phases: Phase[] = ["listen_verse", "fill_in_the_blank", "speak_hint"];
   if (options.lastLetters) phases.push("type_from_last_letters");
   phases.push("fill_in_the_blank_letters", "speak_verse");
   return phases.map((phase) => ({ phase, verseIndex }));
@@ -81,7 +78,7 @@ function challengeSteps(verseIndex: number, options: LearnStageOptions): FlatSte
 // A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
 // optional Rhythm read-through, its sense-line ladder (above; or, with the whole-verse option, its
 // stages over the whole verse), its optional challenges (above), then its optional Write First Letter — a typing check of all of
-// today's verses together when there are several, and Pray.
+// today's verses together when there are several, and the optional Pray.
 // The verses before it are reviewed after (VerseLessonFlow.tsx).
 //
 // `verseIndices` is which of day.newVerses actually have something to drill — a translation's
@@ -100,6 +97,6 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
     if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });
   });
   if (verseIndices.length > 1) steps.push({ phase: "type_cumulative_today", cumulativeVerseIndices: verseIndices });
-  steps.push({ phase: "pray" });
+  if (options.pray) steps.push({ phase: "pray" });
   return steps;
 }

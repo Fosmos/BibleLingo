@@ -10,7 +10,6 @@ import type { ReferenceMode } from "@/lib/referenceAnswer";
 const MODES: Partial<Record<FlatStep["phase"], ReferenceMode>> = {
   fill_in_the_blank: "bank",
   fill_in_the_blank_letters: "letters",
-  fill_in_the_vowels: "letters",
   type_from_last_letters: "letters",
   type_timed: "letters",
   type_math: "letters",

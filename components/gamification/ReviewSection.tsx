@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import type { MemorizationDay, ReviewStage } from "@/types";
+import type { MemorizationDay, ReviewStage, VerseSegment } from "@/types";
 import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useCelebration } from "@/lib/useCelebration";
 import { useReportFocusVerse } from "@/lib/useReportFocusVerse";
@@ -27,6 +27,9 @@ interface ReviewSectionProps {
   // caller left is DaySessionController.tsx's weekly_review/monthly_review days, which have
   // no newVerses of their own anyway.
   phase?: "final" | "pre";
+  // "final" only: the verse before the lesson's and the lesson's own, reviewed first, before
+  // the whole run (VerseLessonFlow.tsx). Unset when that's no shorter than the whole run.
+  pairVerses?: VerseSegment[];
   // The reading view's own real page layout (see lib/useChapterScopedReadingLayout.ts) — set
   // by every caller that has one (VerseLessonFlow.tsx/DaySessionController.tsx), rendering
   // this phase's own verses on the SAME real reading-view page(s) browsing shows, blanking
@@ -45,11 +48,12 @@ interface ReviewSectionProps {
   embeddedInMindMap?: boolean;
 }
 
-export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", layout, lessonLabel, version, onExit, embeddedInMindMap }: ReviewSectionProps) {
+export function ReviewSection({ day, onComplete, sessionKey, phase = "pre", pairVerses, layout, lessonLabel, version, onExit, embeddedInMindMap }: ReviewSectionProps) {
   let stages: StageWithCelebration[];
   if (phase === "final") {
     const verses = day.previousVerses ?? [];
-    stages = verses.length > 0 ? [{ label: "Review", verses, celebrationText: "Verses reviewed" }] : [];
+    const pair = pairVerses && pairVerses.length > 0 ? [{ label: "Review", verses: pairVerses, celebrationText: "Last verse reviewed" }] : [];
+    stages = verses.length > 0 ? [...pair, { label: "Review", verses, celebrationText: "Verses reviewed" }] : [];
   } else {
     const preStages = day.reviewVerses.length > 0 ? [{ label: "Review", verses: day.reviewVerses }] : [];
     stages = preStages.map((stage) => ({ ...stage, celebrationText: "Previous verses reviewed" }));

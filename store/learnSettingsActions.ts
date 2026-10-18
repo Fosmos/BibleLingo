@@ -8,7 +8,7 @@ interface LearnSettingsActions {
   setWriteFirstLetterStageEnabled: (value: boolean) => void;
   setRhythmStageEnabled: (value: boolean) => void;
   setWholeVerseLearning: (value: boolean) => void;
-  setVowelsStageEnabled: (value: boolean) => void;
+  setPrayStageEnabled: (value: boolean) => void;
   setLastLettersStageEnabled: (value: boolean) => void;
   setTimedTypeStageEnabled: (value: boolean) => void;
   setPayloadStageEnabled: (value: boolean) => void;
@@ -48,10 +48,7 @@ export function createLearnSettingsActions(
       set(persist({ ...state, wholeVerseLearning: value }));
     },
 
-    setVowelsStageEnabled: (value) => {
-      const state = get();
-      set(persist({ ...state, vowelsStageEnabled: value }));
-    },
+    setPrayStageEnabled: (value) => set(persist({ ...get(), prayStageEnabled: value })),
 
     setLastLettersStageEnabled: (value) => {
       const state = get();

@@ -14,7 +14,6 @@ import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
 import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
 import { FirstLetterBlankRep } from "@/components/drills/FirstLetterBlankRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
-import { VowelBlankRep } from "@/components/drills/VowelBlankRep";
 import { LearnWholeDayPhaseContent } from "@/components/gamification/LearnWholeDayPhaseContent";
 import { VerseVisualBadge } from "@/components/ui/VerseVisualBadge";
 
@@ -27,7 +26,6 @@ export type Phase =
   | "speak_hint"
   | "fill_in_the_blank"
   | "fill_in_the_blank_letters"
-  | "fill_in_the_vowels"
   | "type_from_last_letters"
   | "type_timed"
   | "speak_payload"
@@ -162,8 +160,6 @@ export function LearnPhaseContent({
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} timed onComplete={onAdvance} />;
   } else if (phase === "type_math") {
     content = <FirstLetterBlankRep key={stageKey} verse={verse} layout={layout} mathBreaks onComplete={onAdvance} />;
-  } else if (phase === "fill_in_the_vowels") {
-    content = <VowelBlankRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else {
     // speak_verse/speak_payload/type_cumulative_today never reach here — LearnSection.tsx intercepts both
     // itself before rendering this component at all (see its own SpeakRep/ReviewChain use).
