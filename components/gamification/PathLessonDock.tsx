@@ -43,7 +43,7 @@ export function PathLessonDock({ onClose, place, children }: PathLessonDockProps
   return (
     <>
       <PathLessonTopBar place={place} onClose={onClose} />
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-2xl flex-col rounded-t-organic bg-parchment pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-organic-lg dark:bg-zinc-900">
+      <div data-lesson-dock className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-2xl flex-col rounded-t-organic bg-parchment pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-organic-lg dark:bg-zinc-900">
         {/* `lesson-sheet-controls` is a styling hook — OnScreenKeyboard.tsx and friends switch to their in-card layouts under it. */}
         <div ref={drillSlotRef} className="lesson-sheet-controls lesson-page-tray flex w-full flex-col px-2.5" />
       </div>

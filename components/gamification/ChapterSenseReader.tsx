@@ -88,28 +88,33 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   }, [lessonVerse, ensure]);
 
   // The selected verse ~150px below the top (instantly on entry, smoothly after). While a lesson or
-  // review runs, the verse before it opens the screen under the top bar, then the verse drilled —
-  // only the end of a long verse before, so the drilled one stays clear of the dock.
+  // review runs nothing moves while the verse drilled is in view between its top bar and dock; once
+  // it isn't, the verse before it opens the screen under the top bar, then the verse drilled — only
+  // the end of a long verse before, so the drilled one stays clear of the dock.
   const target = lessonVerse ?? (active ? { book: active.book, chapter: active.chapter, verseNumber: active.verseNumber } : null);
   const targetKey = target ? verseKey(target.book, target.chapter, target.verseNumber) : null;
   const targetLoaded = target ? Boolean(loaded[chapterKey(target)]) : false;
   useEffect(() => {
     if (!targetKey || !targetLoaded) return;
-    const frame = requestAnimationFrame(() => {
+    // A lesson's bars mount with it — measured once they're in.
+    const timer = setTimeout(() => {
       const scroller = scrollRef.current;
       const row = scroller?.querySelector<HTMLElement>(`[data-verse-key="${CSS.escape(targetKey)}"]`);
       if (!scroller || !row) return;
+      const stripBottom = document.querySelector("[data-lesson-top]")?.getBoundingClientRect().bottom;
+      const dockTop = document.querySelector("[data-lesson-dock]")?.getBoundingClientRect().top ?? window.innerHeight;
+      const rowBox = row.getBoundingClientRect();
+      if (lessonRunning && stripBottom !== undefined && rowBox.top >= stripBottom && rowBox.bottom <= dockTop) return;
       const rows = [...scroller.querySelectorAll<HTMLElement>("[data-verse-key]")];
       const before = lessonRunning ? rows[rows.indexOf(row) - 1] : undefined;
-      // Under the lesson's strip at the top (PathLessonDock.tsx), or the top bar until it's there.
-      const stripBottom = document.querySelector("[data-lesson-top]")?.getBoundingClientRect().bottom;
+      // Under the lesson's top bar (PathLessonTopBar.tsx).
       const underTop = stripBottom ? stripBottom - scroller.getBoundingClientRect().top + 8 : 64;
       const lead = lessonRunning ? underTop + Math.min(before?.offsetHeight ?? 0, LESSON_LEAD_MAX_PX) : 150;
       const top = scroller.scrollTop + row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - lead;
       scroller.scrollTo({ top, behavior: firstScroll.current || reducedMotion() ? "auto" : "smooth" });
       firstScroll.current = false;
-    });
-    return () => cancelAnimationFrame(frame);
+    }, lessonRunning ? 250 : 0);
+    return () => clearTimeout(timer);
   }, [targetKey, targetLoaded, lessonRunning]);
 
   const activeStatus = active ? statusOf(active.book, active.chapter, active.verseNumber) : "open";
@@ -119,13 +124,12 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
     <div className="relative flex h-full flex-col">
       <div ref={scrollRef} onScroll={handleScroll} className={`min-h-0 flex-1 overflow-y-auto px-[18px] pt-1.5 [overflow-anchor:none] [scrollbar-width:none] ${lessonRunning ? "pb-[70dvh]" : "pb-[220px]"}`}>
         <div ref={contentRef} className="flex flex-col gap-[18px]">
-          {!lessonRunning && (
-            <ProgressHeader
-              crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
-              eyebrow={`Sense lines · ${version}`}
-              title={inView.book}
-            />
-          )}
+          {/* Kept through a lesson too, so nothing below it moves. */}
+          <ProgressHeader
+            crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
+            eyebrow={`Sense lines · ${version}`}
+            title={inView.book}
+          />
           {chapters.map((at) => (
             <ReaderChapterSection
               key={chapterKey(at)}
