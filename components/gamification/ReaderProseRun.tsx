@@ -28,7 +28,9 @@ interface ReaderProseRunProps {
 
 // The chapter reader with sense lines off (lib/senseLineMode.ts): a pericope's verses as one
 // continuous paragraph, each verse running on after the one before, a small number in its state's
-// colours at its start. Tapping a verse selects it — tinted where it sits, nothing moving. A
+// colours at its start. Tapping a verse selects it — tinted where it sits, nothing moving (the tint
+// reaches above and below the line with vertical padding, which an inline span adds without
+// moving any line — taller than the pills a lesson puts there). A
 // lesson's verse stays in the paragraph too: its words become the stage's (an inline verse zone,
 // PathLessonVerseSlot.tsx), highlighted over just that verse, even when it starts mid-line.
 export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, onTap, duringLesson, isHidden, isRecalled, lessonVerse }: ReaderProseRunProps) {
@@ -46,7 +48,7 @@ export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, on
             key={verse.verseNumber}
             data-verse-key={verseKey(book, chapter, verse.verseNumber)}
             onClick={hosts ? undefined : () => onTap(verse)}
-            className={`cursor-pointer rounded-md [box-decoration-break:clone] ${selected ? "bg-sage-200/70 text-ink dark:bg-sage-900/50 dark:text-zinc-50" : ""}`}
+            className={`cursor-pointer rounded-md [box-decoration-break:clone] ${selected ? "bg-sage-200/70 py-[0.3em] text-ink dark:bg-sage-900/50 dark:text-zinc-50" : ""}`}
           >
             <span className={`mr-1 inline-flex h-[20px] min-w-[20px] -translate-y-[1px] items-center justify-center rounded-full px-1 align-middle font-heading text-[10.5px] leading-none ${NUMBER_CLASS[status]}`}>
               {verse.verseNumber}
