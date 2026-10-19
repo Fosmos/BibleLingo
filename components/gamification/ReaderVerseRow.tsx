@@ -36,7 +36,7 @@ const RUN_BAR = { single: "top-3 bottom-3", first: "top-3 bottom-0 rounded-b-non
 
 export const NUMBER_CLASS: Record<VerseStatus, string> = {
   rooted: "bg-sage-700 text-white",
-  due: "border-[3px] border-brand-500 bg-sage-700 text-white",
+  due: "bg-sage-700 text-white",
   growing: "bg-[color-mix(in_oklch,#3D472B_50%,#F0FAE1)] text-white",
   current: "border-[2.5px] border-dashed border-ink text-ink dark:border-zinc-100 dark:text-zinc-100",
   open: "border-2 border-sand-300 text-sand-700 dark:border-zinc-700 dark:text-zinc-400",

@@ -101,7 +101,10 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
       if (!scroller || !row) return;
       const rows = [...scroller.querySelectorAll<HTMLElement>("[data-verse-key]")];
       const before = lessonRunning ? rows[rows.indexOf(row) - 1] : undefined;
-      const lead = lessonRunning ? 64 + Math.min(before?.offsetHeight ?? 0, LESSON_LEAD_MAX_PX) : 150;
+      // Under the lesson's strip at the top (PathLessonDock.tsx), or the top bar until it's there.
+      const stripBottom = document.querySelector("[data-lesson-top]")?.getBoundingClientRect().bottom;
+      const underTop = stripBottom ? stripBottom - scroller.getBoundingClientRect().top + 8 : 64;
+      const lead = lessonRunning ? underTop + Math.min(before?.offsetHeight ?? 0, LESSON_LEAD_MAX_PX) : 150;
       const top = scroller.scrollTop + row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - lead;
       scroller.scrollTo({ top, behavior: firstScroll.current || reducedMotion() ? "auto" : "smooth" });
       firstScroll.current = false;

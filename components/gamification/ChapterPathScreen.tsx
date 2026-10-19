@@ -18,7 +18,6 @@ import { BookProgressLevel } from "@/components/gamification/BookProgressLevel";
 import { ChapterSenseReader } from "@/components/gamification/ChapterSenseReader";
 import type { ParsedVerseKey } from "@/lib/verseKey";
 import { ChapterPathLesson, type ChapterLesson } from "@/components/gamification/ChapterPathLesson";
-import { MindMapSheetBreadcrumb } from "@/components/gamification/MindMapSheetBreadcrumb";
 import type { ProgressFilter } from "@/lib/bibleProgress";
 
 interface ChapterPathScreenProps {
@@ -163,10 +162,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
         )}
       </div>
       {sheet && (
-        <ChapterPathLesson lesson={sheet} page={(sheet.kind === "lesson" && sheet.page) || { pathKey, label, days, verses, version, completedDays, todaysDay }} onClose={closeLesson} />
-      )}
-      {sheet && focusVerse && (
-        <MindMapSheetBreadcrumb book={focusVerse.book} chapter={focusVerse.chapter} verseNumber={focusVerse.verseNumber} onExit={closeLesson} />
+        <ChapterPathLesson lesson={sheet} page={(sheet.kind === "lesson" && sheet.page) || { pathKey, label, days, verses, version, completedDays, todaysDay }} onClose={closeLesson} place={lessonVerse ?? { ...place, verseNumber: sheet.verseNumber }} />
       )}
     </div>
   );
