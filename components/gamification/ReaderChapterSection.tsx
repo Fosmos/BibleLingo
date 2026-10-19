@@ -10,6 +10,7 @@ import { useReaderGroups } from "@/lib/useReaderGroups";
 import { verseKey } from "@/lib/verseKey";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { ReaderVerseRow } from "@/components/gamification/ReaderVerseRow";
+import { ReaderProseRun } from "@/components/gamification/ReaderProseRun";
 import { useProgressStore } from "@/store/useProgressStore";
 import { sealTier } from "@/lib/srsSeals";
 
@@ -22,6 +23,11 @@ interface ReaderChapterSectionProps {
   // Highlighted verse numbers in this chapter (the selection, or the whole next lesson).
   highlighted: number[];
   onTap: (verse: VerseSegment) => void;
+  // The verse here a lesson runs on, if any; whether a lesson runs anywhere; which verses it blanks.
+  lessonVerse: number | null;
+  duringLesson: boolean;
+  isHidden: (verseNumber: number) => boolean;
+  isRecalled: (verseNumber: number) => boolean;
   onLoaded: (at: ChapterRef, verses: VerseSegment[]) => void;
 }
 
@@ -31,10 +37,24 @@ function runPosition(run: number[], verseNumber: number): "single" | "first" | "
   return before && after ? "middle" : before ? "last" : after ? "first" : "single";
 }
 
+// With sense lines off, a pericope's verses as runs of continuous text — split around the verse a
+// lesson runs on, which keeps a row of its own (its lesson's verse zone) between them.
+function proseRuns(verses: VerseSegment[], lessonVerse: number | null): VerseSegment[][] {
+  const runs: VerseSegment[][] = [];
+  for (const verse of verses) {
+    const last = runs[runs.length - 1];
+    if (verse.verseNumber === lessonVerse || !last || last[0].verseNumber === lessonVerse) runs.push([verse]);
+    else last.push(verse);
+  }
+  return runs;
+}
+
 // One chapter in the continuous reader (ChapterSenseReader.tsx): its title, then its pericopes in
-// sense lines — the path's own chapters straight from its verses, any other fetched in `version`.
-export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, onLoaded }: ReaderChapterSectionProps) {
+// sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
+// (ReaderProseRun.tsx) — the path's own chapters straight from its verses, any other fetched in `version`.
+export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, lessonVerse, duringLesson, isHidden, isRecalled, onLoaded }: ReaderChapterSectionProps) {
   const entities = useProgressStore((state) => state.memorizedEntities);
+  const prose = useProgressStore((state) => state.wholeVerseLearning) ?? false;
   const onPath = pathVerses.some((verse) => verse.book === at.book && verse.chapter === at.chapter);
   const loaded = useChapterText(at.book, at.chapter, version, onPath);
   const verses = onPath ? chapterPathVerses(pathVerses, at.book, at.chapter, version) : loaded.verses;
@@ -42,6 +62,23 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
   useEffect(() => {
     if (verses?.length) onLoaded(at, verses);
   }, [verses, at, onLoaded]);
+
+  const row = (verse: VerseSegment) => (
+    <ReaderVerseRow
+      key={verse.verseNumber}
+      rowKey={verseKey(at.book, at.chapter, verse.verseNumber)}
+      verse={verse}
+      status={statusOf(verse.verseNumber)}
+      selected={!duringLesson && highlighted.includes(verse.verseNumber)}
+      run={runPosition(highlighted, verse.verseNumber)}
+      onSelect={() => onTap(verse)}
+      hostsLesson={lessonVerse === verse.verseNumber}
+      duringLesson={duringLesson}
+      hidden={isHidden(verse.verseNumber)}
+      recalled={isRecalled(verse.verseNumber)}
+      seal={sealTier(entities, { book: at.book, chapter: at.chapter, startVerse: verse.verseNumber, endVerse: verse.verseNumber })}
+    />
+  );
 
   return (
     <section data-chapter={`${at.book}|${at.chapter}`} className="flex flex-col gap-[18px]">
@@ -61,18 +98,26 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
             <h3 className="font-heading text-[21px] leading-tight text-ink dark:text-zinc-100">{group.heading}</h3>
           </div>
           <div className="-mx-1 flex flex-col">
-            {group.verses.map((verse) => (
-              <ReaderVerseRow
-                key={verse.verseNumber}
-                rowKey={verseKey(at.book, at.chapter, verse.verseNumber)}
-                verse={verse}
-                status={statusOf(verse.verseNumber)}
-                selected={highlighted.includes(verse.verseNumber)}
-                run={runPosition(highlighted, verse.verseNumber)}
-                onSelect={() => onTap(verse)}
-                seal={sealTier(entities, { book: at.book, chapter: at.chapter, startVerse: verse.verseNumber, endVerse: verse.verseNumber })}
-              />
-            ))}
+            {prose
+              ? proseRuns(group.verses, lessonVerse).map((run) =>
+                  run[0].verseNumber === lessonVerse ? (
+                    row(run[0])
+                  ) : (
+                    <ReaderProseRun
+                      key={run[0].verseNumber}
+                      book={at.book}
+                      chapter={at.chapter}
+                      verses={run}
+                      statusOf={statusOf}
+                      isSelected={(verseNumber) => !duringLesson && highlighted.includes(verseNumber)}
+                      onTap={onTap}
+                      duringLesson={duringLesson}
+                      isHidden={isHidden}
+                      isRecalled={isRecalled}
+                    />
+                  ),
+                )
+              : group.verses.map(row)}
           </div>
         </div>
       ))}

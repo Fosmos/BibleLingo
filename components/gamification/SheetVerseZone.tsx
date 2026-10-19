@@ -16,19 +16,33 @@ interface SheetVerseZoneProps {
   ghostNext?: EdgeGhost;
   // The stage and its verses — the fit starts over when it changes.
   fitKey: string;
+  // In a verse's own row in the chapter reader (PathLessonVerseSlot.tsx): the reader's size and
+  // spacing, no fitting, and no ghost lines — its neighbours are right there.
+  inline?: boolean;
 }
 
 // Line height, and the gaps between verses and between sense lines (in ems of the verse's size).
 const ROOMY = { leading: 1.6, verseGap: 1.1, clauseGap: 0.65 };
 const COMPACT = { leading: 1.35, verseGap: 0.6, clauseGap: 0.25 };
+// In a reader row: ReaderVerseRow.tsx's 17px lines, 1.5 apart, 12px between sense lines.
+const IN_ROW_PX = 17;
+const IN_ROW_SPACING = { "--sense-leading": "1.5", "--sense-verse-gap": "0.7em", "--sense-clause-gap": "0.7em" } as CSSProperties;
 
 // A lesson's verse zone (design_handoff_lesson_view): no box and no sage — the verse sits on the
 // page, centred, its reference over it at the left — one size, larger than the verse — with a
 // faint line of the verse before it above the reference, and of the verse after it below, each
 // tagged with its verse number.
 // Never scrolls: lib/useVerseFit.ts steps the type down (then goes compact) until it fits.
-export function SheetVerseZone({ children, reference, ghostPrev, ghostNext, fitKey }: SheetVerseZoneProps) {
+export function SheetVerseZone({ children, reference, ghostPrev, ghostNext, fitKey, inline = false }: SheetVerseZoneProps) {
   const { ref, fontSizePx, compact } = useVerseFit(fitKey);
+  if (inline) {
+    return (
+      <div style={IN_ROW_SPACING} className="flex flex-col">
+        {reference && <div className="mb-1.5 font-serif text-xl leading-snug text-brand-700 dark:text-brand-300">{reference}</div>}
+        <div className="font-medium text-ink dark:text-zinc-50">{children(IN_ROW_PX)}</div>
+      </div>
+    );
+  }
   const { leading, verseGap, clauseGap } = compact ? COMPACT : ROOMY;
   const spacing = {
     "--sense-leading": String(leading),

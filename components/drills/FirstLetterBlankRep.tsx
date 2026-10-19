@@ -35,7 +35,7 @@ interface FirstLetterBlankRepProps {
 }
 
 // One pass with every word blank: the reader TYPES each word's first letter, in order — the same
-// one-key-at-a-time input FirstLetterTypeRep.tsx uses — each typed letter filling in its word.
+// one-key-at-a-time input FirstLetterTypeRep.tsx uses — each typed letter filling in its whole word.
 // With `lastLetters`, each word's last letter shows throughout as the clue.
 export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed = false, mathBreaks = false, onComplete }: FirstLetterBlankRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
@@ -98,8 +98,8 @@ export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed 
   // No verse-number sup here — ChapterVerseRun.tsx already renders that verse's own real
   // number unconditionally. Called once per clause (see LessonPageCard.tsx's own
   // renderActiveVerse doc comment). Every word keeps its punctuation and its length
-  // (HiddenWord.tsx): a word already typed shows its first letter; the rest show just their
-  // underline — terracotta for the one asked for now, red after a miss.
+  // (HiddenWord.tsx): a word already typed shows in full; the rest are grey pills — ringed in
+  // terracotta for the one asked for now, red after a miss.
   // No blank is "next" while the stage's reference is entered first (ReferenceGate.tsx).
   const referenceFirst = useReferenceGate() !== null;
   function renderActiveVerse(_: VerseSegment, range: SenseLineWordRange) {

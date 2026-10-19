@@ -46,7 +46,7 @@ interface ReviewChainRevealedProps {
 
 // ReviewChain.tsx's own word-by-word reveal display, split out purely to keep that file under
 // this codebase's 200-line cap. Shows the WHOLE chain from the start — every word already
-// typed as its first letter, every word still to come at its own length over an underline, its
+// typed in full, every word still to come as a grey pill its length, its
 // punctuation showing (HiddenWord.tsx) — so typing a word fills it into the spot
 // it was always going to sit in. No scroll container of its own — the chain just grows the
 // LessonParchmentCard around it, same "never scroll, only grow" rule every other lesson stage

@@ -5,10 +5,14 @@
 // wraps under its own hanging indent (SenseLineRow.tsx).
 
 import { splitIntoLines } from "@/lib/senseLineSplitting";
+import { isProseMode } from "@/lib/senseLineMode";
+
+// With sense lines off (lib/senseLineMode.ts), a passage is one continuous line that just wraps.
+const lines = (text: string): string[] => (isProseMode() ? [text.replace(/\s*\n\s*/g, " ").trim()] : splitIntoLines(text));
 
 // See this file's own top-of-file doc comment.
 export function parseToSenseLines(text: string): string[] {
-  return splitIntoLines(text);
+  return lines(text);
 }
 
 // Shared with ChapterPageContent.tsx's own rendering so pagination's line-budget math and the
@@ -34,5 +38,5 @@ export interface SenseLineClause {
 }
 
 export function parseSenseLines(text: string): SenseLineClause[] {
-  return splitIntoLines(text).map((line) => ({ text: line }));
+  return lines(text).map((line) => ({ text: line }));
 }

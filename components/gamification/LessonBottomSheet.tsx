@@ -18,7 +18,7 @@ interface LessonBottomSheetProps {
 // The Mind Map's tap-a-verse card, sliding up over the bottom 70dvh of the screen (the canvas runs
 // full-screen behind it, the verse framed in the 30dvh left above — see
 // lib/useMindMapVerseFocusLock.ts). Its inside — header, verse zone, fixed drill zone — is
-// LessonCardBody.tsx (the chapter path uses PathLessonPage.tsx instead).
+// LessonCardBody.tsx (the chapter path docks its controls under the reader instead — PathLessonDock.tsx).
 //
 // Always mounted, only `animate.y` flips — a conditionally-mounted sheet re-ran its slide-in on
 // every parent re-render mid-lesson and could get stuck off-screen (see git history).

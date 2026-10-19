@@ -26,7 +26,7 @@ interface WordRevealLineProps {
 }
 
 // The whole line from the start — every word already typed/spoken shown in full, every word
-// still to come shown at its own length over an underline, its punctuation showing
+// still to come shown as a grey pill its length, its punctuation showing
 // (HiddenWord.tsx) — so typing or speaking a word fills it into the spot
 // it was always going to sit in, instead of the line only growing longer at the end as each
 // word comes in. Shared by FirstLetterTypeRep.tsx and ReviewChain.tsx's own word-by-word reveal.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { MemorizationDay, PathKind } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
@@ -81,9 +81,17 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
     router.replace(`${pathname}?${query}`);
   };
   const index = kind === "verse" ? 0 : sectionParam === "current" ? currentIndex : sectionParam !== null ? Math.min(Number(sectionParam) || 0, sections.length - 1) : null;
+  // A book or chapter path's pericope opens in the reader, on the section's verse you're up to.
+  const readerFor = (section: TrailSection | undefined) => {
+    const lessons = section?.stops.filter((stop) => stop.verse) ?? [];
+    const verse = (lessons.find((stop) => stop.state === "current") ?? lessons.find((stop) => stop.state !== "done") ?? lessons[0])?.verse;
+    return passagePath && !section?.review && verse ? readerHref(pathKey, version, { select: `${verse.chapter}:${verse.verseNumber}` }, false) : null;
+  };
   const showSection = (next: number | null) => {
     // A chapter review is one stop: the map opens it straight away.
     if (next !== null && sections[next]?.review) return setOpen(sections[next].stops[0]);
+    const reader = next === null ? null : readerFor(sections[next]);
+    if (reader) return router.push(reader);
     const query = new URLSearchParams(params.toString());
     if (next === null) query.delete("section");
     else query.set("section", String(next));
@@ -95,6 +103,13 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   // A passage review (a pericope's or chapter's) runs as a practice over those verses.
   const start = (stop: TrailStop, practise: boolean) =>
     router.push(stop.review ? readerHref(pathKey, version, { passage: stop.review, day: stop.dayNumber }) : practise ? readerHref(pathKey, version, { practiceDay: stop.dayNumber, verse: verseOf(stop) }) : readerHref(pathKey, version, { learnDay: stop.dayNumber, verse: verseOf(stop) }));
+
+  // A link to one of their sections (Home's Continue) goes on to the reader the same way.
+  const redirect = index === null ? null : readerFor(sections[index]);
+  useEffect(() => {
+    if (redirect) router.replace(redirect);
+  }, [redirect, router]);
+  if (redirect) return null;
 
   return (
     <>

@@ -4,44 +4,46 @@ export type HiddenWordTone = "pending" | "target" | "error" | "filled";
 
 interface HiddenWordProps {
   word: string;
-  // Shows the word's first letter, the rest still hidden (first-letter stages).
+  // Shows the word's first letter in its pill as a hint, the rest still hidden (hint stages).
   firstLetter?: boolean;
-  // Shows the word's last letter (the Last letters stage) — never on a one-letter word, where it
-  // would be the answer.
+  // Shows the word's last letter in its pill (the Last letters stage) — never on a one-letter word,
+  // where it would be the answer.
   lastLetter?: boolean;
-  // The underline: waiting (sand), the word asked for now (terracotta), a wrong try (red); filled
-  // is a first letter already typed (terracotta letter, faint line).
+  // Waiting (a grey pill), the word asked for now (ringed in terracotta), a wrong try (ringed in
+  // red), or typed — filled shows the whole word.
   tone?: HiddenWordTone;
+  // Leaves out the word's punctuation too, so a blind recall shows nothing of the sentence's shape.
+  bare?: boolean;
 }
 
-const LINE: Record<HiddenWordTone, string> = {
-  pending: "border-sand-400 dark:border-zinc-600",
-  target: "border-brand-500",
-  error: "border-heart-500",
-  filled: "border-sand-300 dark:border-zinc-700",
+const PILL: Record<Exclude<HiddenWordTone, "filled">, string> = {
+  pending: "bg-sand-300 dark:bg-zinc-700",
+  target: "bg-brand-100 ring-2 ring-inset ring-brand-500 dark:bg-brand-900/40",
+  error: "bg-heart-100 ring-2 ring-inset ring-heart-500 dark:bg-heart-500/20",
 };
 
-// A word a lesson stage is hiding: its punctuation stays, and its letters keep their exact width
-// over an underline, so the reader can see how long the word is — "F___ G__ h__ d___," — with
-// the first letter showing on a first-letter stage, and the last on the Last letters stage. `indent-0`: an inline-block would otherwise
-// re-apply SenseLineRow.tsx's hanging `-indent-5` to its own text.
-export function HiddenWord({ word, firstLetter = false, lastLetter = false, tone = "pending" }: HiddenWordProps) {
+// A word a lesson stage is hiding: a grey pill exactly as wide as its letters, so the reader can
+// see how long the word is, its punctuation beside it — with the first (or last) letter showing on
+// a hint stage. Once typed, the whole word shows in its place. `indent-0`: an inline-block would
+// otherwise re-apply SenseLineRow.tsx's hanging `-indent-5` to its own text.
+export function HiddenWord({ word, firstLetter = false, lastLetter = false, tone = "pending", bare = false }: HiddenWordProps) {
   const { lead, core, trail } = splitWordPunctuation(word);
-  if (!core) return <>{word}</>;
+  if (!core) return <>{bare ? "" : word}</>;
+  if (tone === "filled") return <>{word}</>;
   const showFirst = firstLetter;
   const showLast = lastLetter && core.length > 1;
   const middle = core.slice(showFirst ? 1 : 0, showLast ? -1 : undefined);
   return (
     <>
-      {lead}
-      <span className={`inline-block whitespace-nowrap border-b-2 indent-0 leading-[1.15] ${LINE[tone]}`}>
-        {showFirst && <span className={tone === "filled" ? "text-brand-700 dark:text-brand-300" : ""}>{core[0]}</span>}
+      {!bare && lead}
+      <span className={`-mx-[.06em] inline-block whitespace-nowrap rounded-md px-[.06em] indent-0 leading-tight text-ink-soft dark:text-zinc-300 ${PILL[tone]}`}>
+        {showFirst && core[0]}
         <span className="invisible" aria-hidden="true">
           {middle}
         </span>
-        {showLast && <span>{core[core.length - 1]}</span>}
+        {showLast && core[core.length - 1]}
       </span>
-      {trail}
+      {!bare && trail}
     </>
   );
 }

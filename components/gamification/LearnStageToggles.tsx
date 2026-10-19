@@ -41,7 +41,7 @@ export function LearnStageToggles() {
         checked={lineByLine}
         onChange={(value) => setWholeVerseLearning(!value)}
         label="Learn line by line"
-        description="Each verse a sense line at a time, each new line recalled with the lines before it. Off learns the whole verse at once — the same stages over the full verse."
+        description="Verses shown in sense lines and learned a line at a time, each new line recalled with the lines before it. Off shows verses as continuous text, read straight on, and learns each verse whole."
       />
       <ToggleSwitch
         checked={lastLettersStageEnabled}

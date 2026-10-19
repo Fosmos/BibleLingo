@@ -1,4 +1,4 @@
-import { wordLetterPlaceholder } from "@/lib/verseWords";
+import { HiddenWord } from "@/components/drills/HiddenWord";
 
 interface FirstLetterVerseWordsProps {
   // This one real verse's own words only (see FirstLetterMultiVersePageCard.tsx) — never the
@@ -14,15 +14,14 @@ interface FirstLetterVerseWordsProps {
 // SRS review's own multi-verse word rendering on the real page — a word already recalled shows
 // in FULL (the reader typed its first letter correctly, and then gets to read the whole word
 // back, same as ReviewChain.tsx's own combine stage). A word not reached yet shows NOTHING but
-// a same-width blank — no first letter, no punctuation, nothing that leaks the sentence's shape
-// ahead of actually recalling it (`alwaysShowPunctuation: false` — see wordLetterPlaceholder's
-// own doc comment). Reused by both FirstLetterTypeRep.tsx and FirstLetterSpeakRep.tsx's own
+// a grey pill its length (HiddenWord.tsx, `bare`) — no first letter, no punctuation, nothing that
+// leaks the sentence's shape ahead of actually recalling it. Reused by both FirstLetterTypeRep.tsx and FirstLetterSpeakRep.tsx's own
 // multi-verse real-page rendering.
 export function FirstLetterVerseWords({ words, offset, revealedCount }: FirstLetterVerseWordsProps) {
   return (
     <>
       {words.map((word, index) => (
-        <span key={index}>{offset + index < revealedCount ? word : wordLetterPlaceholder(word, false, false)} </span>
+        <span key={index}>{offset + index < revealedCount ? word : <HiddenWord word={word} bare />} </span>
       ))}
     </>
   );

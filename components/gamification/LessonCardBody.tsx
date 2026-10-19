@@ -19,7 +19,7 @@ interface LessonCardBodyProps {
 const FALLBACK_DELAY_MS = 200;
 
 // The inside of the lesson card, wherever it sits — the Mind Map's bottom sheet
-// (LessonBottomSheet.tsx); the chapter path lays it out as a page of its own (PathLessonPage.tsx). The
+// (LessonBottomSheet.tsx); the chapter path runs it in the reader, controls docked (PathLessonDock.tsx). The
 // parent must be a positioned flex column of fixed height. ONE parchment surface: the header, a
 // verse zone (LessonPageCard.tsx or the verse preview portal their sense lines into it — see
 // lib/useMindMapSenseCardSlot.ts) taking all the room between the header and a fixed 30dvh drill

@@ -5,7 +5,8 @@ import type { PassageReview } from "@/lib/trailReviews";
 // tab's trail when it's done (lib/useTrailReturn.ts).
 // `verse` ("chapter:verse") narrows a lesson or practice to that one verse of its day. `passage`
 // reviews a pericope or chapter of the trail (lib/trailReviews.ts), on the page of lesson `day`.
-type ReaderAction = { learnDay: number; verse?: string } | { review: string[] } | { practiceDay: number; verse?: string } | { passage: PassageReview; day: number };
+// `select` ("chapter:verse") just opens the reader on that verse, selected, its action ready.
+type ReaderAction = { select: string } | { learnDay: number; verse?: string } | { review: string[] } | { practiceDay: number; verse?: string } | { passage: PassageReview; day: number };
 
 export function readerHref(pathKey: string, version: string, action: ReaderAction, fromTrail = true): string {
   const query = new URLSearchParams({ path: pathKey, version });
@@ -14,6 +15,7 @@ export function readerHref(pathKey: string, version: string, action: ReaderActio
     query.set("practiceDay", String(action.day));
     query.set("passage", `${key}|${chapter}:${from}-${to}`);
   }
+  if ("select" in action) query.set("select", action.select);
   if ("verse" in action && action.verse) query.set("verse", action.verse);
   if ("learnDay" in action) query.set("learnDay", String(action.learnDay));
   if ("practiceDay" in action) query.set("practiceDay", String(action.practiceDay));

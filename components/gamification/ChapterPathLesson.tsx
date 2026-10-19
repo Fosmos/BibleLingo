@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { narrateText } from "@/lib/narrateText";
 import type { PassageReview } from "@/lib/trailReviews";
-import { PathLessonPage } from "@/components/gamification/PathLessonPage";
+import { PathLessonDock } from "@/components/gamification/PathLessonDock";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
 import { InPlaceSrsReview } from "@/components/gamification/InPlaceSrsReview";
 import { MindMapVersePreview } from "@/components/gamification/MindMapVersePreview";
@@ -33,8 +33,9 @@ interface ChapterPathLessonProps {
   onClose: () => void;
 }
 
-// A lesson on the chapter path, on a page of its own (PathLessonPage.tsx) — the verse's lesson, its spaced review,
-// or, for a verse ahead, a read-and-listen preview.
+// A lesson on the chapter path, run in place in the reader: its controls in the bottom dock
+// (PathLessonDock.tsx), its verse in the verse's own row (PathLessonVerseSlot.tsx) — the verse's
+// lesson, its spaced review, or, for a verse ahead, a read-and-listen preview.
 export function ChapterPathLesson({ lesson, page, onClose }: ChapterPathLessonProps) {
   const stopNarration = useRef<(() => void) | null>(null);
   useEffect(() => () => stopNarration.current?.(), []);
@@ -47,7 +48,7 @@ export function ChapterPathLesson({ lesson, page, onClose }: ChapterPathLessonPr
   }
 
   return (
-    <PathLessonPage onClose={onClose}>
+    <PathLessonDock onClose={onClose}>
       {lesson.kind === "lesson" ? (
         <InPlaceLessonSession
           key={`${page.pathKey}:${lesson.dayNumber}:${lesson.mode}:${lesson.onlyVerse?.chapter}:${lesson.onlyVerse?.verseNumber}:${lesson.passage?.key}`}
@@ -70,6 +71,6 @@ export function ChapterPathLesson({ lesson, page, onClose }: ChapterPathLessonPr
       ) : (
         <MindMapVersePreview verse={lesson.verse} learned={false} actionLabel={undefined} onAction={() => {}} secondary={{ label: "Listen", onClick: () => listen(lesson.verse) }} />
       )}
-    </PathLessonPage>
+    </PathLessonDock>
   );
 }

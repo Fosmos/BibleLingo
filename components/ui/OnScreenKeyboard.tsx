@@ -27,7 +27,7 @@ const KEYBOARD_ROWS = ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"];
 // `lesson-sheet-controls`) the keys are one fixed, larger size (48px tall, 22px letters) —
 // the keyboard never stretches or squashes with the zone, it just docks at its bottom.
 // The Organic restyle's keys: soft sand fills, 12px corners, bold 18px letters, no shadow. On the
-// lesson page (PathLessonPage.tsx, `lesson-page-tray`) they're 46px tall with 20px letters, rows
+// lesson page and the reader's lesson dock (PathLessonPage.tsx / PathLessonDock.tsx, `lesson-page-tray`) they're 46px tall with 20px letters, rows
 // 7px apart and keys 4px apart, big enough to hit without looking twice.
 const KEY_CLASS =
   "flex h-[42px] flex-1 items-center justify-center rounded-xl bg-sand-200 text-lg font-bold uppercase text-ink transition active:scale-95 active:bg-brand-200 disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-100 dark:active:bg-zinc-700 [.lesson-sheet-controls_&]:h-12 [.lesson-sheet-controls_&]:text-[22px] [.lesson-page-tray_&]:!h-[46px] [.lesson-page-tray_&]:!text-xl";

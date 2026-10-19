@@ -72,9 +72,13 @@ interface LessonSessionState {
   // A path just finished (see lib/completeDayEffects.ts) — PathCompleteCelebration.tsx shows it
   // once no lesson is on screen, then clears it.
   completedPath: string | null;
-  // The lesson page (PathLessonPage.tsx) is open — its drill tray carries the help chips
-  // (DrillHelpChips.tsx), which stand in for the reference lookup and the testing shortcut.
+  // The lesson page (PathLessonPage.tsx) or the reader's lesson dock (PathLessonDock.tsx) is open —
+  // its drill tray carries the help chips (DrillHelpChips.tsx), which stand in for the reference
+  // lookup and the testing shortcut.
   lessonPageOpen: boolean;
+  // The verse zone is a verse's own row in the chapter reader (PathLessonVerseSlot.tsx): the verse
+  // at the reader's size, no ghost lines (its neighbours are right there).
+  verseInRow: boolean;
   // Letters / Verse help chips: the tab of the verse open, first letters or whole (lib/peek.ts).
   peek: Peek;
   // The verse zone has gone compact to fit (lib/useVerseFit.ts) — the stage label hides.
@@ -107,6 +111,7 @@ interface LessonSessionActions {
   setLessonProgress: (progress: number | null) => void;
   setCompletedPath: (pathKey: string | null) => void;
   setLessonPageOpen: (open: boolean) => void;
+  setVerseInRow: (inRow: boolean) => void;
   setPeek: (peek: Peek) => void;
   setVerseCompactFit: (compact: boolean) => void;
   setSkipStage: (skip: (() => void) | null) => void;
@@ -139,6 +144,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   lessonProgress: null,
   completedPath: null,
   lessonPageOpen: false,
+  verseInRow: false,
   peek: null,
   verseCompactFit: false,
   skipStage: null,
@@ -161,6 +167,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   removeExpandedVerseZoneUser: () => set((state) => ({ expandedVerseZoneUsers: Math.max(0, state.expandedVerseZoneUsers - 1) })),
   setLessonProgress: (progress) => set({ lessonProgress: progress }),
   setLessonPageOpen: (open) => set({ lessonPageOpen: open }),
+  setVerseInRow: (inRow) => set({ verseInRow: inRow }),
   setPeek: (peek) => set({ peek }),
   setVerseCompactFit: (compact) => set({ verseCompactFit: compact }),
   setSkipStage: (skip) => set({ skipStage: skip }),

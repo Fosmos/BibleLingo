@@ -11,7 +11,7 @@ interface SpeakRepRevealLineProps {
   // stops matching it.
   revealedCount: number;
   // A not-yet-spoken word shows its first letter (the Speak flow's hint mode) or none of its
-  // letters (blind recitation) — either way at its own length, over an underline (HiddenWord.tsx).
+  // letters (blind recitation) — either way as a grey pill its length (HiddenWord.tsx).
   mode: "hint" | "blind";
 }
 

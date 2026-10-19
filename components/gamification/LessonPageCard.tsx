@@ -33,8 +33,7 @@ interface LessonPageCardProps {
   // What to show in the active verse's place, called once per clause (senseLineWordRanges) — the
   // full verse, first letters, or blanks, in the same sense-line structure as every other verse.
   renderActiveVerse: (verse: VerseSegment, range: SenseLineWordRange) => ReactNode;
-  // SRS review only — lets the reader flip between an entity's pages.
-  allowManualFlip?: boolean;
+  allowManualFlip?: boolean; // SRS review only — lets the reader flip between an entity's pages.
   // SRS review only — hides the pericope title until it returns true.
   isHeadingVisible?: (segment: PericopeSegment) => boolean;
   isVerseNumberVisible?: (verse: VerseSegment) => boolean; // Blind recall: a verse number shows once true.
@@ -79,8 +78,8 @@ export function LessonPageCard({
   const shownVerses = slice ? [slice.whole] : (embeddedVerses ?? [activeVerse]);
   usePublishHelpVerse(senseCardPortalNode ? shownVerses.map((verse) => verse.text).join(" ") : null);
   const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
-  // The verse before's last sense line above the reference — optional (Profile > Advanced).
-  const showPrevious = useProgressStore((state) => state.previousLineShown) ?? true;
+  const showPrevious = useProgressStore((state) => state.previousLineShown) ?? true; // Profile > Advanced.
+  const inRow = useLessonSessionStore((state) => state.verseInRow); // A reader row (PathLessonVerseSlot.tsx).
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
   const [lastAutoPageIndex, setLastAutoPageIndex] = useState(autoPageIndex);
@@ -109,9 +108,10 @@ export function LessonPageCard({
     return createPortal(
       <SheetVerseZone
         fitKey={`${stageLabel}|${activeVerse.id}|${shown.map((verse) => verse.id).join(",")}`}
-        reference={referenceSlot ?? (hideWhereFrom ? undefined : formatVerseRangeLabel(shown))}
-        ghostPrev={hideWhereFrom || !showPrevious ? undefined : edgeGhost(shown[0], "previous")}
-        ghostNext={!hideWhereFrom && showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
+        inline={inRow}
+        reference={referenceSlot ?? (hideWhereFrom || inRow ? undefined : formatVerseRangeLabel(shown))}
+        ghostPrev={hideWhereFrom || !showPrevious || inRow ? undefined : edgeGhost(shown[0], "previous")}
+        ghostNext={!hideWhereFrom && !inRow && showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
       >
         {(fontSizePx) => (
           <ChapterPageContent

@@ -31,7 +31,7 @@ interface ReaderArrivalOptions {
 
 // How the chapter reader is opened onto something to do, once on arrival (lib/readerHref.ts):
 // `?review=` a spaced review, `?practiceDay=` a finished lesson's practice, `?learnDay=` a lesson —
-// each run in place at its first verse. Arriving `from=trail`, finishing or closing it goes back
+// each run in place at its first verse; `?select=` just opens on a verse. Arriving `from=trail`, finishing or closing it goes back
 // to the Path tab's trail (`returnToTrail`), with a "Lesson done" toast if the path moved on.
 export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet }: ReaderArrivalOptions) {
   const router = useRouter();
@@ -78,9 +78,14 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   useEffect(() => {
     if (learnDone.current) return;
     learnDone.current = true;
-    const learnDay = Number(new URLSearchParams(window.location.search).get("learnDay"));
-    if (learnDay > 0) startDay(learnDay, "select");
-  }, [startDay]);
+    const search = new URLSearchParams(window.location.search);
+    const learnDay = Number(search.get("learnDay"));
+    if (learnDay > 0) return startDay(learnDay, "select");
+    // `?select=chapter:verse` (a pericope opened from the Path map): that verse, selected, nothing started.
+    const [chapter, verseNumber] = (search.get("select") ?? "").split(":").map(Number);
+    const book = days.find((day) => day.newVerses.length)?.newVerses[0]?.book;
+    if (book && chapter > 0 && verseNumber > 0) openVerse(book, chapter, verseNumber);
+  }, [startDay, days, openVerse]);
 
   // Back to the trail after a lesson begun there — true when it navigated.
   const returnToTrail = useCallback(() => {
