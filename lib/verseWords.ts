@@ -35,9 +35,16 @@ function splitOnDashes(token: string): string[] {
   return words;
 }
 
+// A punctuation mark the source text prints on its own after a space (KJV's "deny him , being")
+// joins the word before it — "him," — so it shows in every drill and the reader, in one place.
+// Closing marks only: an opening quote or bracket belongs to the word after it.
+export function joinStrayPunctuation(text: string): string {
+  return text.replace(/(\S)\s+(?=[,.;:!?)\]’”»]+(?:\s|$))/gu, "$1");
+}
+
 export function tokenizeVerseWords(text: string): string[] {
   if (!text) return [];
-  return text
+  return joinStrayPunctuation(text)
     .split(/\s+/)
     .flatMap((token) => token.split(/-/))
     .flatMap(splitOnDashes)

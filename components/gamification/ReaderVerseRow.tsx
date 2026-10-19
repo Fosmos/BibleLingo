@@ -3,6 +3,7 @@
 import type { VerseSegment } from "@/types";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { parseToSenseLines } from "@/lib/senseLines";
+import { joinStrayPunctuation } from "@/lib/verseWords";
 import { PathLessonVerseSlot } from "@/components/gamification/PathLessonVerseSlot";
 import { HiddenWord } from "@/components/drills/HiddenWord";
 import { HeldVerseWords } from "@/components/gamification/HeldVerseWords";
@@ -49,7 +50,7 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, host
   const lettersOnly = duringLesson && !recalled && !hidden && status !== "open" && status !== "current";
   // The selected verse — and the verse a lesson or review is running on — carries the highlight.
   const highlighted = selected || hostsLesson;
-  const lines = parseToSenseLines(verse.text);
+  const lines = parseToSenseLines(joinStrayPunctuation(verse.text));
 
   return (
     <div

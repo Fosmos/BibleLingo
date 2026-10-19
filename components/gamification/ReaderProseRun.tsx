@@ -3,9 +3,11 @@
 import type { VerseSegment } from "@/types";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { verseKey } from "@/lib/verseKey";
+import { joinStrayPunctuation } from "@/lib/verseWords";
 import { HiddenWord } from "@/components/drills/HiddenWord";
 import { HeldVerseWords } from "@/components/gamification/HeldVerseWords";
 import { NUMBER_CLASS } from "@/components/gamification/ReaderVerseRow";
+import { PathLessonVerseSlot } from "@/components/gamification/PathLessonVerseSlot";
 
 interface ReaderProseRunProps {
   book: string;
@@ -20,40 +22,49 @@ interface ReaderProseRunProps {
   duringLesson: boolean;
   isHidden: (verseNumber: number) => boolean;
   isRecalled: (verseNumber: number) => boolean;
+  // The verse a lesson runs on, if it's here: its words become the lesson's, right where they sit.
+  lessonVerse: number | null;
 }
 
 // The chapter reader with sense lines off (lib/senseLineMode.ts): a pericope's verses as one
 // continuous paragraph, each verse running on after the one before, a small number in its state's
-// colours at its start. Tapping a verse selects it — tinted where it sits, nothing moving.
-export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, onTap, duringLesson, isHidden, isRecalled }: ReaderProseRunProps) {
+// colours at its start. Tapping a verse selects it — tinted where it sits, nothing moving. A
+// lesson's verse stays in the paragraph too: its words become the stage's (an inline verse zone,
+// PathLessonVerseSlot.tsx), highlighted over just that verse, even when it starts mid-line.
+export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, onTap, duringLesson, isHidden, isRecalled, lessonVerse }: ReaderProseRunProps) {
   return (
     <p className="px-3.5 py-2 text-[17px] font-medium leading-[1.9] text-sand-800 dark:text-zinc-300">
       {verses.map((verse) => {
         const status = statusOf(verse.verseNumber);
         const hidden = isHidden(verse.verseNumber);
         const lettersOnly = duringLesson && !hidden && !isRecalled(verse.verseNumber) && status !== "open" && status !== "current";
-        const selected = isSelected(verse.verseNumber);
+        const hosts = verse.verseNumber === lessonVerse;
+        const text = joinStrayPunctuation(verse.text);
+        const selected = hosts || isSelected(verse.verseNumber);
         return (
           <span
             key={verse.verseNumber}
             data-verse-key={verseKey(book, chapter, verse.verseNumber)}
-            onClick={() => onTap(verse)}
+            onClick={hosts ? undefined : () => onTap(verse)}
             className={`cursor-pointer rounded-md [box-decoration-break:clone] ${selected ? "bg-sage-200/70 text-ink dark:bg-sage-900/50 dark:text-zinc-50" : ""}`}
           >
             <span className={`mr-1 inline-flex h-[20px] min-w-[20px] -translate-y-[1px] items-center justify-center rounded-full px-1 align-middle font-heading text-[10.5px] leading-none ${NUMBER_CLASS[status]}`}>
               {verse.verseNumber}
             </span>
-            {hidden
-              ? verse.text.split(/\s+/).map((word, index) => (
-                  <span key={index}>
-                    <HiddenWord word={word} />{" "}
-                  </span>
-                ))
-              : lettersOnly
-                ? <>
-                    <HeldVerseWords text={verse.text} />{" "}
-                  </>
-                : `${verse.text} `}
+            {hosts && <PathLessonVerseSlot inline />}
+            {!hosts &&
+              hidden &&
+              text.split(/\s+/).map((word, index) => (
+                <span key={index}>
+                  <HiddenWord word={word} />{" "}
+                </span>
+              ))}
+            {!hosts && !hidden && lettersOnly && (
+              <>
+                <HeldVerseWords text={text} />{" "}
+              </>
+            )}
+            {!hosts && !hidden && !lettersOnly && `${text} `}
           </span>
         );
       })}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { VerseSegment } from "@/types";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
@@ -9,20 +8,16 @@ import type { PericopeSegment } from "@/lib/pathZones";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { pageIndexForVerse } from "@/lib/chapterPagination";
 import { computeGhostContext } from "@/lib/ghostContext";
-import { buildEmbeddedChapterPage } from "@/lib/buildEmbeddedChapterPage";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useProgressStore } from "@/store/useProgressStore";
 import { ChapterPageContent } from "@/components/gamification/ChapterPageContent";
 import { PericopeTitle } from "@/components/gamification/PericopeTitle";
 import { GhostContextLine } from "@/components/gamification/GhostContextLine";
 import { ParchmentCard } from "@/components/ui/ParchmentCard";
-import { SheetVerseZone } from "@/components/gamification/SheetVerseZone";
-import { edgeGhost } from "@/lib/verseEdgeGhost";
-import { formatVerseRangeLabel } from "@/lib/chapterContent";
-import { TEACHING_STAGE_LABELS } from "@/lib/learnSheetStage";
 import { useReferenceGate } from "@/components/gamification/ReferenceGate";
 import { senseLineSliceView } from "@/components/gamification/SenseLineSliceView";
 import { usePublishHelpVerse } from "@/lib/usePublishHelpVerse";
+import { LessonVerseZone } from "@/components/gamification/LessonVerseZone";
 
 interface LessonPageCardProps {
   layout: ChapterReadingLayout;
@@ -77,9 +72,7 @@ export function LessonPageCard({
   const slice = senseCardPortalNode ? senseLineSliceView(activeVerse, renderActiveVerse) : null;
   const shownVerses = slice ? [slice.whole] : (embeddedVerses ?? [activeVerse]);
   usePublishHelpVerse(senseCardPortalNode ? shownVerses.map((verse) => verse.text).join(" ") : null);
-  const stageLabel = useLessonSessionStore((state) => state.sheetStage?.label);
   const showPrevious = useProgressStore((state) => state.previousLineShown) ?? true; // Profile > Advanced.
-  const inRow = useLessonSessionStore((state) => state.verseInRow); // A reader row (PathLessonVerseSlot.tsx).
   const autoPageIndex = pageIndexForVerse(layout.pages, activeVerse.verseNumber, activeWordIndex);
   const [manualPageIndex, setManualPageIndex] = useState<number | null>(null);
   const [lastAutoPageIndex, setLastAutoPageIndex] = useState(autoPageIndex);
@@ -103,33 +96,9 @@ export function LessonPageCard({
   // zone (SheetVerseZone.tsx): fitted, no verse numbers, the reference at the top left, a ghost
   // line either side (just before, in a review). A sense-line stage: its whole verse (above).
   if (senseCardPortalNode) {
-    const shown = shownVerses;
     const renderShown = slice ? (verse: VerseSegment, range: SenseLineWordRange) => (verse.id === slice.whole.id ? slice.renderLine(range) : undefined) : renderVerseWords;
-    return createPortal(
-      <SheetVerseZone
-        fitKey={`${stageLabel}|${activeVerse.id}|${shown.map((verse) => verse.id).join(",")}`}
-        inline={inRow}
-        reference={referenceSlot ?? (hideWhereFrom || inRow ? undefined : formatVerseRangeLabel(shown))}
-        ghostPrev={hideWhereFrom || !showPrevious || inRow ? undefined : edgeGhost(shown[0], "previous")}
-        ghostNext={!hideWhereFrom && !inRow && showNextGhost && stageLabel && TEACHING_STAGE_LABELS.has(stageLabel) ? edgeGhost(shown[shown.length - 1], "next") : undefined}
-      >
-        {(fontSizePx) => (
-          <ChapterPageContent
-            page={buildEmbeddedChapterPage(shown)}
-            dayNumberByVerse={layout.dayNumberByVerse}
-            todaysVerseNumbers={layout.todaysVerseNumbers}
-            completedDays={layout.completedDays}
-            locationTags={layout.locationTags}
-            iconTags={layout.iconTags}
-            pegActive={layout.pegActive}
-            fontSizePx={fontSizePx}
-            renderVerseWords={renderShown}
-            isVerseNumberVisible={() => false}
-            onSelect={() => {}}
-          />
-        )}
-      </SheetVerseZone>,
-      senseCardPortalNode,
+    return (
+      <LessonVerseZone node={senseCardPortalNode} verses={shownVerses} render={renderShown} layout={layout} activeVerseId={activeVerse.id} referenceSlot={referenceSlot} hideWhereFrom={hideWhereFrom} showNextGhost={showNextGhost} />
     );
   }
 

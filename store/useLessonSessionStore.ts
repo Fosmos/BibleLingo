@@ -43,7 +43,7 @@ interface LessonSessionState {
   // feeds both that portaled card's `fill` sizing AND lib/useChapterReadingLayout.ts's own
   // `fixedFillHeightPx` override, so pagination and the card's real on-screen size never
   // disagree. Both null on the standalone `/day/[dayNumber]` route, which has no such slot.
-  senseCardPortalNode: HTMLDivElement | null;
+  senseCardPortalNode: HTMLElement | null;
   senseCardFillHeightPx: number | null;
   // That same slot's own real measured WIDTH — feeds lib/useChapterPagination.ts's own
   // `fixedColumnWidthPx` override the exact same way `senseCardFillHeightPx` feeds its height
@@ -81,6 +81,9 @@ interface LessonSessionState {
   verseInRow: boolean;
   // The slot in the reader's lesson top bar (PathLessonTopBar.tsx) a recalled reference shows in.
   referenceBarNode: HTMLElement | null;
+  // The reader row's verse zone is inline, mid-paragraph (sense lines off — ReaderProseRun.tsx):
+  // the stage's words flow in the paragraph in the verse's own place.
+  verseInline: boolean;
   // Letters / Verse help chips: the tab of the verse open, first letters or whole (lib/peek.ts).
   peek: Peek;
   // The verse zone has gone compact to fit (lib/useVerseFit.ts) — the stage label hides.
@@ -101,7 +104,7 @@ interface LessonSessionActions {
   clearFocusVerse: () => void;
   setArrivalVerse: (verse: LessonFocusVerse | null) => void;
   setSheetStage: (stage: SheetStage | null) => void;
-  setSenseCardPortalNode: (node: HTMLDivElement | null) => void;
+  setSenseCardPortalNode: (node: HTMLElement | null) => void;
   setSenseCardFillHeightPx: (px: number | null) => void;
   setSenseCardColumnWidthPx: (px: number | null) => void;
   setVerseViewPortalNode: (node: HTMLDivElement | null) => void;
@@ -115,6 +118,7 @@ interface LessonSessionActions {
   setLessonPageOpen: (open: boolean) => void;
   setVerseInRow: (inRow: boolean) => void;
   setReferenceBarNode: (node: HTMLElement | null) => void;
+  setVerseInline: (inline: boolean) => void;
   setPeek: (peek: Peek) => void;
   setVerseCompactFit: (compact: boolean) => void;
   setSkipStage: (skip: (() => void) | null) => void;
@@ -149,6 +153,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   lessonPageOpen: false,
   verseInRow: false,
   referenceBarNode: null,
+  verseInline: false,
   peek: null,
   verseCompactFit: false,
   skipStage: null,
@@ -173,6 +178,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   setLessonPageOpen: (open) => set({ lessonPageOpen: open }),
   setVerseInRow: (inRow) => set({ verseInRow: inRow }),
   setReferenceBarNode: (node) => set({ referenceBarNode: node }),
+  setVerseInline: (inline) => set({ verseInline: inline }),
   setPeek: (peek) => set({ peek }),
   setVerseCompactFit: (compact) => set({ verseCompactFit: compact }),
   setSkipStage: (skip) => set({ skipStage: skip }),

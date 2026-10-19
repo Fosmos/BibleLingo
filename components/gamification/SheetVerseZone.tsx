@@ -21,6 +21,8 @@ interface SheetVerseZoneProps {
   // In a verse's own row in the chapter reader (PathLessonVerseSlot.tsx): the reader's size and
   // spacing, no fitting, and no ghost lines — its neighbours are right there.
   inline?: boolean;
+  // …and mid-paragraph in that reader (sense lines off): an inline span, the words flowing on.
+  flow?: boolean;
 }
 
 // Line height, and the gaps between verses and between sense lines (in ems of the verse's size).
@@ -36,15 +38,24 @@ const IN_ROW_SPACING = { "--sense-leading": "1.5", "--sense-verse-gap": "0px", "
 // faint line of the verse before it above the reference, and of the verse after it below, each
 // tagged with its verse number.
 // Never scrolls: lib/useVerseFit.ts steps the type down (then goes compact) until it fits.
-export function SheetVerseZone({ children, reference, ghostPrev, ghostNext, fitKey, inline = false }: SheetVerseZoneProps) {
+export function SheetVerseZone({ children, reference, ghostPrev, ghostNext, fitKey, inline = false, flow = false }: SheetVerseZoneProps) {
   const { ref, fontSizePx, compact } = useVerseFit(fitKey);
   const referenceBarNode = useLessonSessionStore((state) => state.referenceBarNode);
   if (inline) {
     // The reference, while it's recalled, goes up into the lesson's top bar (PathLessonTopBar.tsx) —
     // above the verse it would push every word down.
+    const referenceInBar = reference && referenceBarNode && createPortal(<span className="font-serif text-lg leading-none text-brand-700 dark:text-brand-300">{reference}</span>, referenceBarNode);
+    if (flow) {
+      return (
+        <span className="text-ink dark:text-zinc-50">
+          {referenceInBar}
+          {children(IN_ROW_PX)}
+        </span>
+      );
+    }
     return (
       <div style={IN_ROW_SPACING} className="flex flex-col font-medium text-ink dark:text-zinc-50">
-        {reference && referenceBarNode && createPortal(<span className="font-serif text-lg leading-none text-brand-700 dark:text-brand-300">{reference}</span>, referenceBarNode)}
+        {referenceInBar}
         {children(IN_ROW_PX)}
       </div>
     );

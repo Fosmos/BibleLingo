@@ -37,18 +37,6 @@ function runPosition(run: number[], verseNumber: number): "single" | "first" | "
   return before && after ? "middle" : before ? "last" : after ? "first" : "single";
 }
 
-// With sense lines off, a pericope's verses as runs of continuous text — split around the verse a
-// lesson runs on, which keeps a row of its own (its lesson's verse zone) between them.
-function proseRuns(verses: VerseSegment[], lessonVerse: number | null): VerseSegment[][] {
-  const runs: VerseSegment[][] = [];
-  for (const verse of verses) {
-    const last = runs[runs.length - 1];
-    if (verse.verseNumber === lessonVerse || !last || last[0].verseNumber === lessonVerse) runs.push([verse]);
-    else last.push(verse);
-  }
-  return runs;
-}
-
 // One chapter in the continuous reader (ChapterSenseReader.tsx): its title, then its pericopes in
 // sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
 // (ReaderProseRun.tsx) — the path's own chapters straight from its verses, any other fetched in `version`.
@@ -98,26 +86,22 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
             <h3 className="font-heading text-[21px] leading-tight text-ink dark:text-zinc-100">{group.heading}</h3>
           </div>
           <div className="-mx-1 flex flex-col">
-            {prose
-              ? proseRuns(group.verses, lessonVerse).map((run) =>
-                  run[0].verseNumber === lessonVerse ? (
-                    row(run[0])
-                  ) : (
-                    <ReaderProseRun
-                      key={run[0].verseNumber}
-                      book={at.book}
-                      chapter={at.chapter}
-                      verses={run}
-                      statusOf={statusOf}
-                      isSelected={(verseNumber) => !duringLesson && highlighted.includes(verseNumber)}
-                      onTap={onTap}
-                      duringLesson={duringLesson}
-                      isHidden={isHidden}
-                      isRecalled={isRecalled}
-                    />
-                  ),
-                )
-              : group.verses.map(row)}
+            {prose ? (
+              <ReaderProseRun
+                book={at.book}
+                chapter={at.chapter}
+                verses={group.verses}
+                statusOf={statusOf}
+                isSelected={(verseNumber) => !duringLesson && highlighted.includes(verseNumber)}
+                onTap={onTap}
+                duringLesson={duringLesson}
+                isHidden={isHidden}
+                isRecalled={isRecalled}
+                lessonVerse={lessonVerse}
+              />
+            ) : (
+              group.verses.map(row)
+            )}
           </div>
         </div>
       ))}
