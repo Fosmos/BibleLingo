@@ -23,6 +23,7 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
   const stage = useLessonSessionStore((state) => state.sheetStage);
   const progress = useLessonSessionStore((state) => state.lessonProgress) ?? 0;
   const pericope = usePericopeHeading(place.book, place.chapter, place.verseNumber);
+  const setReferenceBarNode = useLessonSessionStore((state) => state.setReferenceBarNode);
   const steps = stage?.steps ?? 1;
   const step = stage?.step ?? 0;
 
@@ -45,7 +46,9 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
               <span className={`shrink-0 rounded-md px-1.5 text-[11px] text-white ${stage.accuracy >= (stage.threshold ?? 90) ? "bg-sand-700" : "bg-brand-600"}`}>{Math.round(stage.accuracy)}%</span>
             )}
           </span>
-          <span className="truncate text-[11px] font-bold text-ink-muted dark:text-zinc-500">{[formatChapterLabel(place.book, place.chapter), pericope].filter(Boolean).join(" → ")}</span>
+          {/* A recalled reference shows here (SheetVerseZone.tsx), in the chapter line's place. */}
+          <span ref={setReferenceBarNode} data-ref-slot className="flex items-center empty:hidden" />
+          <span className="truncate text-[11px] font-bold text-ink-muted dark:text-zinc-500 [[data-ref-slot]:not(:empty)~&]:hidden">{[formatChapterLabel(place.book, place.chapter), pericope].filter(Boolean).join(" → ")}</span>
         </div>
         <DrillHelpChips inBar />
       </div>

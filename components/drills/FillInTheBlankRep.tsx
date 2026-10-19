@@ -102,7 +102,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
               <span
                 // Filled: dark terracotta on a pale wash, underlined. The next blank: the pale wash
                 // ringed in terracotta. Later blanks: plain sand (the lesson view, no sage).
-                className={`-mr-[.12em] inline-block rounded-md px-[.12em] indent-0 whitespace-nowrap leading-tight transition-colors ${
+                className={`-mx-[.12em] inline-block rounded-md px-[.12em] indent-0 whitespace-nowrap leading-tight transition-colors ${
                   isFilled
                     ? "border-b-2 border-brand-300 bg-brand-100 text-brand-900 dark:bg-brand-900/40 dark:text-brand-100"
                     : slotPosition === placedCount && !referenceFirst

@@ -3,10 +3,9 @@
 import type { VerseSegment } from "@/types";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { parseToSenseLines } from "@/lib/senseLines";
-import { firstLettersOnly } from "@/lib/chapterPathPalette";
-import { FIRST_LETTER_TEXT_SPACING_CLASS } from "@/lib/firstLetterGap";
 import { PathLessonVerseSlot } from "@/components/gamification/PathLessonVerseSlot";
 import { HiddenWord } from "@/components/drills/HiddenWord";
+import { HeldVerseWords } from "@/components/gamification/HeldVerseWords";
 import { SrsSeal } from "@/components/ui/SrsSeal";
 
 interface ReaderVerseRowProps {
@@ -50,7 +49,7 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, host
   const lettersOnly = duringLesson && !recalled && !hidden && status !== "open" && status !== "current";
   // The selected verse — and the verse a lesson or review is running on — carries the highlight.
   const highlighted = selected || hostsLesson;
-  const lines = parseToSenseLines(verse.text).map((line) => (lettersOnly ? firstLettersOnly(line) : line));
+  const lines = parseToSenseLines(verse.text);
 
   return (
     <div
@@ -68,14 +67,15 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, host
         )}
       </span>
       {hostsLesson ? (
-        <PathLessonVerseSlot className="relative z-[2] flex min-w-0 flex-col gap-1.5" />
+        <PathLessonVerseSlot className="relative z-[2] min-w-0 pt-[1px] text-[17px] leading-[1.5]" />
       ) : (
         <div
           aria-hidden={hidden || undefined}
-          className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"} ${lettersOnly ? FIRST_LETTER_TEXT_SPACING_CLASS : ""}`}
+          className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}
         >
           {lines.map((line, index) => (
-            <p key={index} className="pl-4 -indent-4">
+            // The lesson's verse zone lays its lines out the same way (SenseLineRow.tsx), so nothing moves.
+            <p key={index} className="pl-5 -indent-5 text-pretty">
               {/* A blanked verse keeps its lines, each word a grey pill its length (HiddenWord.tsx). */}
               {hidden
                 ? line.split(" ").map((word, wordIndex) => (
@@ -83,7 +83,9 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, host
                       <HiddenWord word={word} />{" "}
                     </span>
                   ))
-                : line}
+                : lettersOnly
+                  ? <HeldVerseWords text={line} />
+                  : line}
             </p>
           ))}
         </div>

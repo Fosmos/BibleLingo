@@ -53,7 +53,7 @@ export function ChapterPageContent({
   return (
     <div data-fit-text className="flex flex-col gap-3" style={fontSizePx ? { fontSize: `${fontSizePx}px` } : undefined}>
       {page?.segments.map((segment) => (
-        <div key={segment.key} className="font-reading text-lg font-medium">
+        <div key={segment.key} className="font-reading text-lg font-medium [.path-lesson-verse_&]:text-[length:inherit]">
           {buildDayRuns(segment.verses, dayNumberByVerse)
             .flatMap((run) => run.verses.map((verse) => ({ verse, dayNumber: run.dayNumber })))
             .map(({ verse, dayNumber }) => (

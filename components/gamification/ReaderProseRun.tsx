@@ -3,9 +3,8 @@
 import type { VerseSegment } from "@/types";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { verseKey } from "@/lib/verseKey";
-import { firstLettersOnly } from "@/lib/chapterPathPalette";
-import { FIRST_LETTER_TEXT_SPACING_CLASS } from "@/lib/firstLetterGap";
 import { HiddenWord } from "@/components/drills/HiddenWord";
+import { HeldVerseWords } from "@/components/gamification/HeldVerseWords";
 import { NUMBER_CLASS } from "@/components/gamification/ReaderVerseRow";
 
 interface ReaderProseRunProps {
@@ -39,7 +38,7 @@ export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, on
             key={verse.verseNumber}
             data-verse-key={verseKey(book, chapter, verse.verseNumber)}
             onClick={() => onTap(verse)}
-            className={`cursor-pointer rounded-md [box-decoration-break:clone] ${selected ? "bg-sage-200/70 text-ink dark:bg-sage-900/50 dark:text-zinc-50" : ""} ${lettersOnly ? FIRST_LETTER_TEXT_SPACING_CLASS : ""}`}
+            className={`cursor-pointer rounded-md [box-decoration-break:clone] ${selected ? "bg-sage-200/70 text-ink dark:bg-sage-900/50 dark:text-zinc-50" : ""}`}
           >
             <span className={`mr-1 inline-flex h-[20px] min-w-[20px] -translate-y-[1px] items-center justify-center rounded-full px-1 align-middle font-heading text-[10.5px] leading-none ${NUMBER_CLASS[status]}`}>
               {verse.verseNumber}
@@ -50,7 +49,11 @@ export function ReaderProseRun({ book, chapter, verses, statusOf, isSelected, on
                     <HiddenWord word={word} />{" "}
                   </span>
                 ))
-              : `${lettersOnly ? firstLettersOnly(verse.text) : verse.text} `}
+              : lettersOnly
+                ? <>
+                    <HeldVerseWords text={verse.text} />{" "}
+                  </>
+                : `${verse.text} `}
           </span>
         );
       })}

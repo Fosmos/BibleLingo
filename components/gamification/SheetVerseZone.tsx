@@ -1,7 +1,9 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useVerseFit } from "@/lib/useVerseFit";
+import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import type { EdgeGhost } from "@/lib/verseEdgeGhost";
 
 interface SheetVerseZoneProps {
@@ -24,9 +26,10 @@ interface SheetVerseZoneProps {
 // Line height, and the gaps between verses and between sense lines (in ems of the verse's size).
 const ROOMY = { leading: 1.6, verseGap: 1.1, clauseGap: 0.65 };
 const COMPACT = { leading: 1.35, verseGap: 0.6, clauseGap: 0.25 };
-// In a reader row: ReaderVerseRow.tsx's 17px lines, 1.5 apart, 12px between sense lines.
+// In a reader row: exactly ReaderVerseRow.tsx's text — 17px lines, 1.5 apart, 12px between sense
+// lines and nothing above the first — so no word moves when a lesson starts.
 const IN_ROW_PX = 17;
-const IN_ROW_SPACING = { "--sense-leading": "1.5", "--sense-verse-gap": "0.7em", "--sense-clause-gap": "0.7em" } as CSSProperties;
+const IN_ROW_SPACING = { "--sense-leading": "1.5", "--sense-verse-gap": "0px", "--sense-clause-gap": "12px" } as CSSProperties;
 
 // A lesson's verse zone (design_handoff_lesson_view): no box and no sage — the verse sits on the
 // page, centred, its reference over it at the left — one size, larger than the verse — with a
@@ -35,11 +38,14 @@ const IN_ROW_SPACING = { "--sense-leading": "1.5", "--sense-verse-gap": "0.7em",
 // Never scrolls: lib/useVerseFit.ts steps the type down (then goes compact) until it fits.
 export function SheetVerseZone({ children, reference, ghostPrev, ghostNext, fitKey, inline = false }: SheetVerseZoneProps) {
   const { ref, fontSizePx, compact } = useVerseFit(fitKey);
+  const referenceBarNode = useLessonSessionStore((state) => state.referenceBarNode);
   if (inline) {
+    // The reference, while it's recalled, goes up into the lesson's top bar (PathLessonTopBar.tsx) —
+    // above the verse it would push every word down.
     return (
-      <div style={IN_ROW_SPACING} className="flex flex-col">
-        {reference && <div className="mb-1.5 font-serif text-xl leading-snug text-brand-700 dark:text-brand-300">{reference}</div>}
-        <div className="font-medium text-ink dark:text-zinc-50">{children(IN_ROW_PX)}</div>
+      <div style={IN_ROW_SPACING} className="flex flex-col font-medium text-ink dark:text-zinc-50">
+        {reference && referenceBarNode && createPortal(<span className="font-serif text-lg leading-none text-brand-700 dark:text-brand-300">{reference}</span>, referenceBarNode)}
+        {children(IN_ROW_PX)}
       </div>
     );
   }

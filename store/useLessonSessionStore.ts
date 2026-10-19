@@ -79,6 +79,8 @@ interface LessonSessionState {
   // The verse zone is a verse's own row in the chapter reader (PathLessonVerseSlot.tsx): the verse
   // at the reader's size, no ghost lines (its neighbours are right there).
   verseInRow: boolean;
+  // The slot in the reader's lesson top bar (PathLessonTopBar.tsx) a recalled reference shows in.
+  referenceBarNode: HTMLElement | null;
   // Letters / Verse help chips: the tab of the verse open, first letters or whole (lib/peek.ts).
   peek: Peek;
   // The verse zone has gone compact to fit (lib/useVerseFit.ts) — the stage label hides.
@@ -112,6 +114,7 @@ interface LessonSessionActions {
   setCompletedPath: (pathKey: string | null) => void;
   setLessonPageOpen: (open: boolean) => void;
   setVerseInRow: (inRow: boolean) => void;
+  setReferenceBarNode: (node: HTMLElement | null) => void;
   setPeek: (peek: Peek) => void;
   setVerseCompactFit: (compact: boolean) => void;
   setSkipStage: (skip: (() => void) | null) => void;
@@ -145,6 +148,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   completedPath: null,
   lessonPageOpen: false,
   verseInRow: false,
+  referenceBarNode: null,
   peek: null,
   verseCompactFit: false,
   skipStage: null,
@@ -168,6 +172,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   setLessonProgress: (progress) => set({ lessonProgress: progress }),
   setLessonPageOpen: (open) => set({ lessonPageOpen: open }),
   setVerseInRow: (inRow) => set({ verseInRow: inRow }),
+  setReferenceBarNode: (node) => set({ referenceBarNode: node }),
   setPeek: (peek) => set({ peek }),
   setVerseCompactFit: (compact) => set({ verseCompactFit: compact }),
   setSkipStage: (skip) => set({ skipStage: skip }),
