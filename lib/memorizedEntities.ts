@@ -1,5 +1,5 @@
 import type { MemorizedEntity, PathProgress, SRSState, VerseSegment } from "@/types";
-import { getMemorizedVerses } from "@/lib/progressSummary";
+import { getMemorizedVerses, type MemorizedVerseEntry } from "@/lib/progressSummary";
 import { createInitialSRSState } from "@/lib/srs";
 
 export function entityId(book: string, chapter: number, startVerse: number, endVerse: number): string {
@@ -105,8 +105,14 @@ export function addChapterVersesToEntities(
 // used to wait for a whole chapter). Unlike syncMemorizedEntities it never drops a range, so it's
 // safe even while some chapters aren't in the local cache. Unchanged ranges keep their schedule.
 export function addLearnedVersesToEntities(paths: Record<string, PathProgress>, existingEntities: MemorizedEntity[]): MemorizedEntity[] {
+  return addVerseEntriesToEntities(existingEntities, getMemorizedVerses(paths));
+}
+
+// The same, for verses already in hand (one path's, from the book the path screen loaded —
+// lib/progressSummary.ts's learnedPathVerses).
+export function addVerseEntriesToEntities(existingEntities: MemorizedEntity[], entries: MemorizedVerseEntry[]): MemorizedEntity[] {
   let built = existingEntities;
-  for (const { verse, version } of getMemorizedVerses(paths)) built = addVerseToEntities(built, verse, version);
+  for (const { verse, version } of entries) built = addVerseToEntities(built, verse, version);
   if (built === existingEntities) return existingEntities;
   const existingById = new Map(existingEntities.map((entity) => [entity.id, entity]));
   return built.map((entity) => existingById.get(entity.id) ?? entity);

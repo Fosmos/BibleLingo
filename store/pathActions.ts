@@ -1,8 +1,9 @@
 import type { StoreApi } from "zustand";
-import type { PathProgress, UserProgress, PathReminder } from "@/types";
+import type { PathProgress, UserProgress, PathReminder, VerseSegment } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 import { activePathKeysOf } from "@/lib/activePaths";
-import { addLearnedVersesToEntities, syncMemorizedEntities } from "@/lib/memorizedEntities";
+import { addLearnedVersesToEntities, addVerseEntriesToEntities, syncMemorizedEntities } from "@/lib/memorizedEntities";
+import { learnedPathVerses } from "@/lib/progressSummary";
 
 interface PathActions {
   setPath: (
@@ -28,6 +29,7 @@ interface PathActions {
   retireLearnedPath: (pathKey: string) => void;
   // Adds any learned verse not yet in a spaced-review range (lib/memorizedEntities.ts).
   catchUpMemorized: () => void;
+  catchUpPathVerses: (pathKey: string, verses: VerseSegment[]) => void;
   // A path's daily reminder choice (types/index.ts's PathReminder) — saved only, for now.
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
   // The first `count` verses of the next lesson day are learned (each verse its own lesson), so
@@ -106,6 +108,16 @@ export function createPathActions(
       if (state.activePathKey === pathKey && state.activePathKeys?.includes(pathKey)) return;
       const activePathKeys = keys.includes(pathKey) ? keys : [...keys, pathKey];
       set(persist({ ...state, activePathKey: pathKey, activePathKeys }));
+    },
+
+    // One path's learned verses from its own loaded verses — a book path doesn't resolve from
+    // the local cache alone once a chapter's been evicted (lib/progressSummary.ts).
+    catchUpPathVerses: (pathKey, verses) => {
+      const state = get();
+      const plan = state.paths[pathKey];
+      if (!plan) return;
+      const memorizedEntities = addVerseEntriesToEntities(state.memorizedEntities, learnedPathVerses(pathKey, verses, plan));
+      if (memorizedEntities !== state.memorizedEntities) set(persist({ ...state, memorizedEntities }));
     },
 
     catchUpMemorized: () => {

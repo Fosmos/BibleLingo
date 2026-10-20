@@ -10,6 +10,7 @@ import { resolvePath, parsePathKey } from "@/lib/memorizationContent";
 import { ensurePathVerses, pathContentMatchesVersion, BibleFetchError } from "@/lib/bibleApiClient";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { usePericopesReady } from "@/lib/usePericopesReady";
+import { usePathVersesCatchUp } from "@/lib/usePathVersesCatchUp";
 import { resolveBookChapterView } from "@/lib/bookChapterView";
 import { useMindMapSelection } from "@/lib/useMindMapSelection";
 import { activeDayNumber, todaysDayNumber } from "@/lib/dayRollover";
@@ -34,7 +35,7 @@ interface PathOverviewScreenProps {
 }
 
 export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay, startLesson, priorKnownVerseCount, view = "path", bibleFooter }: PathOverviewScreenProps) {
-  // `verses` is seeded from the localStorage cache (empty during SSR) — gating on `mounted` keeps the first paint stable.
+  // `verses` is seeded from the localStorage cache (empty during SSR); gating on `mounted` keeps first paint stable.
   const mounted = useHasMounted();
   const plan = useProgressStore((state) => state.paths[key]);
   const setPath = useProgressStore((state) => state.setPath);
@@ -97,6 +98,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     }
   }, [plan, verses, key, version, versesPerDay, priorKnownVerseCount, setPath]);
   const pericopesReady = usePericopesReady(verses);
+  usePathVersesCatchUp(key, version, verses, pericopesReady); // Learned verses into spaced review.
   if (!mounted) return <FetchLoading label={`Loading ${label}…`} />;
 
   if (error) {
@@ -111,8 +113,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
-  // Waits for section-heading data before chunking (see lib/usePericopesReady.ts).
-  if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />;
+  if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />; // Days chunk by section headings.
   if (!plan) return null;
 
   const days = buildPathDayPlan(key, applyReferencePreference(verses, includeVerseReferences), plan, pegSystemEnabled, locationTagLevels);
@@ -137,8 +138,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
 
-  // Every path kind: the Path tab's trail, or the Memorized tab's reader. Book, chapter and verse
-  // paths get the Mind Map tab's canon view; a topic path's map view is its day list.
+  // Path tab: the trail; Memorized tab: the reader; Mind Map tab: the canon view (a topic path's is its day list).
   if (view === "path") {
     return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
   }

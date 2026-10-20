@@ -26,27 +26,27 @@ export interface MemorizedVerseEntry {
 // to remember which one this specific path used, rather than trusting whatever happens to be
 // cached there by the time they're later reviewed.
 export function getMemorizedVerses(paths: Record<string, PathProgress>): MemorizedVerseEntry[] {
-  const memorized: MemorizedVerseEntry[] = [];
-  for (const [key, plan] of Object.entries(paths)) {
+  return Object.entries(paths).flatMap(([key, plan]) => {
+    // A book path resolves only while every one of its chapters is in the local cache — when it
+    // doesn't, the path screen adds its verses from the book it loads (learnedPathVerses below).
     const resolved = resolvePath(key);
-    if (!resolved) continue;
-    const days = buildPathDayPlan(key, resolved.verses, plan);
-    const pathKind = parsePathKey(key).kind;
+    return resolved ? learnedPathVerses(key, resolved.verses, plan) : [];
+  });
+}
 
-    const earned =
-      pathKind !== "book" && plan.completedDays >= days.length
-        ? resolved.verses.map((verse) => ({ verse, version: plan.version }))
-        : days.flatMap((day) => learnedVersesOfDay(day, plan).map((verse) => ({ verse, version: plan.version })));
-    memorized.push(...earned);
-    // Verses the reader said they already knew when choosing this path (see
-    // PathProgress.priorKnownVerseCount) are memorized from the start — straight into spaced
-    // review, not held back until the rest of their chapter/path is finished.
-    const earnedIds = new Set(earned.map((entry) => entry.verse.id));
-    for (const verse of resolved.verses.slice(0, plan.priorKnownVerseCount ?? 0)) {
-      if (!earnedIds.has(verse.id)) memorized.push({ verse, version: plan.version });
-    }
-  }
-  return memorized;
+// One path's learned verses, from its own verses (however they were loaded) and progress.
+export function learnedPathVerses(key: string, verses: VerseSegment[], plan: PathProgress): MemorizedVerseEntry[] {
+  const days = buildPathDayPlan(key, verses, plan);
+  const earned =
+    parsePathKey(key).kind !== "book" && plan.completedDays >= days.length
+      ? verses.map((verse) => ({ verse, version: plan.version }))
+      : days.flatMap((day) => learnedVersesOfDay(day, plan).map((verse) => ({ verse, version: plan.version })));
+  // Verses the reader said they already knew when choosing this path (see
+  // PathProgress.priorKnownVerseCount) are memorized from the start — straight into spaced
+  // review, not held back until the rest of their chapter/path is finished.
+  const earnedIds = new Set(earned.map((entry) => entry.verse.id));
+  const prior = verses.slice(0, plan.priorKnownVerseCount ?? 0).filter((verse) => !earnedIds.has(verse.id)).map((verse) => ({ verse, version: plan.version }));
+  return [...earned, ...prior];
 }
 
 // A memorized entity (see lib/memorizedEntities.ts) — manual or path-derived alike, every
