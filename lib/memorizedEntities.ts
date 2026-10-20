@@ -112,34 +112,13 @@ export function addLearnedVersesToEntities(paths: Record<string, PathProgress>, 
   return built.map((entity) => existingById.get(entity.id) ?? entity);
 }
 
-// Rebuilds the path-derived portion of the entity list from current path progress. An
-// entity whose verse range is unchanged from before keeps its existing SRS schedule
-// (matched by id, which encodes the range); a range that just merged/grew gets a fresh SRS
-// schedule, since it now covers different content than what was last reviewed under that id.
-// Manually-added entries (see createManualEntity) aren't derived from path progress at all,
-// so this rebuild never reconstructs them on its own — they're carried forward as-is, dropped
-// only if a completed path has since covered the same verses (avoiding a duplicate pair of
-// entities for that range).
-export function syncMemorizedEntities(
-  paths: Record<string, PathProgress>,
-  existingEntities: MemorizedEntity[],
-): MemorizedEntity[] {
-  const memorizedVerses = getMemorizedVerses(paths);
-  const existingById = new Map(existingEntities.map((entity) => [entity.id, entity]));
-
-  let entities: MemorizedEntity[] = [];
-  for (const { verse, version } of memorizedVerses) {
-    entities = addVerseToEntities(entities, verse, version);
-  }
-  const pathDerived = entities.map((entity) => {
-    const existing = existingById.get(entity.id);
-    return existing ? { ...entity, srs: existing.srs } : entity;
-  });
-
-  const manualToKeep = existingEntities.filter(
-    (entity) =>
-      entity.manual && !overlapsExistingEntity(pathDerived, entity.book, entity.chapter, entity.startVerse, entity.endVerse),
-  );
-
-  return [...pathDerived, ...manualToKeep];
+// Brings the entity list up to date with path progress: every verse learned on a path joins a
+// range (merging into its neighbours); nothing is ever taken away. It used to rebuild the
+// path-derived ranges from scratch, which silently dropped every range it couldn't re-derive at
+// that moment — a whole book path's chapters whenever one of its chapters wasn't in the local
+// cache (the ESV storage cap evicts them), and since lessons count each verse as it finishes, that
+// rebuild ran after every verse. A range that grows gets a fresh schedule (it covers new content);
+// one unchanged keeps its own. A manual range already covering a verse just keeps it.
+export function syncMemorizedEntities(paths: Record<string, PathProgress>, existingEntities: MemorizedEntity[]): MemorizedEntity[] {
+  return addLearnedVersesToEntities(paths, existingEntities);
 }

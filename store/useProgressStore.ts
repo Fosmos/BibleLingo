@@ -132,6 +132,8 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
 
   hydrate: (userId) => {
     set(loadProgress(userId));
+    // Every verse learned on a path is in spaced review — restores any a range was missing.
+    get().catchUpMemorized();
   },
 
   completeDay: (pathKey, dayNumber) => {
