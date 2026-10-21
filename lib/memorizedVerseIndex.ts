@@ -1,6 +1,6 @@
 import type { BibleBook, MemorizedEntity, PathProgress } from "@/types";
 import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
-import { resolvePath } from "@/lib/memorizationContent";
+import { pathVersesForCounting } from "@/lib/pathVersesForCounting";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getChapterVerseNumbers } from "@/lib/chapterVerseIndex";
@@ -28,7 +28,7 @@ export function buildMemorizedVerseIndex(paths: Record<string, PathProgress>, en
     for (let verse = entity.startVerse; verse <= entity.endVerse; verse++) add(index, entity.book, entity.chapter, verse);
   }
   for (const [key, plan] of Object.entries(paths)) {
-    const verses = resolvePath(key)?.verses;
+    const verses = pathVersesForCounting(key);
     if (!verses) continue;
     for (const verse of verses.slice(0, plan.priorKnownVerseCount ?? 0)) add(index, verse.book, verse.chapter, verse.verseNumber);
     for (const day of buildPathDayPlan(key, verses, plan)) {
@@ -63,9 +63,9 @@ export function chapterMemorizedFraction(index: MemorizedVerseIndex, book: strin
   return done > 0 && total ? Math.min(1, done / total) : 0;
 }
 
-// A book's (or its chapters `from`..`to`'s) 0..1 share memorized. Chapter lengths come from cached
-// verse numbers where it's been loaded here; otherwise the book's verse total is spread evenly.
-export function bookMemorizedFraction(index: MemorizedVerseIndex, book: BibleBook, from = 1, to = book.chapterCount): number {
+// A book's (or its chapters `from`..`to`'s) verses memorized, of how many. Chapter lengths come from
+// cached verse numbers where it's been loaded here; otherwise the book's verse total is spread evenly.
+export function bookMemorizedCounts(index: MemorizedVerseIndex, book: BibleBook, from = 1, to = book.chapterCount): { done: number; total: number } {
   const average = (BOOK_VERSE_COUNTS[book.name] ?? 0) / book.chapterCount;
   let done = 0;
   let total = 0;
@@ -75,5 +75,11 @@ export function bookMemorizedFraction(index: MemorizedVerseIndex, book: BibleBoo
     done += Math.min(count, length);
     total += length;
   }
+  return { done, total: Math.round(total) };
+}
+
+// The same as a 0..1 share.
+export function bookMemorizedFraction(index: MemorizedVerseIndex, book: BibleBook, from = 1, to = book.chapterCount): number {
+  const { done, total } = bookMemorizedCounts(index, book, from, to);
   return total > 0 ? Math.min(1, done / total) : 0;
 }

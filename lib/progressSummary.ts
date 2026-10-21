@@ -1,6 +1,7 @@
 import type { MemorizedEntity, PathProgress, VerseSegment } from "@/types";
 import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
-import { parsePathKey, resolvePath } from "@/lib/memorizationContent";
+import { parsePathKey } from "@/lib/memorizationContent";
+import { pathVersesForCounting } from "@/lib/pathVersesForCounting";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedChapterVersion } from "@/lib/bibleContentCache";
@@ -27,10 +28,10 @@ export interface MemorizedVerseEntry {
 // cached there by the time they're later reviewed.
 export function getMemorizedVerses(paths: Record<string, PathProgress>): MemorizedVerseEntry[] {
   return Object.entries(paths).flatMap(([key, plan]) => {
-    // A book path resolves only while every one of its chapters is in the local cache — when it
-    // doesn't, the path screen adds its verses from the book it loads (learnedPathVerses below).
-    const resolved = resolvePath(key);
-    return resolved ? learnedPathVerses(key, resolved.verses, plan) : [];
+    // A book path whose text isn't all cached counts from its chapters' remembered verse numbers
+    // (pathVersesForCounting); the path screen also adds its verses from the book it loads.
+    const verses = pathVersesForCounting(key);
+    return verses ? learnedPathVerses(key, verses, plan) : [];
   });
 }
 

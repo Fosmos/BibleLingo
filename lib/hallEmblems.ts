@@ -61,21 +61,19 @@ const THEME_EMBLEMS: [RegExp, string][] = [
 // palace's own "a room" — rather than a random picture that would mean nothing.
 const FALLBACK_EMBLEM = "door";
 
-function versesText(pericope: MindMapPericopeDatum): string {
-  const verses = getChapterVerses(pericope.book, pericope.chapter);
-  const { rangeStartVerse: start, rangeEndVerse: end } = pericope;
+function versesText(book: string, chapter: number, start: number | undefined, end: number | undefined): string {
+  const verses = getChapterVerses(book, chapter);
   if (!verses || start === undefined || end === undefined) return "";
   return verses.slice(start - 1, end).map((verse) => verse.text).join(" ");
 }
 
-// The emblem a hall shows until the reader picks their own — one that fits what the section is
-// about: first from its heading (the first theme its words name); failing that, the theme its
-// verses mention most (e.g. a heading like "Support and Opposition" whose verses talk about
-// receiving and welcoming the brothers); failing that, a plain door.
-export function autoHallEmblem(pericope: MindMapPericopeDatum): string {
-  const fromHeading = THEME_EMBLEMS.find(([pattern]) => pattern.test(pericope.label));
+// The emblem that fits a section — first from its heading (the first theme its words name); failing
+// that, the theme its verses mention most (e.g. a heading like "Support and Opposition" whose verses
+// talk about receiving and welcoming the brothers); failing that, a plain door.
+export function themeEmblem(heading: string, book: string, chapter: number, start?: number, end?: number): string {
+  const fromHeading = THEME_EMBLEMS.find(([pattern]) => pattern.test(heading));
   if (fromHeading) return fromHeading[1];
-  const text = versesText(pericope);
+  const text = versesText(book, chapter, start, end);
   let best: { emblem: string; count: number } | undefined;
   for (const [pattern, emblem] of THEME_EMBLEMS) {
     const count = text.match(new RegExp(pattern.source, "gi"))?.length ?? 0;
@@ -84,11 +82,19 @@ export function autoHallEmblem(pericope: MindMapPericopeDatum): string {
   return best?.emblem ?? FALLBACK_EMBLEM;
 }
 
+// The emblem a hall shows until the reader picks their own (themeEmblem, above).
+export function autoHallEmblem(pericope: MindMapPericopeDatum): string {
+  return themeEmblem(pericope.label, pericope.book, pericope.chapter, pericope.rangeStartVerse, pericope.rangeEndVerse);
+}
+
 // Where a reader's own chosen emblem for a hall is saved (store/locationTagActions.ts's iconTags):
 // keyed by the section's stable verse-range label, so it survives a change of translation.
 export function hallEmblemKey(pericope: MindMapPericopeDatum): string {
-  return `hall:${pericope.tagLabel}`;
+  return hallEmblemKeyFor(pericope.tagLabel);
 }
+
+// The same key from a pericope's verse-range label ("Mark 1:1-8" — PericopeInfo.label).
+export const hallEmblemKeyFor = (tagLabel: string): string => `hall:${tagLabel}`;
 
 // The doorway silhouette a hall is drawn with (its card's corners, and how far the plaque's text
 // is inset to clear them), cycling through five by hall number — so neighbouring halls always

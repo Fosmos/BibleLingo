@@ -40,6 +40,8 @@ export interface TrailSection {
   done: number;
   // A chapter review: one stop, opened straight from the map.
   review?: boolean;
+  // What a review section reviews — a pericope, a chapter, or (the finish line) the whole path.
+  reviewOf?: "pericope" | "chapter" | "final";
 }
 
 const REVIEW_TITLES: Record<Exclude<MemorizationDay["kind"], "learn">, string> = {
@@ -136,16 +138,16 @@ export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDay
   return groups.flatMap((group, index) => {
     const lessons = group.stops.filter((stop) => stop.verse);
     const review = group.key.startsWith("p-") ? passageReviewStop(`pericope:${group.key.slice(2)}`, "Review", `Review: ${group.title}`, lessons, reviewsDone) : null;
-    const sections = [finishSection(group.kicker, group.title, group.stops, byPassage)];
+    const sections: TrailSection[] = [{ ...finishSection(group.kicker, group.title, group.stops, byPassage), reviewOf: group.key === "final" ? "final" : undefined }];
     // A pericope's review of the whole of it is its own stone on the map, right after it.
-    if (review) sections.push({ ...finishSection("Pericope review", `Review: ${group.title}`, [review]), ref: sections[0].ref, review: true });
+    if (review) sections.push({ ...finishSection("Pericope review", `Review: ${group.title}`, [review]), ref: sections[0].ref, review: true, reviewOf: "pericope" });
     // A book's chapter, once its last pericope is through, gets its own review section on the map.
     const chapter = chapterOfSectionKey(group.key);
     if (kind === "book" && chapter !== undefined && chapterOfSectionKey(groups[index + 1]?.key) !== chapter) {
       const inChapter = groups.filter((other) => chapterOfSectionKey(other.key) === chapter).flatMap((other) => other.stops.filter((stop) => stop.verse));
       const book = inChapter[0]?.verse?.book ?? "";
       const stop = passageReviewStop(`chapter:${chapter}`, "Review", `Review ${formatChapterLabel(book, chapter)}`, inChapter, reviewsDone);
-      if (stop) sections.push({ ...finishSection("Chapter review", `Review ${formatChapterLabel(book, chapter)}`, [stop]), ref: formatChapterLabel(book, chapter), review: true });
+      if (stop) sections.push({ ...finishSection("Chapter review", `Review ${formatChapterLabel(book, chapter)}`, [stop]), ref: formatChapterLabel(book, chapter), review: true, reviewOf: "chapter" });
     }
     return sections;
   });

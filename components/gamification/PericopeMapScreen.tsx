@@ -3,7 +3,8 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowLeft, Check, Lock, Play, Trophy } from "lucide-react";
+import { ArrowLeft, Check, Lock, Play, RotateCcw } from "lucide-react";
+import { landmarkIconById } from "@/lib/landmarkIcons";
 import type { TrailSection } from "@/lib/trailStops";
 import { pericopeColour } from "@/lib/chapterPathPalette";
 import type { MapThemePage } from "@/lib/mapThemePages";
@@ -23,6 +24,8 @@ interface PericopeMapScreenProps {
   // Memory Palace tags (lib/trailTags.ts): the path's own, under the title, and each section's.
   headerTags?: TrailTag[];
   tagsFor?: (section: TrailSection) => TrailTag[];
+  // Each section's symbol, a landmark id (lib/sectionEmblems.ts) — unset shows play / lock / check.
+  emblemFor?: (section: TrailSection) => string;
 }
 
 // How far a swipe across the sections must travel to turn the theme page.
@@ -51,6 +54,7 @@ export function PericopeMapScreen({
   onPageChange,
   headerTags = [],
   tagsFor,
+  emblemFor,
 }: PericopeMapScreenProps) {
   const shownPage = pages?.[page];
   const shown = shownPage
@@ -112,6 +116,7 @@ export function PericopeMapScreen({
         {shown.map((index, position) => {
           const section = sections[index];
           const colour = pericopeColour(index);
+          const Emblem = emblemFor ? landmarkIconById(emblemFor(section))?.Icon : undefined;
           const due = new Set(section.stops.flatMap((stop) => stop.dueIds))
             .size;
           const ring = {
@@ -129,20 +134,31 @@ export function PericopeMapScreen({
                 onClick={() => onOpenSection(index)}
                 className="flex items-center gap-3.5 text-left"
               >
-                <span className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#8FA073_0_var(--fill),#DCD3C4_var(--fill)_100%)] dark:bg-[conic-gradient(#8FA073_0_var(--fill),#3f3f46_var(--fill)_100%)]">
+                <span className="relative flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#8FA073_0_var(--fill),#DCD3C4_var(--fill)_100%)] dark:bg-[conic-gradient(#8FA073_0_var(--fill),#3f3f46_var(--fill)_100%)]">
                   <span
                     className={`press-6 -mt-1.5 flex h-[84px] w-[84px] items-center justify-center rounded-full ${BUBBLE[section.state]}`}
                   >
-                    {section.state === "complete" ? (
+                    {Emblem ? (
+                      <Emblem size={36} strokeWidth={2.25} />
+                    ) : section.state === "complete" ? (
                       <Check size={34} strokeWidth={3.5} />
-                    ) : section.review && section.state === "current" ? (
-                      <Trophy size={30} strokeWidth={2.75} />
                     ) : section.state === "current" ? (
                       <Play size={30} fill="currentColor" strokeWidth={2.75} />
                     ) : (
                       <Lock size={28} strokeWidth={2.75} />
                     )}
                   </span>
+                  {/* With a symbol, the state (and a review's loop arrow) moves to small badges on the ring. */}
+                  {Emblem && section.state !== "current" && (
+                    <span className={`absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-paper dark:border-zinc-950 ${section.state === "complete" ? "bg-sage-700 text-white" : "bg-sand-300 text-sand-700 dark:bg-zinc-700 dark:text-zinc-300"}`}>
+                      {section.state === "complete" ? <Check size={14} strokeWidth={3.5} /> : <Lock size={12} strokeWidth={3} />}
+                    </span>
+                  )}
+                  {Emblem && section.review && (
+                    <span className="absolute left-0.5 top-0.5 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-paper bg-brand-700 text-white dark:border-zinc-950">
+                      <RotateCcw size={13} strokeWidth={3} />
+                    </span>
+                  )}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
                   <span className="max-w-full truncate text-[11px] font-black uppercase tracking-[.08em] text-[var(--p)]">

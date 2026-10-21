@@ -44,7 +44,7 @@ export function BookStatsScreen() {
     ["Of the book", stats.percent === null ? "—" : `${stats.percent}%`],
     ["Chapters", String(stats.chapters)],
     ["Avg. accuracy", stats.averageAccuracy === null ? "—" : `${stats.averageAccuracy}%`],
-    ["Reviews", String(stats.reviews)],
+    ["Verses", stats.bookVerses ? `${stats.bookVerses.done}/${stats.bookVerses.total}` : String(stats.verses)],
     ["Due now", String(stats.dueIds.length)],
     ["First memorized", stats.firstMemorized ?? "—"],
   ];

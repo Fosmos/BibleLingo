@@ -11,6 +11,7 @@ import { readerHref } from "@/lib/readerHref";
 import { mapThemePages } from "@/lib/mapThemePages";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { pathTags, sectionTags } from "@/lib/trailTags";
+import { sectionEmblem } from "@/lib/sectionEmblems";
 import type { LocationTagLevel } from "@/types";
 import type { TrailSection } from "@/lib/trailStops";
 import { PATH_TYPE_META } from "@/lib/pathTypeMeta";
@@ -75,6 +76,9 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   const passagePath = kind === "book" || kind === "chapter";
   const headerTags = useMemo(() => (passagePath ? pathTags(kind, sections, tagLevels) : []), [passagePath, kind, sections, tagLevels]);
   const tagsFor = passagePath ? (section: TrailSection) => sectionTags(section, tagLevels) : undefined;
+  // Each stone's symbol on the map — its pericope's hall emblem, or its review's (lib/sectionEmblems.ts).
+  const iconTags = useProgressStore((state) => state.iconTags);
+  const emblemFor = (section: TrailSection) => sectionEmblem(section, iconTags);
   const showPage = (next: number) => {
     const query = new URLSearchParams(params.toString());
     query.set("theme", String(next));
@@ -114,7 +118,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : index === null ? (
-        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} headerTags={headerTags} tagsFor={tagsFor} />
+        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
       ) : (
         <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} tagsFor={tagsFor} />
       )}
