@@ -3,6 +3,7 @@ import { learnedVersesOfDay } from "@/lib/dayVerseProgress";
 import { resolvePath } from "@/lib/memorizationContent";
 import { buildPathDayPlan } from "@/lib/dayPlan";
 import { getChapterVerses } from "@/lib/chapterContent";
+import { getChapterVerseNumbers } from "@/lib/chapterVerseIndex";
 import { BOOK_VERSE_COUNTS } from "@/lib/esvUsageLimits";
 
 // Every memorized verse the reader has, by `${book}|${chapter}` — from ALL of their progress, not
@@ -38,30 +39,39 @@ export function buildMemorizedVerseIndex(paths: Record<string, PathProgress>, en
   return index;
 }
 
-// How many verses a chapter has, from its cached text (skipping a translation's empty gap
-// verses) — undefined when it isn't cached on this device.
-function chapterTotal(book: string, chapter: number): number | undefined {
+// A chapter's verse numbers (skipping a translation's empty gap verses) — from its cached text, or
+// the numbers remembered for good once it's been loaded (lib/chapterVerseIndex.ts: the ESV's storage
+// cap clears a memorized book's text, never these). Undefined when it's never been loaded here.
+function chapterVerseNumbers(book: string, chapter: number): number[] | undefined {
   const verses = getChapterVerses(book, chapter);
-  return verses && verses.length > 0 ? verses.filter((verse) => verse.text.trim().length > 0).length : undefined;
+  if (verses && verses.length > 0) return verses.filter((verse) => verse.text.trim().length > 0).map((verse) => verse.verseNumber);
+  return getChapterVerseNumbers(book, chapter);
 }
 
-// A chapter's 0..1 share memorized — 0 when its length isn't known yet (text not cached).
+// How many of a chapter's verses are memorized, and of how many — only its real verses counted, so a
+// gap verse never holds a whole chapter short of complete. Its length unknown when never loaded here.
+function chapterCount(index: MemorizedVerseIndex, book: string, chapter: number): { done: number; total: number | undefined } {
+  const memorized = index.get(`${book}|${chapter}`);
+  const numbers = chapterVerseNumbers(book, chapter);
+  if (!numbers?.length) return { done: memorized?.size ?? 0, total: undefined };
+  return { done: memorized ? numbers.filter((number) => memorized.has(number)).length : 0, total: numbers.length };
+}
+
+// A chapter's 0..1 share memorized — 0 when its length isn't known yet (never loaded here).
 export function chapterMemorizedFraction(index: MemorizedVerseIndex, book: string, chapter: number): number {
-  const done = index.get(`${book}|${chapter}`)?.size ?? 0;
-  if (done === 0) return 0;
-  const total = chapterTotal(book, chapter);
-  return total ? Math.min(1, done / total) : 0;
+  const { done, total } = chapterCount(index, book, chapter);
+  return done > 0 && total ? Math.min(1, done / total) : 0;
 }
 
 // A book's (or its chapters `from`..`to`'s) 0..1 share memorized. Chapter lengths come from cached
-// text where there is some; otherwise the book's known verse total is spread evenly per chapter.
+// verse numbers where it's been loaded here; otherwise the book's verse total is spread evenly.
 export function bookMemorizedFraction(index: MemorizedVerseIndex, book: BibleBook, from = 1, to = book.chapterCount): number {
   const average = (BOOK_VERSE_COUNTS[book.name] ?? 0) / book.chapterCount;
   let done = 0;
   let total = 0;
   for (let chapter = from; chapter <= to; chapter++) {
-    const count = index.get(`${book.name}|${chapter}`)?.size ?? 0;
-    const length = chapterTotal(book.name, chapter) ?? Math.max(average, count);
+    const { done: count, total: known } = chapterCount(index, book.name, chapter);
+    const length = known ?? Math.max(average, count);
     done += Math.min(count, length);
     total += length;
   }
