@@ -95,6 +95,8 @@ interface LessonSessionState {
   inputSwap: { to: "speak" | "type"; choose: (input: "speak" | "type") => void } | null;
   // The verse the lesson page shows (lib/usePublishHelpVerse.ts), for the help chips' tabs.
   helpVerseText: string | null;
+  // Off during spaced review (InPlaceSrsReview.tsx): blank words take their room but show no grey pill.
+  blankPills: boolean;
 }
 
 interface LessonSessionActions {
@@ -124,6 +126,7 @@ interface LessonSessionActions {
   setSkipStage: (skip: (() => void) | null) => void;
   setInputSwap: (swap: LessonSessionState["inputSwap"]) => void;
   setHelpVerseText: (text: string | null) => void;
+  setBlankPills: (pills: boolean) => void;
 }
 
 type LessonSessionStore = LessonSessionState & LessonSessionActions;
@@ -159,6 +162,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   skipStage: null,
   inputSwap: null,
   helpVerseText: null,
+  blankPills: true,
   begin: () => set((state) => ({ activeCount: state.activeCount + 1 })),
   end: () => set((state) => ({ activeCount: Math.max(0, state.activeCount - 1) })),
   setFocusVerse: (verse) => set({ focusVerse: verse }),
@@ -184,6 +188,7 @@ export const useLessonSessionStore = create<LessonSessionStore>((set) => ({
   setSkipStage: (skip) => set({ skipStage: skip }),
   setInputSwap: (swap) => set({ inputSwap: swap }),
   setHelpVerseText: (text) => set({ helpVerseText: text }),
+  setBlankPills: (pills) => set({ blankPills: pills }),
   setCompletedPath: (pathKey) => set({ completedPath: pathKey }),
 }));
 

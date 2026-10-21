@@ -1,4 +1,7 @@
+"use client";
+
 import { splitWordPunctuation } from "@/lib/verseWords";
+import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 
 export type HiddenWordTone = "pending" | "target" | "error" | "filled";
 
@@ -27,9 +30,12 @@ const PILL: Record<Exclude<HiddenWordTone, "filled">, string> = {
 // a hint stage. Once typed, the whole word shows in its place. `indent-0`: an inline-block would
 // otherwise re-apply SenseLineRow.tsx's hanging `-indent-5` to its own text.
 export function HiddenWord({ word, firstLetter = false, lastLetter = false, tone = "pending", bare = false }: HiddenWordProps) {
+  const pills = useLessonSessionStore((state) => state.blankPills);
   const { lead, core, trail } = splitWordPunctuation(word);
   if (!core) return <>{bare ? "" : word}</>;
   if (tone === "filled") return <>{word}</>;
+  // Spaced review shows no pills: a waiting word just keeps its room, so nothing moves as it's typed.
+  if (!pills && tone === "pending" && !firstLetter && !lastLetter) return <span className="invisible" aria-hidden="true">{word}</span>;
   const showFirst = firstLetter;
   const showLast = lastLetter && core.length > 1;
   const middle = core.slice(showFirst ? 1 : 0, showLast ? -1 : undefined);

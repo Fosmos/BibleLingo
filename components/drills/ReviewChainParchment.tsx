@@ -37,11 +37,13 @@ interface ReviewChainParchmentProps {
   // line layout below (still used wherever this isn't set, e.g. DaySessionController.tsx's own
   // chapter_review usage).
   layout?: ChapterReadingLayout;
+  // The progressive hint on the word being typed (ReviewChainVerseWords.tsx).
+  hintLevel?: number;
 }
 
 // ReviewChain.tsx's own parchment content, split out purely to keep that file under this
 // codebase's 200-line cap.
-export function ReviewChainParchment({ verses, combinedWords, revealedCount, currentVerse, layout }: ReviewChainParchmentProps) {
+export function ReviewChainParchment({ verses, combinedWords, revealedCount, currentVerse, layout, hintLevel }: ReviewChainParchmentProps) {
   const verseIds = new Set(verses.map((verse) => verse.id));
   // How far into `currentVerse` ITSELF (not the whole chain) recall currently is —
   // disambiguates which page a verse split across the page break should open to (see
@@ -89,7 +91,7 @@ export function ReviewChainParchment({ verses, combinedWords, revealedCount, cur
             const fragmentWords = wordsForVerse(combinedWords, verseIndex)
               .slice(fragmentStart, fragmentStart + fragmentWordCount)
               .slice(range.startIndex, range.endIndex);
-            return <ReviewChainVerseWords words={fragmentWords} revealedCount={revealedCount} />;
+            return <ReviewChainVerseWords words={fragmentWords} revealedCount={revealedCount} hintLevel={hintLevel} />;
           }}
           isVerseNumberVisible={(verse) => {
             // Shown once every word before this verse is revealed (the previous verse's last

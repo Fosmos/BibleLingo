@@ -48,6 +48,8 @@ export interface ReviewChainTyping {
   referenceMatch: RegExpMatchArray | null | undefined;
   revealCurrentWord: () => void;
   recordMistake: (notice?: string) => void;
+  // Counts the word being typed as missed, without a notice or a restart (a hint that gives it away).
+  markWrong: () => void;
   handleLetterChange: (value: string) => void;
 }
 
@@ -104,6 +106,10 @@ export function useReviewChain({ verses, restartOnMistake, initialProgress, onPr
     setLetterInput("");
   }
 
+  function markWrong() {
+    setWrongWordIndices((prev) => new Set(prev).add(wordIndex));
+  }
+
   function handleLetterChange(value: string) {
     if (!currentWord) return;
     const expected = firstWordCharacter(currentWord.word)?.toLowerCase();
@@ -131,6 +137,7 @@ export function useReviewChain({ verses, restartOnMistake, initialProgress, onPr
     referenceMatch,
     revealCurrentWord,
     recordMistake,
+    markWrong,
     handleLetterChange,
   };
 }

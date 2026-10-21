@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { VerseSegment, WordDiffToken } from "@/types";
 import { useReviewChain, type ReviewChainProgress } from "@/lib/useReviewChain";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
@@ -10,6 +10,7 @@ import { INFO_TIPS } from "@/lib/infoTipCopy";
 import { MistakeNotice } from "@/components/drills/MistakeNotice";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { ReviewChainResult } from "@/components/drills/ReviewChainResult";
+import { ReviewHintButton } from "@/components/drills/ReviewHintButton";
 import { usePeekedVerses } from "@/lib/usePeekedVerses";
 import { useChainStumbleRecorder } from "@/lib/useStumbleRecorder";
 import { ReviewChainParchment } from "@/components/drills/ReviewChainParchment";
@@ -34,9 +35,11 @@ interface ReviewChainProps {
   // Resume point and progress reports — see lib/useReviewChain.ts.
   initialProgress?: ReviewChainProgress;
   onProgress?: (progress: ReviewChainProgress) => void;
+  // A progressive Hint button for the word being typed (spaced review — InPlaceSrsReview.tsx).
+  hints?: boolean;
 }
 
-export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange, verseViewExtra, initialProgress, onProgress }: ReviewChainProps) {
+export function ReviewChain({ verses, onComplete, label = "Review", layout, restartOnMistake = true, onVerseChange, verseViewExtra, initialProgress, onProgress, hints = false }: ReviewChainProps) {
   const typing = useReviewChain({ verses, restartOnMistake, initialProgress, onProgress });
   const { combinedWords, wordIndex, revealedWords, letterInput, restartNotice, wrongWordIndices, finished, currentWord, currentVerse, referenceMatch } = typing;
   useEffect(() => {
@@ -55,6 +58,18 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
     recordStumbles(verses, [...wrongWordIndices]);
   }, [finished, settle, verses, recordStumbles, wrongWordIndices]);
   const totalWords = combinedWords.length;
+  // How far the hint has gone on the word being typed — back to nothing on the next word. Its first
+  // letter, or the word itself, gives it away, so either counts the word as missed.
+  const [hint, setHint] = useState({ index: -1, level: 0 });
+  const hintLevel = hint.index === wordIndex ? hint.level : 0;
+  const showHint = () => {
+    const level = hintLevel + 1;
+    if (level >= 2) typing.markWrong();
+    if (level >= 3) {
+      setHint({ index: -1, level: 0 });
+      typing.revealCurrentWord();
+    } else setHint({ index: wordIndex, level });
+  };
 
   if (finished) {
     const accuracy = Math.round(((totalWords - wrongWordIndices.size) / totalWords) * 100);
@@ -83,6 +98,7 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
       revealedCount={revealedWords.length}
       currentVerse={currentVerse}
       layout={layout}
+      hintLevel={hintLevel}
     />
   );
 
@@ -123,6 +139,7 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
           />
         )}
         <MistakeNotice text={restartNotice} />
+        {hints && !referenceMatch && <ReviewHintButton level={hintLevel} onHint={showHint} />}
         {!referenceMatch && <OnScreenKeyboard onKey={typing.handleLetterChange} />}
         <AutoCompleteButton onClick={() => onComplete(100)} />
       </LessonControlBar>

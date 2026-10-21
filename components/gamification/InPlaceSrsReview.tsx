@@ -66,6 +66,12 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   useEffect(() => {
     if (current !== -1) saveIndex(current);
   }, [current, saveIndex]);
+  // No grey pills on blank words while reviewing — just their room (HiddenWord.tsx).
+  const setBlankPills = useLessonSessionStore((state) => state.setBlankPills);
+  useEffect(() => {
+    setBlankPills(false);
+    return () => setBlankPills(true);
+  }, [setBlankPills]);
 
   const [chapterVerses, setChapterVerses] = useState<VerseSegment[]>([]);
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
@@ -176,6 +182,7 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
             verseViewExtra={<SrsInputModeToggle />}
             initialProgress={run.progressFor(current)}
             onProgress={onProgress}
+            hints
           />
         )}
       </div>
