@@ -20,7 +20,7 @@ interface ReviewSectionProps {
   day: MemorizationDay;
   onComplete: () => void;
   sessionKey?: string;
-  // "final" runs day.previousVerses — the verse just learned and up to 4 before it — as the
+  // "final" runs day.previousVerses — the verse just learned and its pericope's verses before it — as the
   // lesson's closing "Review", across every path kind (VerseLessonFlow.tsx). "pre"
   // (default) runs day.reviewVerses as a single "Review" stage — VerseLessonFlow itself
   // never reaches this phase for a "learn" day anymore (see its own doc comment); the only

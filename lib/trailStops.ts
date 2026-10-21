@@ -10,7 +10,8 @@ import { chapterOfSectionKey, passageReviewStop, type PassageReview } from "@/li
 // a verse path as its one lesson's learning stages. One stop per verse — a day of several verses is
 // several stops, each opening that day's lesson. Review days are the sections' trophy stops; a
 // pericope is followed by a review section of the whole pericope, and a book's chapter by a chapter
-// review section — each one stone on the map, opened straight from it.
+// review section — each one stone on the map, opened straight from it (one stone for both when the
+// pericope is the whole chapter).
 // A chapter path's own closing review days are its last section.
 export type StopState = "done" | "current" | "locked";
 
@@ -139,15 +140,21 @@ export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDay
     const lessons = group.stops.filter((stop) => stop.verse);
     const review = group.key.startsWith("p-") ? passageReviewStop(`pericope:${group.key.slice(2)}`, "Review", `Review: ${group.title}`, lessons, reviewsDone) : null;
     const sections: TrailSection[] = [{ ...finishSection(group.kicker, group.title, group.stops, byPassage), reviewOf: group.key === "final" ? "final" : undefined }];
-    // A pericope's review of the whole of it is its own stone on the map, right after it.
-    if (review) sections.push({ ...finishSection("Pericope review", `Review: ${group.title}`, [review]), ref: sections[0].ref, review: true, reviewOf: "pericope" });
     // A book's chapter, once its last pericope is through, gets its own review section on the map.
     const chapter = chapterOfSectionKey(group.key);
-    if (kind === "book" && chapter !== undefined && chapterOfSectionKey(groups[index + 1]?.key) !== chapter) {
-      const inChapter = groups.filter((other) => chapterOfSectionKey(other.key) === chapter).flatMap((other) => other.stops.filter((stop) => stop.verse));
+    const endsChapter = kind === "book" && chapter !== undefined && chapterOfSectionKey(groups[index + 1]?.key) !== chapter;
+    const chapterGroups = endsChapter ? groups.filter((other) => chapterOfSectionKey(other.key) === chapter) : [];
+    // A pericope that is its chapter's only one shares the chapter's review stone — reviewed once,
+    // done if either review was (one finished before they were combined counts).
+    const sameAsChapter = review !== null && chapterGroups.length === 1;
+    if (review && !sameAsChapter) sections.push({ ...finishSection("Pericope review", `Review: ${group.title}`, [review]), ref: sections[0].ref, review: true, reviewOf: "pericope" });
+    if (endsChapter && chapter !== undefined) {
+      const inChapter = chapterGroups.flatMap((other) => other.stops.filter((stop) => stop.verse));
       const book = inChapter[0]?.verse?.book ?? "";
-      const stop = passageReviewStop(`chapter:${chapter}`, "Review", `Review ${formatChapterLabel(book, chapter)}`, inChapter, reviewsDone);
-      if (stop) sections.push({ ...finishSection("Chapter review", `Review ${formatChapterLabel(book, chapter)}`, [stop]), ref: formatChapterLabel(book, chapter), review: true, reviewOf: "chapter" });
+      const done = sameAsChapter && review?.state === "done" ? [...reviewsDone, `chapter:${chapter}`] : reviewsDone;
+      const title = sameAsChapter ? `Review ${formatChapterLabel(book, chapter)}: ${group.title}` : `Review ${formatChapterLabel(book, chapter)}`;
+      const stop = passageReviewStop(`chapter:${chapter}`, "Review", title, inChapter, done);
+      if (stop) sections.push({ ...finishSection("Chapter review", title, [stop]), ref: formatChapterLabel(book, chapter), review: true, reviewOf: "chapter" });
     }
     return sections;
   });
