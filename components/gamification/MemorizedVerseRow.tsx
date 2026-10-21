@@ -8,17 +8,17 @@ interface MemorizedVerseRowProps {
   row: LibraryRow;
   // Where "Review" goes (lib/useReviewHref.ts) — only shown on due rows.
   reviewHref: string;
-  // Tapping the row itself — lands on the range in the reader.
-  openHref: string;
+  // Tapping the row itself — the passage's stats page (PassageStatsScreen.tsx).
+  statsHref: string;
 }
 
 // One range in the Memorized tab's lists: its spaced-review seal (bronze → diamond by box —
-// SrsSeal.tsx), reference, when it's due, and a Review button on due rows. Rows sit inside a card and divide with a sand rule.
-export function MemorizedVerseRow({ row, reviewHref, openHref }: MemorizedVerseRowProps) {
+// SrsSeal.tsx), reference, when it's due, and a Review button on due rows; tapping it opens its stats. Rows sit inside a card and divide with a sand rule.
+export function MemorizedVerseRow({ row, reviewHref, statsHref }: MemorizedVerseRowProps) {
   const due = row.tone === "due";
   return (
     <div className="flex items-center gap-2.5 border-t-2 border-sand-200 py-[9px] first:border-t-0 dark:border-zinc-800">
-      <Link href={openHref} className="flex min-w-0 flex-1 items-center gap-2.5">
+      <Link href={statsHref} className="flex min-w-0 flex-1 items-center gap-2.5">
         <SrsSeal tier={row.seal} size={30} />
         <span className="flex min-w-0 flex-1 flex-col gap-px">
           <span className="truncate text-[14.5px] font-black text-ink dark:text-zinc-100">{row.label}</span>

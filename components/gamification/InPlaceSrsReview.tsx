@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { VerseSegment } from "@/types";
+import { chainStumbles } from "@/lib/stumbleTracking";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { applyReferencePreference, formatVerseSpanLabel } from "@/lib/chapterContent";
@@ -56,9 +57,13 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   const { saveIndex, saveProgress, finish: finishRun } = run;
   // Words missed so far in the range being typed — the header's live score (SrsAccuracyTracker.tsx).
   const [missed, setMissed] = useState<{ index: number; count: number }>({ index: -1, count: 0 });
+  // Which words were missed, to keep per word (UserProgress.wordStumbleCounts) once it's done.
+  const wrongWords = useRef<number[]>([]);
+  const recordWordStumbles = useProgressStore((state) => state.recordWordStumbles);
   const onProgress = useCallback(
     (progress: ReviewChainProgress) => {
       saveProgress(current, progress);
+      wrongWords.current = progress.wrongWordIndices;
       setMissed({ index: current, count: progress.wrongWordIndices.length });
     },
     [current, saveProgress],
@@ -141,6 +146,11 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   function handleComplete(accuracy: number) {
     if (!entity) return;
     recordSrsReview(entity.id, accuracy);
+    for (const { verseNumber, indices } of chainStumbles(verses, wrongWords.current)) {
+      const verse = chapterVerses[verseNumber - 1];
+      if (verse) recordWordStumbles(verse, indices);
+    }
+    wrongWords.current = [];
     const isLast = current + 1 >= entityIds.length;
     if (isLast) finishRun();
     else saveIndex(current + 1);

@@ -128,6 +128,14 @@ export interface SRSState {
   // review %" badge. Optional: undefined until this range's first SRS review (and for any
   // entity saved before this field existed).
   lastAccuracy?: number;
+  // Each review's accuracy, oldest first, the last 20 — the passage stats graph
+  // (PassageStatsSheet.tsx). Optional: reviews before this existed only left lastAccuracy.
+  history?: SrsReviewResult[];
+}
+
+export interface SrsReviewResult {
+  at: string;
+  accuracy: number;
 }
 
 // A contiguous, gap-free run of verses within a single book+chapter that have all been

@@ -4,6 +4,8 @@ import { moveToBox, scheduleReview } from "@/lib/srs";
 import { SHEKELS_PER_VERSE_REVIEWED } from "@/lib/economy";
 import type { ProgressStore } from "@/store/useProgressStore";
 
+const REVIEW_HISTORY = 20;
+
 interface SrsReviewActions {
   recordSrsReview: (entityId: string, accuracy: number) => void;
   moveEntityToBox: (entityId: string, box: SrsBox) => void;
@@ -25,7 +27,10 @@ export function createSrsReviewActions(
       const state = get();
       const entity = state.memorizedEntities.find((candidate) => candidate.id === entityId);
       if (!entity) return;
-      const srs = { ...scheduleReview(entity.srs, accuracy, new Date(), state.srsPromotionThreshold, state.restDayOfWeek ?? null), lastAccuracy: accuracy };
+      const now = new Date();
+      // The passage's past results, for its stats graph — the last REVIEW_HISTORY of them.
+      const history = [...(entity.srs.history ?? []), { at: now.toISOString(), accuracy }].slice(-REVIEW_HISTORY);
+      const srs = { ...scheduleReview(entity.srs, accuracy, now, state.srsPromotionThreshold, state.restDayOfWeek ?? null), lastAccuracy: accuracy, history };
       const memorizedEntities = state.memorizedEntities.map((candidate) => (candidate.id === entityId ? { ...candidate, srs } : candidate));
       const best = Math.max(state.srsBestAccuracy[entityId] ?? 0, accuracy);
       set(persist({ ...state, memorizedEntities, srsBestAccuracy: { ...state.srsBestAccuracy, [entityId]: best } }));
@@ -40,7 +45,7 @@ export function createSrsReviewActions(
     moveEntityToBox: (entityId, box) => {
       const state = get();
       const memorizedEntities = state.memorizedEntities.map((entity) =>
-        entity.id === entityId ? { ...entity, srs: moveToBox(entity.srs, box, new Date(), state.restDayOfWeek ?? null) } : entity,
+        entity.id === entityId ? { ...entity, srs: { ...entity.srs, ...moveToBox(entity.srs, box, new Date(), state.restDayOfWeek ?? null) } } : entity,
       );
       set(persist({ ...state, memorizedEntities }));
     },

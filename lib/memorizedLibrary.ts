@@ -91,15 +91,7 @@ const bookOrder = (name: string) => {
 const byPlace = (a: MemorizedEntity, b: MemorizedEntity) =>
   bookOrder(a.book) - bookOrder(b.book) || a.chapter - b.chapter || a.startVerse - b.startVerse;
 
-// Due tab: most overdue first.
-export function dueRows(entities: MemorizedEntity[], now: Date): LibraryRow[] {
-  return entities
-    .filter((entity) => isDue(entity.srs, now))
-    .map((entity) => toRow(entity, now))
-    .sort((a, b) => a.daysUntil - b.daysUntil || byPlace(a.entity, b.entity));
-}
-
-// Books tab: one group per book in Bible order, its ranges in chapter/verse order.
+// The Memorized tab's list (MemorizedBooksList.tsx): one group per book in Bible order, its ranges in chapter/verse order.
 export function libraryBooks(entities: MemorizedEntity[], now: Date): LibraryBook[] {
   const books = new Map<string, MemorizedEntity[]>();
   for (const entity of entities) books.set(entity.book, [...(books.get(entity.book) ?? []), entity]);
@@ -115,11 +107,3 @@ export function libraryBooks(entities: MemorizedEntity[], now: Date): LibraryBoo
       };
     });
 }
-
-// All tab: every range in Bible order.
-export function allRows(entities: MemorizedEntity[], now: Date): LibraryRow[] {
-  return [...entities].sort(byPlace).map((entity) => toRow(entity, now));
-}
-
-// A rough review length — a little over a minute a range (same as NeedsReviewingCard.tsx).
-export const reviewMinutes = (ranges: number) => Math.max(1, Math.round(ranges * 1.3));

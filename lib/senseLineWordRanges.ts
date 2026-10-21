@@ -1,5 +1,6 @@
 import { tokenizeVerseWords } from "@/lib/verseWords";
 import { parseSenseLines, type SenseLineClause } from "@/lib/senseLines";
+import { splitIntoLines } from "@/lib/senseLineSplitting";
 
 export interface SenseLineWordRange {
   clause: SenseLineClause;
@@ -27,6 +28,19 @@ export function senseLineWordRanges(text: string): SenseLineWordRange[] {
   return parseSenseLines(text).map((clause) => {
     const wordCount = tokenizeVerseWords(clause.text).length;
     const range: SenseLineWordRange = { clause, startIndex: cursor, endIndex: cursor + wordCount };
+    cursor += wordCount;
+    return range;
+  });
+}
+
+// The same, always by the verse's natural sense lines — even with sense lines off
+// (lib/senseLineMode.ts), where the verse shows as one continuous line: the stages that work a
+// line at a time (Fill in the blank's bank, Math breaks) still pace themselves by its sense lines.
+export function naturalSenseLineWordRanges(text: string): SenseLineWordRange[] {
+  let cursor = 0;
+  return splitIntoLines(text).map((line) => {
+    const wordCount = tokenizeVerseWords(line).length;
+    const range: SenseLineWordRange = { clause: { text: line }, startIndex: cursor, endIndex: cursor + wordCount };
     cursor += wordCount;
     return range;
   });

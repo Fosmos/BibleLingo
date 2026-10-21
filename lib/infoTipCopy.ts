@@ -15,9 +15,9 @@ export const INFO_TIPS = {
   lastLetterBlankRep:
     "Only each word's last letter shows. Type each word's first letter, in order, to fill it in. A wrong letter flashes red — try again.",
   timedBlankRep:
-    "The whole verse, every word blank, against the clock. The timer starts with your first letter and stops on the last word — type each word's first letter as fast as you can.",
+    "The whole verse, every word blank, against the clock: a countdown of about a second and a half a word, starting with your first letter. Type each word's first letter before it runs out — if it does, the verse starts over until you make it in time.",
   mathBreakBlankRep:
-    "The whole verse, every word blank. After each sense line a quick math problem pops up — type the answer on the number row, then carry on with the next line's first letters.",
+    "The whole verse, every word blank. After each sense line a quick multiplication problem pops up — type the answer on the number row, then carry on with the next line's first letters.",
   payloadRecall:
     "A number and a color flash up for 2 seconds before you say the verse. Hold them in mind while you recite it from memory — then pick them both to move on.",
   drawFirstLetterRep:

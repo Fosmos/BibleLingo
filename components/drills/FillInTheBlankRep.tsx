@@ -10,7 +10,7 @@ import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { InfoTip } from "@/components/ui/InfoTip";
 import { INFO_TIPS } from "@/lib/infoTipCopy";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
-import { senseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
+import { naturalSenseLineWordRanges, type SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 import { useReferenceGate } from "@/components/gamification/ReferenceGate";
@@ -50,8 +50,9 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
   const referenceFirst = useReferenceGate() !== null;
   const targetIndex = blankIndices[placedCount];
   const targetWord = targetIndex !== undefined ? words[targetIndex] : undefined;
-  // The sense line holding the next blank — the tray offers just its words, then moves on.
-  const lineRanges = useMemo(() => senseLineWordRanges(verse.text), [verse.text]);
+  // The sense line holding the next blank — the tray offers just its words, then moves on (its
+  // natural sense lines even when the verse shows as continuous text).
+  const lineRanges = useMemo(() => naturalSenseLineWordRanges(verse.text), [verse.text]);
   const line = lineRanges.find((range) => targetIndex !== undefined && targetIndex >= range.startIndex && targetIndex < range.endIndex);
   const lineTiles = line ? tray.filter((entry) => entry.tileId >= line.startIndex && entry.tileId < line.endIndex) : [];
   const columns = lineTiles.length <= 1 ? "grid-cols-1" : lineTiles.length === 2 ? "grid-cols-2" : "grid-cols-3";

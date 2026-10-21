@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { playCorrectSfx, playIncorrectSfx, playLetterSfx, resetLetterCombo } from "@/lib/audio";
 import { makeMathProblem, type MathProblem } from "@/lib/memoryChallenges";
-import { senseLineWordRanges } from "@/lib/senseLineWordRanges";
+import { naturalSenseLineWordRanges } from "@/lib/senseLineWordRanges";
 import { tokenizeVerseWords, firstWordCharacter } from "@/lib/verseWords";
 import { AutoCompleteButton } from "@/components/ui/AutoCompleteButton";
 import { OnScreenKeyboard } from "@/components/ui/OnScreenKeyboard";
@@ -19,6 +19,10 @@ import { StageTimer } from "@/components/drills/StageTimer";
 import { MathBreakCard } from "@/components/drills/MathBreakCard";
 import { useReferenceGate } from "@/components/gamification/ReferenceGate";
 
+// Against the clock's time allowed: this much a word, and never less than MIN_TIME_MS.
+const TIME_PER_WORD_MS = 1500;
+const MIN_TIME_MS = 10_000;
+
 interface FirstLetterBlankRepProps {
   verse: VerseSegment;
   // The reading view's own real page layout (see lib/useChapterReadingLayout.ts) — Learn flow
@@ -27,7 +31,8 @@ interface FirstLetterBlankRepProps {
   layout: ChapterReadingLayout;
   // The Last letters stage: every word shows its last letter, the first still to type.
   lastLetters?: boolean;
-  // Against the clock: a timer runs from the first key to the last word.
+  // Against the clock: a countdown (TIME_PER_WORD_MS a word) from the first key to the last word —
+  // run out and it starts again from the first word.
   timed?: boolean;
   // A math problem to answer after each sense line but the last, before the next line's letters.
   mathBreaks?: boolean;
@@ -39,13 +44,29 @@ interface FirstLetterBlankRepProps {
 // With `lastLetters`, each word's last letter shows throughout as the clue.
 export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed = false, mathBreaks = false, onComplete }: FirstLetterBlankRepProps) {
   const words = useMemo(() => tokenizeVerseWords(verse.text), [verse.text]);
-  // Where each sense line but the last ends — where a math break pops up.
-  const lineEnds = useMemo(() => new Set(senseLineWordRanges(verse.text).map((range) => range.endIndex)), [verse.text]);
+  // Where each sense line but the last ends — where a math break pops up (its natural sense lines,
+  // even when the verse shows as continuous text).
+  const lineEnds = useMemo(() => new Set(naturalSenseLineWordRanges(verse.text).map((range) => range.endIndex)), [verse.text]);
   const [filledCount, setFilledCount] = useState(0);
   const [letterInput, setLetterInput] = useState("");
   const [showError, setShowError] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [stoppedAt, setStoppedAt] = useState<number | null>(null);
+  const limitMs = Math.max(MIN_TIME_MS, words.length * TIME_PER_WORD_MS);
+  const [timedOut, setTimedOut] = useState(false);
+  // Time up before the last word: the verse starts over, its clock with it, until it's typed in time.
+  useEffect(() => {
+    if (!timed || startedAt === null || stoppedAt !== null) return;
+    const timer = setTimeout(() => {
+      resetLetterCombo();
+      playIncorrectSfx();
+      setFilledCount(0);
+      setStartedAt(null);
+      setShowError(false);
+      setTimedOut(true);
+    }, Math.max(0, startedAt + limitMs - Date.now()));
+    return () => clearTimeout(timer);
+  }, [timed, startedAt, stoppedAt, limitMs]);
   const [math, setMath] = useState<{ problem: MathProblem; typed: string; error: boolean } | null>(null);
 
   // A digit towards the open math problem's answer — checked once it's as long as the answer.
@@ -70,7 +91,10 @@ export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed 
     setLetterInput("");
     if (math) return handleMathKey(value);
     if (!targetWord || stoppedAt !== null) return;
-    if (timed && startedAt === null && value) setStartedAt(Date.now());
+    if (timed && startedAt === null && value) {
+      setStartedAt(Date.now());
+      setTimedOut(false);
+    }
     const expected = firstWordCharacter(targetWord)?.toLowerCase();
     const typed = value.toLowerCase();
     if (typed && typed === expected) {
@@ -128,7 +152,7 @@ export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed 
           Type the first letter
           <InfoTip text={lastLetters ? INFO_TIPS.lastLetterBlankRep : timed ? INFO_TIPS.timedBlankRep : mathBreaks ? INFO_TIPS.mathBreakBlankRep : INFO_TIPS.firstLetterBlankRep} />
         </p>
-        {timed && <StageTimer startedAt={startedAt} stoppedAt={stoppedAt} />}
+        {timed && <StageTimer startedAt={startedAt} stoppedAt={stoppedAt} limitMs={limitMs} timedOut={timedOut} />}
         {/* Visually hidden, not removed — same as FirstLetterTypingControls.tsx: the on-screen
             keyboard is the visible way to type, and a wrong letter already shows on the card's
             own target blank (see renderActiveVerse's border-heart-500), but a physical keyboard

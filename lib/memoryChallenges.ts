@@ -35,20 +35,8 @@ export interface MathProblem {
   answer: number;
 }
 
-// A sum, a difference (never below zero) or a times-table product — quick, but enough to pull
-// the mind off the verse for a moment.
+// A times-table product — quick, but enough to pull the mind off the verse for a moment.
 export function makeMathProblem(): MathProblem {
-  const kind = pick(0, 2);
-  if (kind === 0) {
-    const a = pick(2, 12);
-    const b = pick(2, 12);
-    return { text: `${a} + ${b}`, answer: a + b };
-  }
-  if (kind === 1) {
-    const a = pick(6, 20);
-    const b = pick(1, a - 1);
-    return { text: `${a} − ${b}`, answer: a - b };
-  }
   const a = pick(2, 9);
   const b = pick(2, 9);
   return { text: `${a} × ${b}`, answer: a * b };
