@@ -9,7 +9,8 @@ import { chapterOfSectionKey, passageReviewStop, type PassageReview } from "@/li
 // sections — book and chapter paths by pericope, a topic path five at a time,
 // a verse path as its one lesson's learning stages. One stop per verse — a day of several verses is
 // several stops, each opening that day's lesson. Review days are the sections' trophy stops; a
-// pericope ends on a review of the whole pericope, and a book's chapter on a chapter review section.
+// pericope is followed by a review section of the whole pericope, and a book's chapter by a chapter
+// review section — each one stone on the map, opened straight from it.
 // A chapter path's own closing review days are its last section.
 export type StopState = "done" | "current" | "locked";
 
@@ -135,7 +136,9 @@ export function buildTrail(kind: PathKind, days: MemorizationDay[], completedDay
   return groups.flatMap((group, index) => {
     const lessons = group.stops.filter((stop) => stop.verse);
     const review = group.key.startsWith("p-") ? passageReviewStop(`pericope:${group.key.slice(2)}`, "Review", `Review: ${group.title}`, lessons, reviewsDone) : null;
-    const sections = [finishSection(group.kicker, group.title, review ? [...group.stops, review] : group.stops, byPassage)];
+    const sections = [finishSection(group.kicker, group.title, group.stops, byPassage)];
+    // A pericope's review of the whole of it is its own stone on the map, right after it.
+    if (review) sections.push({ ...finishSection("Pericope review", `Review: ${group.title}`, [review]), ref: sections[0].ref, review: true });
     // A book's chapter, once its last pericope is through, gets its own review section on the map.
     const chapter = chapterOfSectionKey(group.key);
     if (kind === "book" && chapter !== undefined && chapterOfSectionKey(groups[index + 1]?.key) !== chapter) {

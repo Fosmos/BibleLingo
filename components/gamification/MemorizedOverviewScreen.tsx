@@ -10,9 +10,10 @@ import { useHasMounted } from "@/lib/useHasMounted";
 import { FetchLoading } from "@/components/ui/FetchStatus";
 import { MemorizedCountHero } from "@/components/gamification/MemorizedCountHero";
 import { MemorizedBooksList } from "@/components/gamification/MemorizedBooksList";
+import { StrugglesCard } from "@/components/gamification/StrugglesCard";
 
 // The Memorized tab's count-first overview (design option 4b): the verse total and next milestone,
-// then your passages by book (each opening its stats page), and a way into the Bible reader (MemorizedReaderScreen.tsx, with its
+// then your books (each opening its info page), the verses you struggle with most (StrugglesCard.tsx), and a way into the Bible reader (MemorizedReaderScreen.tsx, with its
 // Recall quiz). Verse total comes from computeMemorizedStats, so a translation's gap verses
 // (e.g. ESV Mark 11:26) aren't counted.
 export function MemorizedOverviewScreen() {
@@ -37,7 +38,10 @@ export function MemorizedOverviewScreen() {
           Nothing here yet — a passage joins spaced review once you finish it on a path, or you add one you already know.
         </p>
       ) : (
-        <MemorizedBooksList entities={entities} />
+        <>
+          <MemorizedBooksList entities={entities} />
+          <StrugglesCard />
+        </>
       )}
       <Link
         href="/memorized?view=bible"

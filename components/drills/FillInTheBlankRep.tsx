@@ -14,6 +14,7 @@ import { naturalSenseLineWordRanges, type SenseLineWordRange } from "@/lib/sense
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 import { useReferenceGate } from "@/components/gamification/ReferenceGate";
+import { useStumbleRecorder } from "@/lib/useStumbleRecorder";
 
 interface FillInTheBlankRepProps {
   verse: VerseSegment;
@@ -50,6 +51,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
   const referenceFirst = useReferenceGate() !== null;
   const targetIndex = blankIndices[placedCount];
   const targetWord = targetIndex !== undefined ? words[targetIndex] : undefined;
+  const recordMiss = useStumbleRecorder(verse);
   // The sense line holding the next blank — the tray offers just its words, then moves on (its
   // natural sense lines even when the verse shows as continuous text).
   const lineRanges = useMemo(() => naturalSenseLineWordRanges(verse.text), [verse.text]);
@@ -69,6 +71,7 @@ export function FillInTheBlankRep({ verse, layout, onComplete }: FillInTheBlankR
     } else {
       playIncorrectSfx();
       setWrongTileId(tileId);
+      if (targetIndex !== undefined) recordMiss(targetIndex);
     }
   }
 

@@ -5,8 +5,8 @@ import { verseKey } from "@/lib/verseKey";
 // Cumulative per-word miss counts for every verse ever reviewed, keyed by lib/verseKey.ts's
 // verseKey — one running count per word position in tokenizeVerseWords(verse.text), so it
 // stays aligned with every other word-indexed structure in this app (RevealedWordsList,
-// useFirstLetterTyping, ...). Never reset; grows across every SRS review this verse is ever
-// drilled in.
+// useFirstLetterTyping, ...). Never reset; grows across every review and Learn drill this verse
+// is ever in (lib/useStumbleRecorder.ts).
 export type StumbleCounts = Record<string, number[]>;
 
 // Folds one review's wrong word positions (local to this one verse — see
@@ -43,14 +43,14 @@ export function stumbleHeat(missCount: number): StumbleHeat {
 // A review chain's missed words (positions across all its verses' words in order — lib/useReviewChain.ts)
 // as each verse's own word positions, for recordStumbles — a verse-number word at a verse's start
 // (verse references on — applyReferencePreference) isn't one of its words, so positions skip it.
-export function chainStumbles(chainVerses: VerseSegment[], wrongIndices: number[]): { verseNumber: number; indices: number[] }[] {
-  const found: { verseNumber: number; indices: number[] }[] = [];
+export function chainStumbles(chainVerses: VerseSegment[], wrongIndices: number[]): { verse: VerseSegment; verseNumber: number; indices: number[] }[] {
+  const found: { verse: VerseSegment; verseNumber: number; indices: number[] }[] = [];
   let offset = 0;
   for (const verse of chainVerses) {
     const words = tokenizeVerseWords(verse.text);
     const shift = words.length > 0 && isReferenceToken(words[0]) ? 1 : 0;
     const indices = wrongIndices.filter((index) => index >= offset + shift && index < offset + words.length).map((index) => index - offset - shift);
-    if (indices.length) found.push({ verseNumber: verse.verseNumber, indices });
+    if (indices.length) found.push({ verse, verseNumber: verse.verseNumber, indices });
     offset += words.length;
   }
   return found;

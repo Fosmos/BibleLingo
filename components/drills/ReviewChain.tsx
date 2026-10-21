@@ -11,6 +11,7 @@ import { MistakeNotice } from "@/components/drills/MistakeNotice";
 import { ReferenceNumberEntry } from "@/components/drills/ReferenceNumberEntry";
 import { ReviewChainResult } from "@/components/drills/ReviewChainResult";
 import { usePeekedVerses } from "@/lib/usePeekedVerses";
+import { useChainStumbleRecorder } from "@/lib/useStumbleRecorder";
 import { ReviewChainParchment } from "@/components/drills/ReviewChainParchment";
 import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import { LessonParchmentCard } from "@/components/gamification/LessonParchmentCard";
@@ -41,15 +42,18 @@ export function ReviewChain({ verses, onComplete, label = "Review", layout, rest
   useEffect(() => {
     if (currentVerse) onVerseChange?.(currentVerse);
   }, [currentVerse, onVerseChange]);
-  // Peeking flags a problem verse; finishing clears the ones recalled without a peek.
+  // Peeking flags a problem verse; finishing clears the ones recalled without a peek, and counts
+  // the words missed (UserProgress.wordStumbleCounts — reviews and lessons alike).
   const peeks = usePeekedVerses();
   const { settle } = peeks;
+  const recordStumbles = useChainStumbleRecorder();
   const settledRef = useRef(false);
   useEffect(() => {
     if (!finished || settledRef.current) return;
     settledRef.current = true;
     settle(verses);
-  }, [finished, settle, verses]);
+    recordStumbles(verses, [...wrongWordIndices]);
+  }, [finished, settle, verses, recordStumbles, wrongWordIndices]);
   const totalWords = combinedWords.length;
 
   if (finished) {

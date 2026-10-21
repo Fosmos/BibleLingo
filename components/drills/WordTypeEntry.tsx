@@ -12,6 +12,7 @@ import type { ChapterReadingLayout } from "@/lib/useChapterReadingLayout";
 import type { SenseLineWordRange } from "@/lib/senseLineWordRanges";
 import { LessonPageCard } from "@/components/gamification/LessonPageCard";
 import { LessonControlBar } from "@/components/gamification/LessonControlBar";
+import { useStumbleRecorder } from "@/lib/useStumbleRecorder";
 
 interface WordTypeEntryProps {
   verse: VerseSegment;
@@ -46,6 +47,7 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
   const [revealedWords, setRevealedWords] = useState<string[]>([]);
   const [value, setValue] = useState("");
   const [hadMistake, setHadMistake] = useState(false);
+  const recordMiss = useStumbleRecorder(verse);
 
   const currentWord = words[wordIndex];
   const referenceMatch = currentWord?.match(REFERENCE_PATTERN);
@@ -72,6 +74,7 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
       resetLetterCombo();
       setValue("");
       setHadMistake(true);
+      recordMiss(wordIndex);
       onMistake?.();
     }
   }
@@ -95,6 +98,7 @@ export function WordTypeEntry({ verse, mode, onComplete, onMistake, layout }: Wo
       resetLetterCombo();
       setValue("");
       setHadMistake(true);
+      recordMiss(wordIndex);
       onMistake?.();
     }
   }

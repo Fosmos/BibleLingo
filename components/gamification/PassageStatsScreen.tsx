@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { toRow } from "@/lib/memorizedLibrary";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { useReviewHref } from "@/lib/useReviewHref";
@@ -14,6 +13,8 @@ import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 import { useProgressStore } from "@/store/useProgressStore";
 import { SrsSeal } from "@/components/ui/SrsSeal";
 import { ReviewAccuracyChart } from "@/components/gamification/ReviewAccuracyChart";
+import { MemorizedBackLink } from "@/components/gamification/MemorizedBackLink";
+import { memorizedDateText } from "@/lib/memorizedDates";
 
 const SECTION = "flex flex-col gap-2 rounded-[20px] bg-sand-100 p-3.5 dark:bg-zinc-800/70";
 const HEADING = "text-[11px] font-black uppercase tracking-[.08em] text-sage-800 dark:text-sage-300";
@@ -29,7 +30,11 @@ const ago = (at: string | null) => {
 // most-missed words — then Review it, or open it in the reader.
 export function PassageStatsScreen() {
   const mounted = useHasMounted();
-  const id = useSearchParams().get("id");
+  const params = useSearchParams();
+  const id = params.get("id");
+  // Back to where it was opened from — its book's page (BookStatsScreen.tsx) — else the tab.
+  const from = params.get("from");
+  const back = from?.startsWith("/memorized/book") ? <MemorizedBackLink href={from} label={new URLSearchParams(from.split("?")[1]).get("name") ?? "Back"} /> : <MemorizedBackLink />;
   const entity = useProgressStore((state) => state.memorizedEntities.find((candidate) => candidate.id === id));
   const threshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
   const best = useProgressStore((state) => (id ? state.srsBestAccuracy[id] : undefined));
@@ -40,7 +45,7 @@ export function PassageStatsScreen() {
   if (!entity) {
     return (
       <div className="flex flex-col items-start gap-3 px-[18px] pt-4">
-        <BackLink />
+        {back}
         <p className="text-sm font-semibold text-ink-muted">This passage isn&apos;t in your memorized verses.</p>
       </div>
     );
@@ -54,7 +59,7 @@ export function PassageStatsScreen() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-[18px] pb-28 pt-[calc(0.5rem+env(safe-area-inset-top))]">
-      <BackLink />
+      {back}
       <div className="flex items-center gap-3">
         <SrsSeal tier={row.seal} size={44} />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -62,6 +67,7 @@ export function PassageStatsScreen() {
           <span className="text-xs font-extrabold text-ink-muted">
             {row.verseCount} {row.verseCount === 1 ? "verse" : "verses"} · {entity.version}
           </span>
+          <span className="text-xs font-semibold text-ink-muted">Memorized {memorizedDateText(entity)}</span>
         </div>
       </div>
 
@@ -111,7 +117,7 @@ export function PassageStatsScreen() {
             ))}
           </div>
         ) : (
-          <span className="text-sm font-semibold text-ink-muted">None yet — no words missed in review.</span>
+          <span className="text-sm font-semibold text-ink-muted">None yet — no words missed while learning or reviewing.</span>
         )}
       </section>
 
@@ -124,13 +130,5 @@ export function PassageStatsScreen() {
         </Link>
       </div>
     </div>
-  );
-}
-
-function BackLink() {
-  return (
-    <Link href="/memorized" className="flex items-center gap-1 self-start rounded-xl py-1.5 pr-2 text-sm font-black text-sand-700 hover:text-ink dark:text-zinc-400">
-      <ChevronLeft size={18} strokeWidth={2.75} /> Memorized
-    </Link>
   );
 }

@@ -156,6 +156,10 @@ export interface MemorizedEntity {
   // browsing/fetching can silently overwrite it with a different one, so SRS review must
   // fetch by this stored version rather than trusting whatever's currently cached there.
   version: string;
+  // When its first verse was memorized (or it was added by hand), and when its latest verse joined —
+  // ISO timestamps for the passage stats page. Unset on ranges saved before dates were kept.
+  memorizedAt?: string;
+  lastAddedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -362,8 +366,9 @@ export interface UserProgress {
   // The Mind Map's SRS review run left part-way (see lib/useSrsReviewRun.ts), so it can be picked
   // up again. Optional: absent on profiles saved before this existed, and once a run finishes.
   srsReviewRun?: SrsReviewRun | null;
-  // Cumulative per-word SRS miss counts, keyed by lib/verseKey.ts's verseKey — see
-  // lib/stumbleTracking.ts. Powers the Stumble Map heat-map view (surfaced from
+  // Cumulative per-word miss counts — in spaced review and in Learn drills alike
+  // (lib/useStumbleRecorder.ts) — keyed by lib/verseKey.ts's verseKey — see
+  // lib/stumbleTracking.ts. Its first word's count is the stats' First words tab (lib/struggles.ts). Powers the Stumble Map heat-map view (surfaced from
   // ProblemVersesBin.tsx): which exact words in a verse are the reader's actual weak points,
   // not just which whole verses. Grows across every review, never resets — a word that was
   // hard once but has since improved fades relative to a currently weak one rather than

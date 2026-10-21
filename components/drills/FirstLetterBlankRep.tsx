@@ -18,6 +18,7 @@ import { HiddenWord } from "@/components/drills/HiddenWord";
 import { StageTimer } from "@/components/drills/StageTimer";
 import { MathBreakCard } from "@/components/drills/MathBreakCard";
 import { useReferenceGate } from "@/components/gamification/ReferenceGate";
+import { useStumbleRecorder } from "@/lib/useStumbleRecorder";
 
 // Against the clock's time allowed: this much a word, and never less than MIN_TIME_MS.
 const TIME_PER_WORD_MS = 1500;
@@ -86,6 +87,7 @@ export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed 
   // Every word is blank, typed in order — the next one is the word at `filledCount`.
   const targetIndex = filledCount < words.length ? filledCount : undefined;
   const targetWord = targetIndex !== undefined ? words[targetIndex] : undefined;
+  const recordMiss = useStumbleRecorder(verse);
 
   function handleLetterChange(value: string) {
     setLetterInput("");
@@ -116,6 +118,7 @@ export function FirstLetterBlankRep({ verse, layout, lastLetters = false, timed 
       resetLetterCombo();
       setShowError(true);
       setLetterInput("");
+      if (targetIndex !== undefined) recordMiss(targetIndex);
     }
   }
 

@@ -25,6 +25,7 @@ export function createManualEntity(
     srs,
     manual: true,
     version,
+    memorizedAt: new Date().toISOString(),
   };
 }
 
@@ -66,6 +67,10 @@ function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, ve
 
   const startVerse = predecessor?.startVerse ?? verseNumber;
   const endVerse = successor?.endVerse ?? verseNumber;
+  // The earliest of the ranges it joins; unknown when one of them predates dates being kept.
+  const now = new Date().toISOString();
+  const joined = [predecessor, successor].filter((entity) => entity !== undefined);
+  const memorizedAt = joined.some((entity) => !entity.memorizedAt) ? undefined : [now, ...joined.map((entity) => entity.memorizedAt ?? now)].sort()[0];
   const merged: MemorizedEntity = {
     id: entityId(book, chapter, startVerse, endVerse),
     book,
@@ -75,6 +80,8 @@ function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, ve
     srs: createInitialSRSState(),
     manual: false,
     version,
+    memorizedAt,
+    lastAddedAt: now,
   };
 
   const remaining = entities.filter((entity) => entity !== predecessor && entity !== successor);

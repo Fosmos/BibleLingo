@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowLeft, Check, Lock, Play } from "lucide-react";
+import { ArrowLeft, Check, Lock, Play, Trophy } from "lucide-react";
 import type { TrailSection } from "@/lib/trailStops";
 import { pericopeColour } from "@/lib/chapterPathPalette";
 import type { MapThemePage } from "@/lib/mapThemePages";
@@ -135,6 +135,8 @@ export function PericopeMapScreen({
                   >
                     {section.state === "complete" ? (
                       <Check size={34} strokeWidth={3.5} />
+                    ) : section.review && section.state === "current" ? (
+                      <Trophy size={30} strokeWidth={2.75} />
                     ) : section.state === "current" ? (
                       <Play size={30} fill="currentColor" strokeWidth={2.75} />
                     ) : (
@@ -150,12 +152,12 @@ export function PericopeMapScreen({
                     {section.title}
                   </span>
                   <span className="text-xs font-extrabold text-sand-700 dark:text-zinc-400">
-                    {section.done}/{section.stops.length} done
+                    {section.review ? (section.state === "complete" ? "Reviewed" : "Review the whole passage") : `${section.done}/${section.stops.length} done`}
                     {due ? ` · ${due} due` : ""}
                   </span>
                   {section.state === "current" && (
                     <span className="mt-1 rounded-xl bg-brand-500 px-[13px] py-[7px] text-[11.5px] font-black uppercase tracking-[.06em] text-white shadow-[0_3px_0_#8C491A]">
-                      Continue
+                      {section.review ? "Review" : "Continue"}
                     </span>
                   )}
                 </span>
