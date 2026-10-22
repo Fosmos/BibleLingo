@@ -6,6 +6,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { getAdjacentVerse } from "@/lib/chapterContent";
 import { buildMemorizedVerseIndex } from "@/lib/memorizedVerseIndex";
 import { getPericopeForVerse } from "@/lib/chapterPericopes";
+import { usePericopesReady } from "@/lib/usePericopesReady";
 
 // How far back the closing review goes when the verse's pericope isn't known (its data not loaded).
 const REVIEW_BACK = 4;
@@ -21,8 +22,13 @@ const REVIEW_BACK = 4;
 export function usePriorLearnedVerses(day: MemorizationDay, allDays: MemorizationDay[] = []): VerseSegment[] {
   const paths = useProgressStore((state) => state.paths);
   const entities = useProgressStore((state) => state.memorizedEntities);
+  // Worked out again once the chapter's pericope headings have loaded — a lesson opened straight
+  // from the map can start before they have, and without them the review only goes back 4 verses.
+  const pericopesReady = usePericopesReady(day.newVerses);
   // Memoized: VerseLessonFlow.tsx builds the review day from it, which mustn't change every render.
-  return useMemo(() => priorLearnedVerses(day, allDays, paths, entities), [day, allDays, paths, entities]);
+  // `pericopesReady` isn't read inside — the lookup reads the heading cache — it just re-runs it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => priorLearnedVerses(day, allDays, paths, entities), [day, allDays, paths, entities, pericopesReady]);
 }
 
 // The verses of the path's lessons before this lesson's first verse (its own day's earlier verses too).
