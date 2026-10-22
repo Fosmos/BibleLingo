@@ -37,7 +37,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
   const phase = PHASES[phaseIndex] ?? PHASES[0];
   // The closing review: the verses before this lesson's (learning 8:9 in a pericope from 8:5, it reviews 8:5–8) and then
   // the lesson's own verses, typed through in order.
-  const prior = usePriorLearnedVerses(day);
+  const prior = usePriorLearnedVerses(day, allDays);
   const learned = useMemo(() => day.newVerses.filter((verse) => verse.text.trim().length > 0), [day.newVerses]);
   const reviewDay = useMemo(() => ({ ...day, previousVerses: [...prior, ...learned] }), [day, prior, learned]);
   // First the verse just before with the lesson's own — only when the whole run is longer than that.
