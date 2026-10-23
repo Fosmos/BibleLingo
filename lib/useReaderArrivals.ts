@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveEntity } from "@/lib/memorizedEntities";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MemorizationDay } from "@/types";
@@ -42,7 +43,8 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
 
   const startReview = useCallback(
     (entityIds: string[]) => {
-      const entity = useProgressStore.getState().memorizedEntities.find((candidate) => candidate.id === entityIds[0]);
+      // The range itself, or the bigger one it's since been merged into (resolveEntity).
+      const entity = resolveEntity(useProgressStore.getState().memorizedEntities, entityIds[0]);
       if (!entity) return;
       openVerse(entity.book, entity.chapter, entity.startVerse);
       setSheet({ kind: "srs", verseNumber: entity.startVerse, entityIds });

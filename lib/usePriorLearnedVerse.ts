@@ -6,6 +6,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { getAdjacentVerse } from "@/lib/chapterContent";
 import { buildMemorizedVerseIndex } from "@/lib/memorizedVerseIndex";
 import { getPericopeForVerse } from "@/lib/chapterPericopes";
+import { getCachedPericopes } from "@/lib/pericopeCache";
 import { usePericopesReady } from "@/lib/usePericopesReady";
 
 // How far back the closing review goes when the verse's pericope isn't known (its data not loaded).
@@ -13,7 +14,7 @@ const REVIEW_BACK = 4;
 
 // The learned verses from the start of a lesson's pericope up to its first verse, nearest last —
 // [v5 … v8] for a lesson at v9 in a pericope starting at v5 — which the lesson reviews at the end,
-// with the verse just learned (VerseLessonFlow.tsx); up to 4 when the pericope isn't known. Only
+// with the verse just learned (VerseLessonFlow.tsx); up to 4 when the chapter's headings haven't loaded. Only
 // verses the reader has already learned (the lesson's own previous verses, or anything memorized),
 // counting back until one isn't: a path that starts mid-pericope never asks them to recall an
 // unlearned verse before it. A translation's empty gap verse is stepped over, not a stop.
@@ -53,7 +54,11 @@ function priorLearnedVerses(day: MemorizationDay, allDays: MemorizationDay[], pa
     const same = (other: VerseSegment) => other.book === verse.book && other.chapter === verse.chapter && other.verseNumber === verse.verseNumber;
     return Boolean(day.previousVerses?.some(same) || day.reviewVerses.some(same) || memorized?.has(verse.verseNumber) || earlier.has(`${verse.book}|${verse.chapter}|${verse.verseNumber}`));
   };
-  const pericopeStart = getPericopeForVerse(first.book, first.chapter, first.verseNumber)?.startVerse;
+  // A verse before its chapter's first heading (1 Timothy 6:1–10, before "Fight the Good Fight of
+  // Faith" at 6:11) continues a pericope from the chapter before — the map shows it as the chapter's
+  // own section, so the review starts at the chapter's first verse. So does a chapter with no headings.
+  const headingsLoaded = getCachedPericopes(first.book, first.chapter) !== undefined;
+  const pericopeStart = getPericopeForVerse(first.book, first.chapter, first.verseNumber)?.startVerse ?? (headingsLoaded ? 1 : undefined);
   const prior: VerseSegment[] = [];
   let cursor = first;
   while (pericopeStart !== undefined ? cursor.verseNumber > pericopeStart : prior.length < REVIEW_BACK) {

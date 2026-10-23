@@ -8,7 +8,6 @@ import { buildSteps } from "@/lib/learnSteps";
 import { STAGE_LABELS } from "@/lib/learnSheetStage";
 import { buildTrail, type TrailStop } from "@/lib/trailStops";
 import { readerHref } from "@/lib/readerHref";
-import { mapThemePages } from "@/lib/mapThemePages";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { pathTags, sectionTags } from "@/lib/trailTags";
 import { sectionEmblem } from "@/lib/sectionEmblems";
@@ -66,10 +65,6 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
 
   const sectionParam = params.get("section");
   const currentIndex = Math.max(0, sections.findIndex((section) => section.state !== "complete"));
-  // A long book's map has a page per theme — opening on the one you're on, kept in `?theme=`.
-  const pages = useMemo(() => (kind === "book" ? mapThemePages(parsePathKey(pathKey).identifier, sections) : null), [kind, pathKey, sections]);
-  const themeParam = params.get("theme");
-  const page = pages ? (themeParam !== null ? Math.min(Number(themeParam) || 0, pages.length - 1) : Math.max(0, pages.findIndex((entry) => entry.indices.includes(currentIndex)))) : 0;
   // Memory Palace tags on a book or chapter path's map and trail, for the scopes turned on — book,
   // chapter and pericope until the reader has chosen in Settings.
   const tagLevels = useProgressStore((state) => state.locationTagLevels) ?? PASSAGE_TAG_LEVELS;
@@ -79,11 +74,6 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   // Each stone's symbol on the map — its pericope's hall emblem, or its review's (lib/sectionEmblems.ts).
   const iconTags = useProgressStore((state) => state.iconTags);
   const emblemFor = (section: TrailSection) => sectionEmblem(section, iconTags);
-  const showPage = (next: number) => {
-    const query = new URLSearchParams(params.toString());
-    query.set("theme", String(next));
-    router.replace(`${pathname}?${query}`);
-  };
   const index = kind === "verse" ? 0 : sectionParam === "current" ? currentIndex : sectionParam !== null ? Math.min(Number(sectionParam) || 0, sections.length - 1) : null;
   // A book or chapter path's pericope opens in the reader, on the section's verse you're up to.
   const readerFor = (section: TrailSection | undefined) => {
@@ -118,7 +108,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : index === null ? (
-        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} pages={pages} page={page} onPageChange={showPage} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
+        <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} outlineBook={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
       ) : (
         <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} tagsFor={tagsFor} />
       )}

@@ -1,6 +1,6 @@
 import type { MemorizedEntity, PathProgress, SRSState, VerseSegment } from "@/types";
 import { getMemorizedVerses, type MemorizedVerseEntry } from "@/lib/progressSummary";
-import { createInitialSRSState } from "@/lib/srs";
+import { BOX_INTERVAL_DAYS, createInitialSRSState } from "@/lib/srs";
 
 export function entityId(book: string, chapter: number, startVerse: number, endVerse: number): string {
   return `${book}|${chapter}|${startVerse}-${endVerse}`;
@@ -29,6 +29,17 @@ export function createManualEntity(
   };
 }
 
+// The range an id names now — itself, or, once a newly learned verse merged it into a bigger range
+// (a new id), the range that covers it — so a review started on the old id still lands on it.
+export function resolveEntity(entities: MemorizedEntity[], id: string): MemorizedEntity | undefined {
+  const exact = entities.find((entity) => entity.id === id);
+  if (exact) return exact;
+  const match = id.match(/^(.+)\|(\d+)\|(\d+)-(\d+)$/);
+  if (!match) return undefined;
+  const [book, chapter, start] = [match[1], Number(match[2]), Number(match[3])];
+  return entities.find((entity) => entity.book === book && entity.chapter === chapter && start >= entity.startVerse && start <= entity.endVerse);
+}
+
 export function overlapsExistingEntity(
   entities: MemorizedEntity[],
   book: string,
@@ -40,6 +51,23 @@ export function overlapsExistingEntity(
     (entity) =>
       entity.book === book && entity.chapter === chapter && !(entity.endVerse < startVerse || entity.startVerse > endVerse),
   );
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// The schedule a range takes when a newly learned verse joins it: the ranges it joins keep theirs —
+// whichever is due soonest, at the more frequent box, their review history carried on — so reviewing a
+// passage sticks even as the next lesson's verse joins it (it used to start over, due at once). A
+// verse with no neighbour starts in box 1, first due tomorrow: the lesson just drilled it.
+function joinedSchedule(joined: MemorizedEntity[]): SRSState {
+  const now = new Date();
+  if (!joined.length) return { ...createInitialSRSState(now), nextDueAt: new Date(now.getTime() + DAY_MS).toISOString() };
+  const due = (entity: MemorizedEntity) => (entity.srs.nextDueAt ? new Date(entity.srs.nextDueAt).getTime() : now.getTime());
+  const soonest = [...joined].sort((a, b) => due(a) - due(b))[0];
+  const history = joined.flatMap((entity) => entity.srs.history ?? []).sort((a, b) => a.at.localeCompare(b.at)).slice(-20);
+  // The more frequent box (box numbers don't run in cadence order — lib/srs.ts's BOX_INTERVAL_DAYS).
+  const box = joined.reduce((low, entity) => (BOX_INTERVAL_DAYS[entity.srs.box] < BOX_INTERVAL_DAYS[low] ? entity.srs.box : low), soonest.srs.box);
+  return { ...soonest.srs, box, history: history.length ? history : undefined };
 }
 
 // Merges a newly-memorized verse into the running entity list: extends whichever
@@ -77,7 +105,7 @@ function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, ve
     chapter,
     startVerse,
     endVerse,
-    srs: createInitialSRSState(),
+    srs: joinedSchedule(joined),
     manual: false,
     version,
     memorizedAt,
@@ -130,8 +158,8 @@ export function addVerseEntriesToEntities(existingEntities: MemorizedEntity[], e
 // path-derived ranges from scratch, which silently dropped every range it couldn't re-derive at
 // that moment — a whole book path's chapters whenever one of its chapters wasn't in the local
 // cache (the ESV storage cap evicts them), and since lessons count each verse as it finishes, that
-// rebuild ran after every verse. A range that grows gets a fresh schedule (it covers new content);
-// one unchanged keeps its own. A manual range already covering a verse just keeps it.
+// rebuild ran after every verse. A range that grows keeps the schedule of the ranges it joined
+// (joinedSchedule); one unchanged keeps its own. A manual range already covering a verse just keeps it.
 export function syncMemorizedEntities(paths: Record<string, PathProgress>, existingEntities: MemorizedEntity[]): MemorizedEntity[] {
   return addLearnedVersesToEntities(paths, existingEntities);
 }

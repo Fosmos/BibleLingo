@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
+import { resolveEntity } from "@/lib/memorizedEntities";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { applyReferencePreference, formatVerseSpanLabel } from "@/lib/chapterContent";
 import { ensureChapterLoaded, BibleFetchError } from "@/lib/bibleApiClient";
@@ -46,13 +47,14 @@ export function InPlaceSrsReview({ entityIds, onExit }: InPlaceSrsReviewProps) {
   const setLessonProgress = useLessonSessionStore((state) => state.setLessonProgress);
   const reportVerse = useReportFocusVerse(true);
   const { pending, celebrate, finish } = useCelebration();
-  // How far through `entityIds` the run is. A range that vanished since the run started
-  // (re-synced away) is simply stepped over: `current` is the first one still there from here on.
+  // How far through `entityIds` the run is. A range merged into a bigger one since (a newly learned
+  // verse joined it) is reviewed as that range (resolveEntity); one gone altogether is stepped over:
+  // `current` is the first one still there from here on.
   // Saved as it goes, so leaving part-way can be picked up later (lib/useSrsReviewRun.ts).
   const run = useSrsReviewRun(entityIds);
   const [index, setIndex] = useState(run.startIndex);
-  const current = entityIds.findIndex((id, position) => position >= index && entities.some((candidate) => candidate.id === id));
-  const entity = current === -1 ? undefined : entities.find((candidate) => candidate.id === entityIds[current]);
+  const current = entityIds.findIndex((id, position) => position >= index && resolveEntity(entities, id) !== undefined);
+  const entity = current === -1 ? undefined : resolveEntity(entities, entityIds[current]);
   const { saveIndex, saveProgress, finish: finishRun } = run;
   // Words missed so far in the range being typed — the header's live score (SrsAccuracyTracker.tsx).
   const [missed, setMissed] = useState<{ index: number; count: number }>({ index: -1, count: 0 });
