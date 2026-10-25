@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Award, User, FlaskConical, type LucideIcon } from "lucide-react";
+import { Home, Map, Award, User, Castle, type LucideIcon } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 
 interface TabItem {
@@ -22,9 +22,9 @@ export function BottomTabBar() {
   // overwrite an already-selected translation via PathOverviewScreen's sync effect.
   const versionQuery = activePlan ? `?version=${encodeURIComponent(activePlan.version)}` : "";
   const pathHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}${versionQuery}` : "/begin";
-  // The Mind Map lives in its own experimental tab (app/path/[key]/map).
-  const mapHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/map${versionQuery}` : "/begin";
-  const onMap = pathname.startsWith("/path") && pathname.endsWith("/map");
+  // The Palace (app/path/[key]/palace) took the Mind Map's tab — the Mind Map's route still counts as the Path tab's.
+  const palaceHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/palace${versionQuery}` : "/begin";
+  const onPalace = pathname.startsWith("/path") && pathname.endsWith("/palace");
 
   const items: TabItem[] = [
     { href: "/", label: "Home", icon: Home, isActive: pathname === "/" },
@@ -32,9 +32,9 @@ export function BottomTabBar() {
       href: pathHref,
       label: "Path",
       icon: Map,
-      isActive: (pathname.startsWith("/path") && !onMap) || pathname === "/begin",
+      isActive: (pathname.startsWith("/path") && !onPalace) || pathname === "/begin",
     },
-    { href: mapHref, label: "Mind Map", icon: FlaskConical, isActive: onMap },
+    { href: palaceHref, label: "Palace", icon: Castle, isActive: onPalace },
     {
       href: "/memorized",
       label: "Memorized",

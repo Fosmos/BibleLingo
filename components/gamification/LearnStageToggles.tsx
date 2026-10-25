@@ -22,6 +22,8 @@ export function LearnStageToggles() {
   const setRhythmStageEnabled = useProgressStore((state) => state.setRhythmStageEnabled);
   const lineByLine = !(useProgressStore((state) => state.wholeVerseLearning) ?? false);
   const setWholeVerseLearning = useProgressStore((state) => state.setWholeVerseLearning);
+  const sayLadder = useProgressStore((state) => state.sayLadderLearning) ?? true;
+  const setSayLadderLearning = useProgressStore((state) => state.setSayLadderLearning);
   const previousLineShown = useProgressStore((state) => state.previousLineShown) ?? true;
   const setPreviousLineShown = useProgressStore((state) => state.setPreviousLineShown);
   const prayStageEnabled = useProgressStore((state) => state.prayStageEnabled) ?? false;
@@ -37,6 +39,12 @@ export function LearnStageToggles() {
 
   return (
     <>
+      <ToggleSwitch
+        checked={sayLadder}
+        onChange={setSayLadderLearning}
+        label="Say-it ladder"
+        description="Read the verse aloud, then say it as its sense lines turn to first letters one at a time, then blank one at a time, until you say it all from memory. Off uses the stages below instead."
+      />
       <ToggleSwitch
         checked={lineByLine}
         onChange={(value) => setWholeVerseLearning(!value)}

@@ -11,6 +11,7 @@ import { verseKey } from "@/lib/verseKey";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { ReaderVerseRow } from "@/components/gamification/ReaderVerseRow";
 import { ReaderProseRun } from "@/components/gamification/ReaderProseRun";
+import { ReaderPassagePictures } from "@/components/gamification/ReaderPassagePictures";
 import { useProgressStore } from "@/store/useProgressStore";
 import { sealTier } from "@/lib/srsSeals";
 
@@ -37,8 +38,8 @@ function runPosition(run: number[], verseNumber: number): "single" | "first" | "
   return before && after ? "middle" : before ? "last" : after ? "first" : "single";
 }
 
-// One chapter in the continuous reader (ChapterSenseReader.tsx): its title, then its pericopes in
-// sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
+// One chapter in the continuous reader (ChapterSenseReader.tsx): its title, then its pericopes — each
+// heading with its line of verse pictures (ReaderPassagePictures.tsx) — in sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
 // (ReaderProseRun.tsx) — the path's own chapters straight from its verses, any other fetched in `version`.
 export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, lessonVerse, duringLesson, isHidden, isRecalled, onLoaded }: ReaderChapterSectionProps) {
   const entities = useProgressStore((state) => state.memorizedEntities);
@@ -84,6 +85,7 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
           <div className="flex flex-col gap-0.5 px-3.5 pb-1.5 pt-1">
             <span className="text-[11px] font-extrabold uppercase tracking-[.06em] text-sage-800 dark:text-sage-300">{group.range}</span>
             <h3 className="font-heading text-[21px] leading-tight text-ink dark:text-zinc-100">{group.heading}</h3>
+            {!duringLesson && <ReaderPassagePictures verses={group.verses} statusOf={statusOf} />}
           </div>
           <div className="-mx-1 flex flex-col">
             {prose ? (

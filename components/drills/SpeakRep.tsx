@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { firstWordCharacter } from "@/lib/verseWords";
 import { useSpeakRepMic } from "@/lib/useSpeakRepMic";
 import type { FirstLetterHintToken } from "@/lib/verseFirstLetters";
+import { ladderWordModes, type LineMode } from "@/lib/sayLadder";
+import { SayLadderLine } from "@/components/drills/SayLadderLine";
 import { MistakeDiff } from "@/components/drills/MistakeDiff";
 import { SpeakRepFallback } from "@/components/drills/SpeakRepFallback";
 import { SpeakRepRevealLine } from "@/components/drills/SpeakRepRevealLine";
@@ -45,6 +47,9 @@ interface SpeakRepProps {
   // When true, a missed attempt's diff shows only each word's first letter, not the full
   // correct word — the Learn flow's closing stage shouldn't hand back the answer it's testing.
   firstLettersOnMistake?: boolean;
+  // A say-it ladder step (lib/sayLadder.ts): each sense line shown whole, as first letters or
+  // blank, and a missed word doesn't hold it up.
+  lineModes?: LineMode[];
 }
 
 export function SpeakRep({
@@ -61,10 +66,12 @@ export function SpeakRep({
   previousVerse,
   nextVerse,
   firstLettersOnMistake,
+  lineModes,
 }: SpeakRepProps) {
   const [openWordIndex, setOpenWordIndex] = useState<number | null>(null); // tapped-open hint word
   // Each word fills in once its first letter is heard; a missed word just waits (useSpeakRepMic.ts).
-  const mic = useSpeakRepMic({ targetText, reps, onComplete });
+  const mic = useSpeakRepMic({ targetText, reps, onComplete, lenient: Boolean(lineModes) });
+  const wordModes = useMemo(() => (lineModes ? ladderWordModes(targetText, lineModes) : null), [targetText, lineModes]);
   const { completedReps, isListening, liveTranscript, revealedCount, mistake, permissionDenied, hadMistakeRef, supported, isSecure, handleStart, handleStop } =
     mic;
   const toggleWord = (index: number) => setOpenWordIndex((prev) => (prev === index ? null : index));
@@ -80,6 +87,7 @@ export function SpeakRep({
   function renderActiveVerseRange(_: VerseSegment, range: SenseLineWordRange) {
     const clauseWordCount = range.endIndex - range.startIndex;
     const clauseRevealedCount = Math.max(0, Math.min(clauseWordCount, revealedCount - range.startIndex));
+    if (wordModes) return <SayLadderLine text={range.clause.text} startIndex={range.startIndex} revealedCount={revealedCount} wordModes={wordModes} />;
     return (
       <>
         {showVerse && range.clause.text}

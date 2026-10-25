@@ -394,6 +394,9 @@ export interface UserProgress {
   // Learn each verse whole instead of sense line by sense line (lib/learnSteps.ts) — the same
   // stages, run once over the full verse. Undefined (the default) is line by line.
   wholeVerseLearning?: boolean;
+  // Learn each verse with the say-it ladder (lib/sayLadder.ts) instead of the stages above.
+  // Undefined (the default) is on.
+  sayLadderLearning?: boolean;
   // Whether the Last letters stage (type the first letters with each word's last letter showing)
   // runs during Learn (lib/learnSteps.ts). Undefined (the default) is on.
   lastLettersStageEnabled?: boolean;

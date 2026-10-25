@@ -18,6 +18,7 @@ import { useArrivalToast } from "@/lib/useArrivalToast";
 import { PericopeMapScreen } from "@/components/gamification/PericopeMapScreen";
 import { SectionTrailScreen } from "@/components/gamification/SectionTrailScreen";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
+import { BookStructureScreen } from "@/components/gamification/BookStructureScreen";
 
 const PASSAGE_TAG_LEVELS: LocationTagLevel[] = ["book", "chapter", "pericope"];
 
@@ -30,13 +31,15 @@ interface PathTrailScreenProps {
   completedDays: number;
   // Verses of the next day already learned, each verse being its own lesson.
   versesIntoDay?: number;
+  // The Palace tab: the whole book's structure, a picture per verse (BookStructureScreen.tsx).
+  palace?: boolean;
 }
 
 // The Path tab (design_handoff_path_trail): the path's sections as a map, or — with `?section=` (an
 // index, or "current") — one section's trail. A verse path is one section, so always its trail. A
 // stop's lesson, review or practice runs in the Memorized tab's chapter reader, in place, and
 // comes back here when it's done (lib/readerHref.ts).
-export function PathTrailScreen({ pathKey, kind, label, days, version, completedDays, versesIntoDay = 0 }: PathTrailScreenProps) {
+export function PathTrailScreen({ pathKey, kind, label, days, version, completedDays, versesIntoDay = 0, palace = false }: PathTrailScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -56,9 +59,10 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
       payload: toggles.payloadStageEnabled ?? true,
       mathBreaks: toggles.mathBreakStageEnabled ?? true,
       wholeVerse: toggles.wholeVerseLearning,
+      sayLadder: toggles.sayLadderLearning ?? true,
     });
     return [...new Set(steps.filter((step) => step.phase !== "pray").map((step) => STAGE_LABELS[step.phase]))];
-  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.prayStageEnabled, toggles.lastLettersStageEnabled, toggles.timedTypeStageEnabled, toggles.payloadStageEnabled, toggles.mathBreakStageEnabled, toggles.wholeVerseLearning]);
+  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.prayStageEnabled, toggles.lastLettersStageEnabled, toggles.timedTypeStageEnabled, toggles.payloadStageEnabled, toggles.mathBreakStageEnabled, toggles.wholeVerseLearning, toggles.sayLadderLearning]);
   const sections = useMemo(() => buildTrail(kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone), [kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone]);
   const [open, setOpen] = useState<TrailStop | null>(null);
   const toast = useArrivalToast();
@@ -94,12 +98,14 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   // A verse stop opens just that verse (a verse path's stages, and review stops, the whole day).
   const verseOf = (stop: TrailStop) => (stop.verse && kind !== "verse" ? `${stop.verse.chapter}:${stop.verse.verseNumber}` : undefined);
   const sectionOf = (stop: TrailStop) => sections.find((section) => section.stops.includes(stop))?.title ?? "";
-  // A passage review (a pericope's or chapter's) runs as a practice over those verses.
+  // A passage review (a pericope's or chapter's) runs as a practice over those verses. Begun on the
+  // Palace, the reader comes back there.
+  const back = palace ? ("palace" as const) : true;
   const start = (stop: TrailStop, practise: boolean) =>
-    router.push(stop.review ? readerHref(pathKey, version, { passage: stop.review, day: stop.dayNumber }) : practise ? readerHref(pathKey, version, { practiceDay: stop.dayNumber, verse: verseOf(stop) }) : readerHref(pathKey, version, { learnDay: stop.dayNumber, verse: verseOf(stop) }));
+    router.push(stop.review ? readerHref(pathKey, version, { passage: stop.review, day: stop.dayNumber }, back) : practise ? readerHref(pathKey, version, { practiceDay: stop.dayNumber, verse: verseOf(stop) }, back) : readerHref(pathKey, version, { learnDay: stop.dayNumber, verse: verseOf(stop) }, back));
 
   // A link to one of their sections (Home's Continue) goes on to the reader the same way.
-  const redirect = index === null ? null : readerFor(sections[index]);
+  const redirect = index === null || palace ? null : readerFor(sections[index]);
   useEffect(() => {
     if (redirect) router.replace(redirect);
   }, [redirect, router]);
@@ -107,7 +113,9 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
 
   return (
     <>
-      {!sections.length ? null : index === null ? (
+      {!sections.length ? null : palace ? (
+        <BookStructureScreen pathLabel={label} book={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} />
+      ) : index === null ? (
         <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} outlineBook={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
       ) : (
         <SectionTrailScreen pathLabel={label} sections={sections} index={index} onBack={() => (kind === "verse" ? router.push("/") : showSection(null))} onTapStop={setOpen} onOpenSection={showSection} tagsFor={tagsFor} />
@@ -119,7 +127,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
           pathLabel={label}
           onClose={() => setOpen(null)}
           onStart={() => start(open, false)}
-          onReview={() => router.push(readerHref(pathKey, version, { review: open.dueIds }))}
+          onReview={() => router.push(readerHref(pathKey, version, { review: open.dueIds }, back))}
           onPractise={() => start(open, true)}
         />
       )}

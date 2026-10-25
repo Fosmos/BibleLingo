@@ -16,6 +16,7 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   // `?? false`: self-healing for progress saved before this field existed.
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
+  const sayLadder = useProgressStore((state) => state.sayLadderLearning) ?? true;
   // On unless turned off — undefined for progress saved before these stages existed.
   const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
@@ -24,7 +25,7 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const pray = useProgressStore((state) => state.prayStageEnabled) ?? false;
 
   return useMemo(
-    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse }),
-    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse],
+    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder }),
+    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder],
   );
 }

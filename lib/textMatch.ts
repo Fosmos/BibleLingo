@@ -151,3 +151,27 @@ export function spokenPrefixMatchCountFirstLetter(transcript: string, targetWord
   while (count < matchedA.length && matchedA[count]) count++;
   return count;
 }
+
+// The say-it ladder's lenient counterpart to spokenPrefixMatchCountFirstLetter above: the run from
+// the start may skip a misheard or missed word, so long as no more than two in a row are missed and
+// at least LENIENT_SHARE of the words so far were heard — so one word the recognizer gets wrong
+// doesn't hold the step up.
+const LENIENT_SHARE = 0.8;
+export function spokenLenientPrefixCountFirstLetter(transcript: string, targetWords: string[]): number {
+  const spokenWords = normalizedWords(transcript);
+  if (spokenWords.length === 0) return 0;
+  const { matchedA } = lcsAlign(firstLetters(targetWords), spokenWords.map((word) => word.charAt(0)));
+  let reach = 0;
+  let matched = 0;
+  let missedInARow = 0;
+  for (let index = 0; index < matchedA.length; index++) {
+    if (!matchedA[index]) {
+      if (++missedInARow > 2) break;
+      continue;
+    }
+    missedInARow = 0;
+    matched++;
+    if (matched >= LENIENT_SHARE * (index + 1)) reach = index + 1;
+  }
+  return reach;
+}

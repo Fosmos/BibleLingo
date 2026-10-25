@@ -1,10 +1,9 @@
-// Natural sense lines: one sentence divided into lines of about 5–8 words, broken where a reader
-// would pause. Every possible break between two words gets a cost, and so does every line's
-// length; dynamic programming then picks the division with the lowest total. A break is cheap at
-// punctuation, before a word that opens a clause ("and", "that", "who"...) and, a little less,
-// before a helping verb or a preposition ("has", "in", "through"...).
-// It is dear after a word that can't end a phrase ("the", "of", "his"...), because those leave the
-// line hanging. Lengths of 5–8 words cost nothing, 4 or 9 a little, and anything else a lot.
+// Sense lines: a verse broken only at its punctuation (, ; : . ? ! and before an em-dash), then
+// evened out — a line under MIN_WORDS joins its neighbour (across the weaker of its two pauses), and
+// a line over LONG_WORDS is split in two where a reader would pause. That split point gets a cost per
+// break between two words: cheap before a word that opens a clause ("and", "that", "who"...) and, a
+// little less, before a helping verb or a preposition ("has", "in", "through"...); dear after a word
+// that can't end a phrase ("the", "of", "his"...), which would leave the line hanging.
 
 // A unit of the sentence: a word, or the part of a dashed word from its em-dash on
 // ("witness—look," → "witness", "—look,"), so a line can break at the dash.
@@ -49,9 +48,10 @@ const ENDS_SENTENCE = /[.?!]['"’”)]*$/;
 // The word with its punctuation stripped, lower-cased ("“Behold," → "behold").
 const bare = (text: string) => text.toLowerCase().replace(/^[^a-z]+|[^a-z]+$/g, "");
 
-// Each line length's cost: 5–8 words is the aim.
-const LENGTH_COST = [Infinity, 24, 14, 9, 4, 0, 0, 0, 0, 6, 16, 24];
-const MAX_LINE = LENGTH_COST.length - 1;
+// A sense line has at least this many words (unless the whole verse is shorter); one longer than
+// LONG_WORDS is split in two.
+const MIN_WORDS = 4;
+const LONG_WORDS = 12;
 
 // The cost of a line break just before units[index].
 function breakCost(units: Unit[], index: number): number {
@@ -89,25 +89,48 @@ function unitsOf(sentence: string): Unit[] {
 
 const join = (units: Unit[]) => units.map((unit, index) => (index > 0 && unit.spaced ? ` ${unit.text}` : unit.text)).join("");
 
-// One sentence's lines, each about 5–8 words, broken where a reader would naturally pause.
-export function naturalSenseLines(sentence: string): string[] {
-  const units = unitsOf(sentence);
-  if (units.length <= 3) return units.length ? [join(units)] : [];
-  // best[end]: the lowest cost of dividing units[0, end); from[end]: where its last line starts.
-  const best: number[] = [0];
-  const from: number[] = [0];
-  for (let end = 1; end <= units.length; end++) {
-    best[end] = Infinity;
-    for (let length = 1; length <= Math.min(MAX_LINE, end); length++) {
-      const start = end - length;
-      const cost = best[start] + LENGTH_COST[length] + (start > 0 ? breakCost(units, start) : 0);
-      if (cost < best[end]) {
-        best[end] = cost;
-        from[end] = start;
-      }
-    }
+// Each unit is a word — tokenizeVerseWords counts the part of a dashed word from its em-dash on as one too.
+const words = (segment: Unit[]) => segment.length;
+
+// How strong the pause is at the end of a segment: a sentence's end, a semicolon or colon, a comma,
+// else none (an em-dash, or the verse's end) — a short line joins across the weaker side.
+function pauseAfter(segment: Unit[]): number {
+  const last = segment[segment.length - 1].text;
+  if (ENDS_SENTENCE.test(last)) return 3;
+  if (/[;:]['"’”)]*$/.test(last)) return 2;
+  return /,['"’”)]*$/.test(last) ? 1 : 0;
+}
+
+// A long line's best split into two, each at least MIN_WORDS words: the cheapest break, kept near the middle.
+function splitLong(segment: Unit[]): Unit[][] {
+  const total = words(segment);
+  let best = { cost: Infinity, at: -1 };
+  for (let index = MIN_WORDS; index <= total - MIN_WORDS; index++) {
+    const [before, after] = [index, total - index];
+    const cost = breakCost(segment, index) + Math.abs(before - after);
+    if (cost < best.cost) best = { cost, at: index };
   }
-  const lines: string[] = [];
-  for (let end = units.length; end > 0; end = from[end]) lines.unshift(join(units.slice(from[end], end)));
-  return lines;
+  return best.at < 0 ? [segment] : [segment.slice(0, best.at), segment.slice(best.at)];
+}
+
+// A verse's sense lines (see this file's doc comment).
+export function naturalSenseLines(text: string): string[] {
+  const units = unitsOf(text);
+  if (!units.length) return [];
+  // At its punctuation: after a word ending in a pause or a sentence's end, and before an em-dash.
+  const segments: Unit[][] = [[]];
+  units.forEach((unit, index) => {
+    if (index > 0 && (!unit.spaced || ENDS_PAUSE.test(units[index - 1].text) || ENDS_SENTENCE.test(units[index - 1].text))) segments.push([]);
+    segments[segments.length - 1].push(unit);
+  });
+  // The shortest line under MIN_WORDS joins a neighbour, over the weaker pause, until none is left.
+  for (;;) {
+    const short = segments.map((segment, index) => ({ index, size: words(segment) })).filter((entry) => entry.size < MIN_WORDS && segments.length > 1);
+    if (!short.length) break;
+    const { index } = short.sort((a, b) => a.size - b.size)[0];
+    const intoPrevious = index > 0 && (index === segments.length - 1 || pauseAfter(segments[index - 1]) <= pauseAfter(segments[index]));
+    const at = intoPrevious ? index - 1 : index;
+    segments.splice(at, 2, [...segments[at], ...segments[at + 1]]);
+  }
+  return segments.flatMap((segment) => (words(segment) > LONG_WORDS ? splitLong(segment) : [segment])).map(join);
 }

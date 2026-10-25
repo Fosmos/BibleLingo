@@ -30,7 +30,7 @@ interface PathOverviewScreenProps {
   // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once (PathProgress.priorKnownVerseCount).
   priorKnownVerseCount?: number;
   // "path" — the Path tab's trail; "reader" — the Memorized tab's reader; "map" — the Mind Map tab.
-  view?: "path" | "reader" | "map";
+  view?: "path" | "reader" | "map" | "palace";
   bibleFooter?: ReactNode;
 }
 
@@ -138,9 +138,10 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
 
-  // Path tab: the trail; Memorized tab: the reader; Mind Map tab: the canon view (a topic path's is its day list).
-  if (view === "path") {
-    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
+  // Path tab: the trail; Palace tab: the same as a Duolingo path with pictures; Memorized tab: the
+  // reader; Mind Map: the canon view (a topic path's is its day list).
+  if (view === "path" || view === "palace") {
+    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} palace={view === "palace"} />;
   }
   const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
   if (view === "reader") {

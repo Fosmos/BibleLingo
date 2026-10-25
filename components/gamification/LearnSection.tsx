@@ -145,8 +145,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
   }
 
   if (step.phase === "type_cumulative_today") {
-    // Never day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this
-    // one's.
+    // Never day.reviewVerses (prior days' own verses), which is ReviewSection's job, not this one's.
     return gated(
       <LearnCumulativeStage
         day={day}
@@ -170,7 +169,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
       : sliceWordAnnotations(wordAnnotations, verseOffsets[step.verseIndex!], tokenizeVerseWords(verse.text).length);
   const verseMarkers = wholeDayPhase ? verseNumberMarkers(day.newVerses) : {};
 
-  const stageKey = `${step.phase}-${step.verseIndex ?? "day"}-${step.lines?.join("-") ?? "all"}`;
+  const stageKey = `${step.phase}-${step.verseIndex ?? "day"}-${step.lines?.join("-") ?? "all"}-${step.lineModes?.join("") ?? ""}`;
   // The reading view's own pagination budget, run over this fixed page and keyed to the active
   // verse — unbounded, a normal day's verses can overflow the fixed, non-scrolling parchment.
   const verseWindow = wholeDayPhase ? undefined : paginateVerseWindow(contextVerses, heading, fullVerse.id, layout.pageBudget);
@@ -192,6 +191,7 @@ export function LearnSection({ day, allDays, completedDays, todaysDay, label, ve
           contextVerses={verseWindow?.verses}
           layout={layout}
           prayDurationSeconds={realVerseIndices.length > PRAY_LONGER_VERSE_THRESHOLD ? LONGER_PRAYER_DURATION_S : undefined}
+          lineModes={step.lineModes}
           onAdvance={advance}
         />
       </div>

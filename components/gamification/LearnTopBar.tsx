@@ -12,7 +12,7 @@ import { LearnVerseSpotlightChrome } from "@/components/gamification/LearnVerseS
 // LearnVerseSpotlightChrome.tsx) — every other phase (Orientation/Orientation Summary/Pray, the
 // whole-day cumulative typing step) isn't about one specific verse, so it keeps the plain
 // LessonChrome unchanged.
-const SPOTLIGHT_PHASES = new Set<Phase | "type_cumulative_today">(["rhythm", "draw_first_letters", "speak_hint", "speak_verse"]);
+const SPOTLIGHT_PHASES = new Set<Phase | "type_cumulative_today">(["rhythm", "draw_first_letters", "speak_hint", "speak_verse", "say_ladder"]);
 
 interface LearnTopBarProps {
   phase: Phase | "type_cumulative_today";

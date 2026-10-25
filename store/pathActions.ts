@@ -2,6 +2,7 @@ import type { StoreApi } from "zustand";
 import type { PathProgress, UserProgress, PathReminder, VerseSegment } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 import { activePathKeysOf } from "@/lib/activePaths";
+import { ensurePericopesLoaded } from "@/lib/chapterPericopes";
 import { addLearnedVersesToEntities, addVerseEntriesToEntities, syncMemorizedEntities } from "@/lib/memorizedEntities";
 import { learnedPathVerses } from "@/lib/progressSummary";
 
@@ -120,10 +121,17 @@ export function createPathActions(
       if (memorizedEntities !== state.memorizedEntities) set(persist({ ...state, memorizedEntities }));
     },
 
+    // Also splits ranges that cross a pericope heading (review goes by pericope —
+    // lib/pericopeEntities.ts), again once every reviewed chapter's headings have loaded.
     catchUpMemorized: () => {
-      const state = get();
-      const memorizedEntities = addLearnedVersesToEntities(state.paths, state.memorizedEntities);
-      if (memorizedEntities !== state.memorizedEntities) set(persist({ ...state, memorizedEntities }));
+      const catchUp = () => {
+        const state = get();
+        const memorizedEntities = addLearnedVersesToEntities(state.paths, state.memorizedEntities);
+        if (memorizedEntities !== state.memorizedEntities) set(persist({ ...state, memorizedEntities }));
+      };
+      catchUp();
+      const chapters = new Map(get().memorizedEntities.map((entity) => [`${entity.book}|${entity.chapter}`, entity]));
+      void Promise.all([...chapters.values()].map((entity) => ensurePericopesLoaded(entity.book, entity.chapter))).then(catchUp);
     },
 
     retireLearnedPath: (pathKey) => {

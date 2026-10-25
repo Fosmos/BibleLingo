@@ -7,7 +7,7 @@ import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 
 // The drills said aloud, and the ones typed by first letter — either kind can be switched to the
 // other with the lesson page's Speak / Type chip (DrillHelpChips.tsx).
-const SPEAK = new Set<Phase>(["speak_hint", "speak_verse", "speak_payload"]);
+const SPEAK = new Set<Phase>(["speak_hint", "speak_verse", "speak_payload", "say_ladder"]);
 const TYPE = new Set<Phase>(["fill_in_the_blank_letters", "type_from_last_letters", "type_timed", "type_math"]);
 
 export interface InputSwap {

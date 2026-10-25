@@ -14,6 +14,7 @@ import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
 import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
 import { FirstLetterBlankRep } from "@/components/drills/FirstLetterBlankRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
+import { ladderLabel, type LineMode } from "@/lib/sayLadder";
 import { LearnWholeDayPhaseContent } from "@/components/gamification/LearnWholeDayPhaseContent";
 import { VerseVisualBadge } from "@/components/ui/VerseVisualBadge";
 
@@ -32,6 +33,7 @@ export type Phase =
   | "type_math"
   | "pray"
   | "speak_verse"
+  | "say_ladder"
   | "type_cumulative_today";
 
 interface LearnPhaseContentProps {
@@ -68,6 +70,8 @@ interface LearnPhaseContentProps {
   // instead of a smaller/differently-sized excerpt. Stages not yet converted just ignore it.
   layout: ChapterReadingLayout;
   onAdvance: () => void;
+  // A say_ladder step's mode for each sense line (lib/sayLadder.ts).
+  lineModes?: LineMode[];
 }
 
 // Split out of LearnSection so that component can stay focused on the day's batch/phase
@@ -86,6 +90,7 @@ export function LearnPhaseContent({
   prayDurationSeconds,
   layout,
   onAdvance,
+  lineModes,
 }: LearnPhaseContentProps) {
   // Read unconditionally regardless of phase — a whole-day phase's `verse` stands in for the
   // whole day (see LearnSection.tsx) but keeps the first new verse's own identity, a
@@ -147,6 +152,24 @@ export function LearnPhaseContent({
         verse={verse}
         contextVerses={contextVerses}
         layout={layout}
+        onComplete={onAdvance}
+      />
+    );
+  } else if (phase === "say_ladder" && lineModes) {
+    content = (
+      <SpeakRep
+        key={stageKey}
+        label={ladderLabel(lineModes)}
+        reference={verse.reference}
+        targetText={verse.text}
+        reps={1}
+        showVerse={lineModes.every((mode) => mode === "full")}
+        hintTokens={lineModes.includes("letters") ? firstLetterHintTokens(verse.text, verseMarkers) : undefined}
+        verse={verse}
+        contextVerses={contextVerses}
+        layout={layout}
+        lineModes={lineModes}
+        firstLettersOnMistake
         onComplete={onAdvance}
       />
     );

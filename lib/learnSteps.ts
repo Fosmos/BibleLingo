@@ -1,4 +1,5 @@
 import type { Phase } from "@/components/gamification/LearnPhaseContent";
+import { sayLadder, type LineMode } from "@/lib/sayLadder";
 
 // verseIndex is undefined for the whole-day phases (orientation, orientation summary, pray);
 // set for a single verse's own stages, including speak_verse's own (see buildSteps) — that
@@ -9,10 +10,13 @@ import type { Phase } from "@/components/gamification/LearnPhaseContent";
 //
 // cumulativeVerseIndices is set only on type_cumulative_today steps — the explicit list of
 // day.newVerses indices that check covers.
+//
+// lineModes is set on say_ladder steps — how each of the verse's sense lines shows (lib/sayLadder.ts).
 export interface FlatStep {
   phase: Phase;
   verseIndex?: number;
   lines?: [number, number];
+  lineModes?: LineMode[];
   cumulativeVerseIndices?: number[];
 }
 
@@ -32,6 +36,8 @@ export interface LearnStageOptions {
   mathBreaks: boolean;
   // Learn each verse whole rather than a sense line at a time (UserProgress.wholeVerseLearning).
   wholeVerse?: boolean;
+  // The say-it ladder in place of the stages above (UserProgress.sayLadderLearning — on unless turned off).
+  sayLadder?: boolean;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
@@ -76,8 +82,9 @@ function challengeSteps(verseIndex: number, options: LearnStageOptions): FlatSte
 }
 
 // A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
-// optional Rhythm read-through, its sense-line ladder (above; or, with the whole-verse option, its
-// stages over the whole verse), its optional challenges (above), then its optional Write First Letter — a typing check of all of
+// optional Rhythm read-through, its say-it ladder (lib/sayLadder.ts — read it aloud, then say it as
+// its lines turn to first letters and then to blanks, one at a time; or, with that setting off, its
+// sense-line stages above, or with the whole-verse option its stages over the whole verse), its optional challenges (above), then its optional Write First Letter — a typing check of all of
 // today's verses together when there are several, and the optional Pray.
 // The verses before it are reviewed after (VerseLessonFlow.tsx).
 //
@@ -92,7 +99,9 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
   if (options.visualize) steps.push({ phase: "orientation_summary" });
   verseIndices.forEach((verseIndex, position) => {
     if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
-    steps.push(...(options.wholeVerse ? wholeVerseSteps(verseIndex, options) : senseLineSteps(verseIndex, Math.max(1, lineCounts[position] ?? 1), options)));
+    const lineCount = Math.max(1, lineCounts[position] ?? 1);
+    if (options.sayLadder) steps.push(...sayLadder(lineCount).map((lineModes) => ({ phase: "say_ladder" as const, verseIndex, lineModes })));
+    else steps.push(...(options.wholeVerse ? wholeVerseSteps(verseIndex, options) : senseLineSteps(verseIndex, lineCount, options)));
     steps.push(...challengeSteps(verseIndex, options));
     if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });
   });

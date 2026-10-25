@@ -4,6 +4,8 @@ import type { CSSProperties } from "react";
 import { X } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { usePericopeHeading } from "@/lib/usePericopeHeading";
+import { useVersePicture } from "@/lib/useVersePicture";
+import { VersePictureTile } from "@/components/gamification/VersePictureTile";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import type { ParsedVerseKey } from "@/lib/verseKey";
 import { DrillHelpChips } from "@/components/gamification/DrillHelpChips";
@@ -14,7 +16,8 @@ interface PathLessonTopBarProps {
   onClose: () => void;
 }
 
-// A lesson's top bar on the chapter reader, in one short row: close at the left; the stage's name
+// A lesson's top bar on the chapter reader, in one short row: close at the left; the verse's picture
+// (lib/verseImages.ts — learned with its words); the stage's name
 // (with its "2 of 4", or a spaced review's score) over the chapter and pericope; the Letters /
 // Verse / Skip chips at the right (DrillHelpChips.tsx); and along its bottom edge, a thin step bar
 // across the verse's run of stages (done sand, current terracotta) or the lesson's progress.
@@ -23,6 +26,8 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
   const stage = useLessonSessionStore((state) => state.sheetStage);
   const progress = useLessonSessionStore((state) => state.lessonProgress) ?? 0;
   const pericope = usePericopeHeading(place.book, place.chapter, place.verseNumber);
+  // The verse's picture (the Palace's dual coding), learned with its words.
+  const picture = useVersePicture(place.book, place.chapter, place.verseNumber);
   const setReferenceBarNode = useLessonSessionStore((state) => state.setReferenceBarNode);
   const steps = stage?.steps ?? 1;
   const step = stage?.step ?? 0;
@@ -38,6 +43,11 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
         >
           <X size={17} strokeWidth={3} />
         </button>
+        {picture && (
+          <span aria-hidden="true" className="shrink-0">
+            <VersePictureTile pictureId={picture} verseNumber={place.verseNumber} learned />
+          </span>
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-black uppercase tracking-[.06em] text-brand-700 dark:text-brand-300">
             <span className="truncate">{stage?.label ?? ""}</span>

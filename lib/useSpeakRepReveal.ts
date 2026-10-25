@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { buildDrawTokens } from "@/lib/verseDrawTokens";
-import { spokenPrefixMatchCount, spokenPrefixMatchCountFirstLetter } from "@/lib/textMatch";
+import { spokenLenientPrefixCountFirstLetter, spokenPrefixMatchCount, spokenPrefixMatchCountFirstLetter } from "@/lib/textMatch";
 
 export interface SpeakRepReveal {
   revealedCount: number;
@@ -20,8 +20,9 @@ export interface SpeakRepReveal {
 // SpeakRepRevealLine's own token loop does, so the two stay in lockstep index-for-index.
 // `gradeByFirstLetter` swaps in the first-letter matcher, so a word reveals the instant its first
 // letter is heard. Each listen (`resume`) matches only the words still to come, so stopping and
-// starting again never loses what's been said.
-export function useSpeakRepReveal(targetText: string, gradeByFirstLetter: boolean): SpeakRepReveal {
+// starting again never loses what's been said. `lenient` (the say-it ladder) lets the run skip
+// a missed word (lib/textMatch.ts's spokenLenientPrefixCountFirstLetter).
+export function useSpeakRepReveal(targetText: string, gradeByFirstLetter: boolean, lenient = false): SpeakRepReveal {
   const [revealedCount, setRevealedCount] = useState(0);
   const countRef = useRef(0);
   const baseRef = useRef(0);
@@ -29,7 +30,7 @@ export function useSpeakRepReveal(targetText: string, gradeByFirstLetter: boolea
     () => buildDrawTokens(targetText, {}).filter((token) => token.kind === "word" && !token.isReference).map((token) => token.text),
     [targetText],
   );
-  const matchCount = gradeByFirstLetter ? spokenPrefixMatchCountFirstLetter : spokenPrefixMatchCount;
+  const matchCount = lenient ? spokenLenientPrefixCountFirstLetter : gradeByFirstLetter ? spokenPrefixMatchCountFirstLetter : spokenPrefixMatchCount;
   const set = (count: number) => {
     countRef.current = count;
     setRevealedCount(count);
