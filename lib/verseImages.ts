@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { verseKey } from "@/lib/verseKey";
+import { splitIntoLines } from "@/lib/senseLineSplitting";
 
 // Dual coding: every verse gets a picture — an icon — to be learned with its words (the Palace's book
 // structure — BookStructureScreen.tsx — the reader's passage headings and the lessons). Picked from
@@ -109,15 +110,19 @@ interface PictureVerse {
 }
 
 // The picture ids of one passage's verses, in order — so no picture repeats within a passage, each
-// verse takes the most specific one its words call up that the verses before it haven't (the
-// reader's own choice always wins). Every place that shows a verse's picture works it out over its
+// verse takes the most specific one its first sense line calls up that the verses before it haven't
+// (the picture cues the verse's start), or failing that the rest of the verse; the reader's own
+// choice always wins. Every place that shows a verse's picture works it out over its
 // whole passage this way, so a verse shows the same picture everywhere.
 export function passagePictures(verses: PictureVerse[], chosen: Record<string, string>): string[] {
   const used = new Set<string>();
   return verses.map((verse) => {
     const own = chosen[verseImageKey(verse.book, verse.chapter, verse.verseNumber)];
-    const picture = own && pictureById(own) ? own : autoVerseImage(verse.text, used);
+    const firstLine = splitIntoLines(verse.text)[0] ?? verse.text;
+    const fromFirstLine = WORD_PICTURES.find(([pattern, candidate]) => !used.has(candidate.id) && pattern.test(firstLine))?.[1].id;
+    const picture = own && pictureById(own) ? own : (fromFirstLine ?? autoVerseImage(verse.text, used));
     used.add(picture);
     return picture;
   });
 }
+

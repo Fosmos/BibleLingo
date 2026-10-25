@@ -34,9 +34,9 @@ export interface StructurePassage {
 // The Palace tab: the whole book on one page, as a memory palace — its chapters in order (under its
 // themes, for a long book), each a room you name, each chapter's passages spots in that room you name,
 // and under each passage its verses' picture tiles (dual coding — lib/verseImages.ts), in colour once
-// learned. Tap a passage to open its text right here (BookStructurePassage.tsx); the one you're on
-// starts open. Room and spot names are the place tags the Path map shows too — shown once given,
-// offered only on the passage that's open, so the page stays quiet.
+// learned. Tap a passage to open it right here (BookStructurePassage.tsx); the one you're on starts
+// open and stays highlighted in orange. Room and spot names are the place tags the Path map shows
+// too — shown once given, offered only on the passage that's open, so the page stays quiet.
 export function BookStructureScreen({ pathLabel, book, sections, onStart }: BookStructureScreenProps) {
   const chosen = useProgressStore((state) => state.iconTags);
   const places = useProgressStore((state) => state.locationTags);
@@ -94,14 +94,19 @@ export function BookStructureScreen({ pathLabel, book, sections, onStart }: Book
                     .filter((passage) => passage.chapter === chapter)
                     .map((passage) => (
                       <div key={passage.index} data-current={passage.index === current || undefined}>
-                        <button type="button" aria-expanded={open === passage.index} onClick={() => setOpen(open === passage.index ? null : passage.index)} className="flex w-full items-baseline justify-between gap-2 border-l-2 border-sand-300 pl-3 pr-1 pt-1.5 text-left dark:border-zinc-700">
-                          <span className="font-heading text-[16px] leading-snug text-ink dark:text-zinc-100">{passage.section.title}</span>
+                        <button
+                          type="button"
+                          aria-expanded={open === passage.index}
+                          onClick={() => setOpen(open === passage.index ? null : passage.index)}
+                          className={`flex w-full items-baseline justify-between gap-2 border-l-2 pl-3 pr-1 pt-1.5 text-left ${passage.index === current || open === passage.index ? "rounded-tr-[16px] border-brand-500 bg-brand-100/60 dark:bg-brand-900/25" : "border-sand-300 dark:border-zinc-700"}`}
+                        >
+                          <span className={`font-heading text-[16px] leading-snug ${passage.index === current ? "text-brand-700 dark:text-brand-300" : "text-ink dark:text-zinc-100"}`}>{passage.section.title}</span>
                           <span className="flex shrink-0 items-center gap-1 text-[10.5px] font-extrabold text-sand-600 dark:text-zinc-500">
                             {passage.section.ref.replace(/^.*? (\d+:)/, "$1")}
                             <ChevronDown size={13} strokeWidth={3} className={`transition-transform ${open === passage.index ? "rotate-180" : ""}`} />
                           </span>
                         </button>
-                        <BookStructurePassage passage={passage} open={open === passage.index} onToggle={() => setOpen(open === passage.index ? null : passage.index)} onStart={onStart} />
+                        <BookStructurePassage passage={passage} open={open === passage.index} current={passage.index === current} onToggle={() => setOpen(open === passage.index ? null : passage.index)} onStart={onStart} />
                       </div>
                     ))}
                 </div>

@@ -1,7 +1,6 @@
 import type { MemorizedEntity, PathProgress, SRSState, VerseSegment } from "@/types";
 import { getMemorizedVerses, type MemorizedVerseEntry } from "@/lib/progressSummary";
 import { BOX_INTERVAL_DAYS, createInitialSRSState } from "@/lib/srs";
-import { samePericope, splitEntitiesByPericope } from "@/lib/pericopeEntities";
 
 export function entityId(book: string, chapter: number, startVerse: number, endVerse: number): string {
   return `${book}|${chapter}|${startVerse}-${endVerse}`;
@@ -71,11 +70,40 @@ function joinedSchedule(joined: MemorizedEntity[]): SRSState {
   return { ...soonest.srs, box, history: history.length ? history : undefined };
 }
 
+// Joins ranges that sit side by side in the same chapter into one — review goes by chapter, and for
+// a while it went by pericope, which split chapters at their headings. The joined range keeps the
+// schedule of the ones it joins (joinedSchedule) and the earliest date. Returns the same array when
+// nothing was next to anything.
+export function joinAdjacentEntities(entities: MemorizedEntity[]): MemorizedEntity[] {
+  const sorted = [...entities].sort((a, b) => a.book.localeCompare(b.book) || a.chapter - b.chapter || a.startVerse - b.startVerse);
+  const runs: MemorizedEntity[][] = [];
+  for (const entity of sorted) {
+    const last = runs[runs.length - 1]?.at(-1);
+    if (last && last.book === entity.book && last.chapter === entity.chapter && last.endVerse + 1 === entity.startVerse) runs[runs.length - 1].push(entity);
+    else runs.push([entity]);
+  }
+  if (runs.length === entities.length) return entities;
+  return runs.map((run) => {
+    if (run.length === 1) return run[0];
+    const [first, last] = [run[0], run[run.length - 1]];
+    const dates = run.map((entity) => entity.memorizedAt);
+    return {
+      ...first,
+      id: entityId(first.book, first.chapter, first.startVerse, last.endVerse),
+      endVerse: last.endVerse,
+      srs: joinedSchedule(run),
+      manual: run.every((entity) => entity.manual),
+      memorizedAt: dates.some((date) => !date) ? undefined : [...dates].sort()[0],
+      lastAddedAt: run.map((entity) => entity.lastAddedAt ?? "").sort().at(-1) || undefined,
+    };
+  });
+}
+
 // Merges a newly-memorized verse into the running entity list: extends whichever
-// neighbor(s) (previous/next verse in the same pericope) already exist, or starts a fresh
-// single-verse entity if it has no memorized neighbor yet. Entities are scoped to one pericope —
-// they never merge across a heading (lib/pericopeEntities.ts) — so each passage is reviewed on
-// its own; while a chapter's headings aren't loaded yet they grow within the chapter instead.
+// neighbor(s) (previous/next verse in the same book+chapter) already exist, or starts a
+// fresh single-verse entity if it has no memorized neighbor yet. Entities are scoped to one
+// chapter — they never merge across chapter boundaries — so growth is naturally capped at a
+// full chapter, and the next chapter always starts its own entity.
 function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, version: string): MemorizedEntity[] {
   const { book, chapter, verseNumber } = verse;
   const alreadyCovered = entities.some(
@@ -88,10 +116,10 @@ function addVerseToEntities(entities: MemorizedEntity[], verse: VerseSegment, ve
   if (alreadyCovered) return entities;
 
   const predecessor = entities.find(
-    (entity) => entity.book === book && entity.chapter === chapter && entity.endVerse === verseNumber - 1 && samePericope(book, chapter, entity.endVerse, verseNumber),
+    (entity) => entity.book === book && entity.chapter === chapter && entity.endVerse === verseNumber - 1,
   );
   const successor = entities.find(
-    (entity) => entity.book === book && entity.chapter === chapter && entity.startVerse === verseNumber + 1 && samePericope(book, chapter, entity.startVerse, verseNumber),
+    (entity) => entity.book === book && entity.chapter === chapter && entity.startVerse === verseNumber + 1,
   );
 
   const startVerse = predecessor?.startVerse ?? verseNumber;
@@ -130,7 +158,7 @@ export function addChapterVersesToEntities(
   chapterVerses: VerseSegment[],
   version: string,
 ): MemorizedEntity[] {
-  const split = splitEntitiesByPericope(existingEntities);
+  const split = joinAdjacentEntities(existingEntities);
   let built = split;
   for (const verse of chapterVerses) built = addVerseToEntities(built, verse, version);
   const existingById = new Map(split.map((entity) => [entity.id, entity]));
@@ -148,8 +176,8 @@ export function addLearnedVersesToEntities(paths: Record<string, PathProgress>, 
 // The same, for verses already in hand (one path's, from the book the path screen loaded —
 // lib/progressSummary.ts's learnedPathVerses).
 export function addVerseEntriesToEntities(existingEntities: MemorizedEntity[], entries: MemorizedVerseEntry[]): MemorizedEntity[] {
-  // Ranges made before review went by pericope (or before their headings loaded) split first.
-  const split = splitEntitiesByPericope(existingEntities);
+  // Ranges split by pericope (while review briefly went by pericope) join back up first.
+  const split = joinAdjacentEntities(existingEntities);
   let built = split;
   for (const { verse, version } of entries) built = addVerseToEntities(built, verse, version);
   if (built === existingEntities) return existingEntities;
