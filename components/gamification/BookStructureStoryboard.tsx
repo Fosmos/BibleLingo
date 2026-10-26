@@ -13,7 +13,7 @@ interface BookStructureStoryboardProps {
 }
 
 // A verse's first few words, as the cue to say the rest.
-const OPENING_WORDS = 4;
+const OPENING_WORDS = 3;
 function openingWords(text: string): string {
   const words = text.trim().split(/\s+/);
   return words.length > OPENING_WORDS ? `${words.slice(0, OPENING_WORDS).join(" ")}…` : words.join(" ");
@@ -33,7 +33,7 @@ export function BookStructureStoryboard({ lessons, pictures }: BookStructureStor
     });
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-4 gap-1.5">
       {lessons.map((stop, index) => {
         const verse = stop.verse!;
         const learned = stop.state === "done";
@@ -49,19 +49,19 @@ export function BookStructureStoryboard({ lessons, pictures }: BookStructureStor
             initial={false}
             animate={{ rotateY: open ? 180 : 0 }}
             transition={{ duration: 0.35, ease: "easeInOut" }}
-            className={`relative min-h-[132px] rounded-[16px] border-2 bg-paper text-left [transform-style:preserve-3d] dark:bg-zinc-900 ${stop.state === "current" ? "border-brand-500" : "border-sand-200 dark:border-zinc-800"}`}
+            className={`relative min-h-[112px] rounded-[12px] border-2 bg-paper text-left [transform-style:preserve-3d] dark:bg-zinc-900 ${stop.state === "current" ? "border-brand-500" : "border-sand-200 dark:border-zinc-800"}`}
           >
-            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-2.5 [backface-visibility:hidden]">
-              <span className={`flex h-14 w-14 items-center justify-center rounded-[14px] ${learned ? "bg-sage-500 text-white shadow-[0_3px_0_#56633F]" : "bg-sand-200 text-sand-500 dark:bg-zinc-800 dark:text-zinc-500"}`}>
-                {Icon && <Icon size={28} strokeWidth={2.2} />}
+            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-1.5 [backface-visibility:hidden]">
+              <span className={`flex h-10 w-10 items-center justify-center rounded-[10px] ${learned ? "bg-sage-500 text-white shadow-[0_3px_0_#56633F]" : "bg-sand-200 text-sand-500 dark:bg-zinc-800 dark:text-zinc-500"}`}>
+                {Icon && <Icon size={21} strokeWidth={2.2} />}
               </span>
               <span className="text-[10px] font-extrabold text-sand-600 dark:text-zinc-500">{verse.verseNumber}</span>
-              <span className="text-center font-heading text-[14.5px] leading-tight text-ink dark:text-zinc-100">{openingWords(verse.text)}</span>
+              <span className="text-center font-heading text-[11.5px] leading-tight text-ink dark:text-zinc-100">{openingWords(verse.text)}</span>
             </span>
-            <span className="absolute inset-0 flex flex-col gap-0.5 overflow-y-auto p-2.5 [backface-visibility:hidden] [transform:rotateY(180deg)] [scrollbar-width:none]">
+            <span className="absolute inset-0 flex flex-col gap-0.5 overflow-y-auto p-1.5 [backface-visibility:hidden] [transform:rotateY(180deg)] [scrollbar-width:none]">
               <span className="text-[10px] font-extrabold text-sand-600 dark:text-zinc-500">{verse.verseNumber}</span>
               {parseToSenseLines(verse.text).map((line, at) => (
-                <span key={at} className="pl-3 -indent-3 text-[12.5px] leading-snug text-ink dark:text-zinc-100">
+                <span key={at} className="pl-2 -indent-2 text-[10.5px] leading-snug text-ink dark:text-zinc-100">
                   {line}
                 </span>
               ))}
