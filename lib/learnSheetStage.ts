@@ -20,6 +20,7 @@ export const STAGE_LABELS: Record<FlatStep["phase"], string> = {
   speak_hint: "Say it with hints",
   speak_verse: "Say it from memory",
   say_ladder: "Say it",
+  place_in_palace: "Your palace",
   type_cumulative_today: "Remember",
   pray: "Pray",
 };
@@ -27,7 +28,7 @@ export const STAGE_LABELS: Record<FlatStep["phase"], string> = {
 // The stages that teach a verse rather than test recall — while one runs on the Path tab's reader,
 // the verses after it stay readable; a review step (Review, Remember, Chapter Review)
 // blanks them (ChapterPathScreen.tsx).
-const TEACHING = new Set(["orientation", "orientation_summary", "listen_verse", "rhythm", "draw_first_letters", "fill_in_the_blank", "fill_in_the_blank_letters", "type_from_last_letters", "speak_hint", "speak_verse", "say_ladder", "pray"] as const);
+const TEACHING = new Set(["orientation", "orientation_summary", "listen_verse", "rhythm", "draw_first_letters", "fill_in_the_blank", "fill_in_the_blank_letters", "type_from_last_letters", "speak_hint", "speak_verse", "say_ladder", "place_in_palace", "pray"] as const);
 export const TEACHING_STAGE_LABELS = new Set([...TEACHING].map((phase) => STAGE_LABELS[phase]));
 
 // What a Learn lesson shows in the sheet header at `stepIndex`: the stage, the verse it drills

@@ -114,7 +114,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : palace ? (
-        <BookStructureScreen pathLabel={label} book={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} />
+        <BookStructureScreen pathKey={pathKey} pathLabel={label} book={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} />
       ) : index === null ? (
         <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} outlineBook={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
       ) : (

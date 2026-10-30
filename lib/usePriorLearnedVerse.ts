@@ -7,8 +7,8 @@ import { getAdjacentVerse } from "@/lib/chapterContent";
 import { buildMemorizedVerseIndex } from "@/lib/memorizedVerseIndex";
 
 // The learned verses from the start of a lesson's chapter up to its first verse, nearest last —
-// [v1 … v8] for a lesson at v9 — which the lesson reviews at the end, with the verse just learned
-// (VerseLessonFlow.tsx). Only verses the reader has already learned (the lesson's own previous verses,
+// [v1 … v8] for a lesson at v9 — which the lesson's closing review picks from (lib/lessonReview.ts,
+// VerseLessonFlow.tsx). Only verses the reader has already learned (the lesson's own previous verses,
 // or anything memorized), counting back until one isn't: a path that starts mid-chapter never asks
 // them to recall an unlearned verse before it. A translation's empty gap verse is stepped over, not a stop.
 // `allDays` is the lesson's whole path: every verse of a lesson before this one on it counts as learned

@@ -6,6 +6,10 @@ import { useCheckpointField } from "@/lib/useSessionCheckpoint";
 import { useChapterScopedReadingLayout } from "@/lib/useChapterScopedReadingLayout";
 import { useEmbeddedSenseCardOverride } from "@/lib/useEmbeddedSenseCardOverride";
 import { usePriorLearnedVerses } from "@/lib/usePriorLearnedVerse";
+import { usePericopesReady } from "@/lib/usePericopesReady";
+import { getChapterVerses } from "@/lib/chapterContent";
+import { getCachedPericopes } from "@/lib/pericopeCache";
+import { lessonReviewVerses } from "@/lib/lessonReview";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { LearnSection } from "@/components/gamification/LearnSection";
 
@@ -28,19 +32,23 @@ interface VerseLessonFlowProps {
 
 const PHASES = ["learn", "finalReview"] as const;
 
-// A single verse lesson: learn the verse, then review it with the learned verse just before it,
-// then with the learned verses back to the start of its chapter (every path kind). Nothing after.
+// A single verse lesson: learn the verse, then review it with the verses before it — the last five,
+// or on every fifth verse the block so far (lib/lessonReview.ts; every path kind). Nothing after.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);
   const phase = PHASES[phaseIndex] ?? PHASES[0];
-  // The closing review: the verses before this lesson's (learning 8:9, it reviews 8:1–8) and then
-  // the lesson's own verses, typed through in order.
+  // The closing review. A chapter's pericopes (where a long one's blocks break) can load after the
+  // lesson opens — one started straight from the map — and the review is worked out again when they do.
   const prior = usePriorLearnedVerses(day, allDays);
   const learned = useMemo(() => day.newVerses.filter((verse) => verse.text.trim().length > 0), [day.newVerses]);
-  const reviewDay = useMemo(() => ({ ...day, previousVerses: [...prior, ...learned] }), [day, prior, learned]);
-  // First the verse just before with the lesson's own — only when the whole run is longer than that.
-  const pairVerses = useMemo(() => (prior.length > 1 ? [prior[prior.length - 1], ...learned] : undefined), [prior, learned]);
+  const pericopesReady = usePericopesReady(day.newVerses);
+  const first = learned[0];
+  const pericopes = pericopesReady && first ? getCachedPericopes(first.book, first.chapter) : undefined;
+  const reviewDay = useMemo(() => {
+    const chapterLength = first ? (getChapterVerses(first.book, first.chapter)?.length ?? first.verseNumber) : 0;
+    return { ...day, previousVerses: lessonReviewVerses(prior, learned, chapterLength, (pericopes ?? []).map((pericope) => pericope.startVerse)) };
+  }, [day, prior, learned, first, pericopes]);
   // Only used by the review below (LearnSection computes its own for "learn") — called
   // unconditionally regardless, since hooks can't be called after an early return.
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
@@ -69,7 +77,6 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
       onComplete={onComplete}
       sessionKey={sessionKey}
       phase="final"
-      pairVerses={pairVerses}
       layout={layout}
       lessonLabel={label}
       version={version}

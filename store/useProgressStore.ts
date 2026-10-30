@@ -12,6 +12,7 @@ import { createManualEntityActions } from "@/store/manualEntityActions";
 import { createBuildingViewActions } from "@/store/buildingViewActions";
 import { createVersePOAActions } from "@/store/versePOAActions";
 import { createLocationTagActions } from "@/store/locationTagActions";
+import { createBuiltPalaceActions, type BuiltPalaceActions } from "@/store/builtPalaceActions";
 import { createPegMasterListActions } from "@/store/pegMasterListActions";
 import { createCustomClauseRoleActions } from "@/store/customClauseRoleActions";
 import { createSessionCheckpointActions } from "@/store/sessionCheckpointActions";
@@ -95,8 +96,8 @@ interface ProgressActions {
   resetProgress: () => void;
 }
 
-// The Learn settings' setters (store/learnSettingsActions.ts) are declared there.
-export type ProgressStore = UserProgress & ProgressActions & LearnSettingsActions;
+// The Learn settings' and built palaces' actions (store/learnSettingsActions.ts, builtPalaceActions.ts) are declared there.
+export type ProgressStore = UserProgress & ProgressActions & LearnSettingsActions & BuiltPalaceActions;
 
 // Reads the signed-in user id at save time rather than threading it through every action —
 // every action runs only while signed in (AuthGate gates every route), so never null here.
@@ -119,6 +120,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   ...createBuildingViewActions(set, get, persist),
   ...createVersePOAActions(set, get, persist),
   ...createLocationTagActions(set, get, persist),
+  ...createBuiltPalaceActions(set, get, persist),
   ...createPegMasterListActions(set, get, persist),
   ...createCustomClauseRoleActions(set, get, persist),
   ...createSessionCheckpointActions(set, get, persist),

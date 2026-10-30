@@ -14,6 +14,7 @@ import { DrawFirstLetterRep } from "@/components/drills/DrawFirstLetterRep";
 import { FillInTheBlankRep } from "@/components/drills/FillInTheBlankRep";
 import { FirstLetterBlankRep } from "@/components/drills/FirstLetterBlankRep";
 import { SpeakRep } from "@/components/drills/SpeakRep";
+import { PalacePlaceStep } from "@/components/gamification/PalacePlaceStep";
 import { ladderLabel, type LineMode } from "@/lib/sayLadder";
 import { LearnWholeDayPhaseContent } from "@/components/gamification/LearnWholeDayPhaseContent";
 import { VerseVisualBadge } from "@/components/ui/VerseVisualBadge";
@@ -34,6 +35,7 @@ export type Phase =
   | "pray"
   | "speak_verse"
   | "say_ladder"
+  | "place_in_palace"
   | "type_cumulative_today";
 
 interface LearnPhaseContentProps {
@@ -64,10 +66,8 @@ interface LearnPhaseContentProps {
   contextVerses?: VerseSegment[];
   // Only read by the "pray" phase — see PrayRep.tsx and LearnSection.tsx's buildSteps.
   prayDurationSeconds?: number;
-  // The reading view's own real page layout (see lib/useChapterReadingLayout.ts) — passed
-  // through to whichever per-verse stages already render against it (see each drill's own
-  // `layout` prop) so their own parchment matches the Path screen's reading view exactly,
-  // instead of a smaller/differently-sized excerpt. Stages not yet converted just ignore it.
+  // The reading view's own real page layout (see lib/useChapterReadingLayout.ts), so each per-verse
+  // stage's parchment matches the Path screen's reading view exactly.
   layout: ChapterReadingLayout;
   onAdvance: () => void;
   // A say_ladder step's mode for each sense line (lib/sayLadder.ts).
@@ -92,9 +92,7 @@ export function LearnPhaseContent({
   onAdvance,
   lineModes,
 }: LearnPhaseContentProps) {
-  // Read unconditionally regardless of phase — a whole-day phase's `verse` stands in for the
-  // whole day (see LearnSection.tsx) but keeps the first new verse's own identity, a
-  // reasonable single anchor for a combined screen.
+  // Read for every phase — a whole-day phase's `verse` keeps the first new verse's identity.
   const poa = useProgressStore((state) => state.versePOA[verseKey(verse.book, verse.chapter, verse.verseNumber)]);
   const locationTag = useProgressStore((state) => state.locationTags[locationTagKey({ level: "verse", book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber })]);
   // Once the reader has visualized this lesson (i.e. every phase after orientation_summary),
@@ -124,6 +122,8 @@ export function LearnPhaseContent({
         onAdvance={onAdvance}
       />
     );
+  } else if (phase === "place_in_palace") {
+    content = <PalacePlaceStep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else if (phase === "listen_verse") {
     content = <ListenVerseRep key={stageKey} verse={verse} layout={layout} onComplete={onAdvance} />;
   } else if (phase === "rhythm") {

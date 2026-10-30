@@ -5,6 +5,7 @@ import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { buildSteps, type FlatStep } from "@/lib/learnSteps";
 import { senseLineCount } from "@/lib/senseLineSlice";
+import { findPlacement, palaceToPlaceIn } from "@/lib/palacePlacement";
 
 // Reads the optional Learn-stage toggles (Profile > Advanced) and builds this day's own flat step
 // list from them and each verse's sense lines — split out of LearnSection.tsx purely to keep that
@@ -17,6 +18,11 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
   const sayLadder = useProgressStore((state) => state.sayLadderLearning) ?? true;
+  // A palace built for this path (the Palace tab) — each verse is placed in it as it's learned.
+  const palaces = useProgressStore((state) => state.builtPalaces);
+  const activePathKey = useProgressStore((state) => state.activePathKey);
+  const first = verses[realVerseIndices[0]];
+  const palace = Boolean(first && palaces?.length && (findPlacement(palaces, first) || palaceToPlaceIn(palaces, first, activePathKey)));
   // On unless turned off — undefined for progress saved before these stages existed.
   const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;
@@ -25,7 +31,7 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const pray = useProgressStore((state) => state.prayStageEnabled) ?? false;
 
   return useMemo(
-    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder }),
-    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder],
+    () => buildSteps(realVerseIndices, realVerseIndices.map((index) => senseLineCount(verses[index])), { understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder, palace }),
+    [realVerseIndices, verses, understand, visualize, rhythm, writeFirstLetter, lastLetters, pray, timedType, payload, mathBreaks, wholeVerse, sayLadder, palace],
   );
 }

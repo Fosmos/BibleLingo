@@ -58,6 +58,42 @@ export interface ReviewStage {
   verses: VerseSegment[];
 }
 
+// A stretch of verses in one book — what a built palace, one of its rooms, or one of its spots holds.
+export interface PalaceVerseRange {
+  book: string;
+  startChapter: number;
+  startVerse: number;
+  endChapter: number;
+  endVerse: number;
+}
+
+// One spot (locus) in a built palace's room: where it is ("the fridge"), the verses there, and the
+// scene the reader pictures tying them to it.
+export interface BuiltLocus {
+  id: string;
+  name: string;
+  range?: PalaceVerseRange;
+  scene?: string;
+}
+
+export interface BuiltRoom {
+  id: string;
+  name: string;
+  range?: PalaceVerseRange;
+  loci: BuiltLocus[];
+}
+
+// A memory palace the reader builds of a path in the Palace tab — a real place they know (their
+// house, their school), its rooms in walking order and each room's spots.
+export interface BuiltPalace {
+  id: string;
+  name: string;
+  pathKey: string;
+  range?: PalaceVerseRange;
+  rooms: BuiltRoom[];
+  createdAt: string;
+}
+
 export interface MemorizationDay {
   dayNumber: number;
   kind: DayKind;
@@ -293,6 +329,10 @@ export interface UserProgress {
   // "verse" scope only). Shown as a margin glyph in the same slot as the loci/peg markers
   // (see ChapterVerseRun.tsx) and as the tap target in IconTagField.tsx.
   iconTags: Record<string, string>;
+  // The memory palaces the reader builds in the Palace tab (lib/builtPalaces.ts) — a real place they
+  // know, its rooms and the spots in each, with verse ranges assigned as they go. Undefined (the
+  // default) is none yet.
+  builtPalaces?: BuiltPalace[];
   // The reader's own Master Peg List — one word per NUMBER (0-99, zero-padded key — see
   // lib/pegSystem.ts's pegMasterListKey), not per scope: unlike locationTags, this is the same
   // single flat map whether it's edited from the Master Peg List settings page

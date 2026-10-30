@@ -13,6 +13,7 @@ import { usePericopesReady } from "@/lib/usePericopesReady";
 import { useWholeChapterReadingLayout } from "@/lib/useWholeChapterReadingLayout";
 import { SrsEntityRecall } from "@/components/gamification/SrsEntityRecall";
 import { SrsReviewTopBar } from "@/components/gamification/SrsReviewTopBar";
+import { PalacePlacementChip } from "@/components/gamification/PalacePlacementChip";
 import { ChapterFitProbes } from "@/components/gamification/ChapterFitProbes";
 import { Button } from "@/components/ui/Button";
 import { EsvAttribution } from "@/components/ui/EsvAttribution";
@@ -156,6 +157,7 @@ export function SrsReviewSession() {
         onSelect={setSelectedEntityId}
         onRestart={restart}
       />
+      <PalacePlacementChip verse={{ book: entity.book, chapter: entity.chapter, verseNumber: entity.startVerse }} className="mx-auto w-full max-w-2xl px-4 pt-1" />
       <div ref={bodyTopRef} />
       <div className="mx-auto w-full max-w-2xl px-4">
         <ChapterFitProbes

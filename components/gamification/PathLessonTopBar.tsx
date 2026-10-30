@@ -9,6 +9,7 @@ import { VersePictureTile } from "@/components/gamification/VersePictureTile";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import type { ParsedVerseKey } from "@/lib/verseKey";
 import { DrillHelpChips } from "@/components/gamification/DrillHelpChips";
+import { PalacePlacementChip } from "@/components/gamification/PalacePlacementChip";
 
 interface PathLessonTopBarProps {
   // The verse the lesson is on — its chapter and pericope.
@@ -59,6 +60,8 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
           {/* A recalled reference shows here (SheetVerseZone.tsx), in the chapter line's place. */}
           <span ref={setReferenceBarNode} data-ref-slot className="flex items-center empty:hidden" />
           <span className="truncate text-[11px] font-bold text-ink-muted dark:text-zinc-500 [[data-ref-slot]:not(:empty)~&]:hidden">{[formatChapterLabel(place.book, place.chapter), pericope].filter(Boolean).join(" → ")}</span>
+          {/* Its spot in the reader's built palace (the Palace tab), as its cue. */}
+          <PalacePlacementChip verse={place} />
         </div>
         <DrillHelpChips inBar />
       </div>

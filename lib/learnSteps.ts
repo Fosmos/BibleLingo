@@ -38,6 +38,9 @@ export interface LearnStageOptions {
   wholeVerse?: boolean;
   // The say-it ladder in place of the stages above (UserProgress.sayLadderLearning — on unless turned off).
   sayLadder?: boolean;
+  // Open each verse by placing it in (or walking to its spot in) the reader's built palace for the
+  // path (the Palace tab — PalacePlaceStep.tsx). Set when they've built one.
+  palace?: boolean;
 }
 
 // Phases with no room/relevance for prev/next-verse context: draw is full-viewport.
@@ -99,6 +102,7 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
   if (options.visualize) steps.push({ phase: "orientation_summary" });
   verseIndices.forEach((verseIndex, position) => {
     if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
+    if (options.palace) steps.push({ phase: "place_in_palace", verseIndex });
     const lineCount = Math.max(1, lineCounts[position] ?? 1);
     if (options.sayLadder) steps.push(...sayLadder(lineCount).map((lineModes) => ({ phase: "say_ladder" as const, verseIndex, lineModes })));
     else steps.push(...(options.wholeVerse ? wholeVerseSteps(verseIndex, options) : senseLineSteps(verseIndex, lineCount, options)));
