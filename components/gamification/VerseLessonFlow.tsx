@@ -29,13 +29,12 @@ interface VerseLessonFlowProps {
 const PHASES = ["learn", "finalReview"] as const;
 
 // A single verse lesson: learn the verse, then review it with the learned verse just before it,
-// then with the learned verses back to the start of its pericope (every path kind). Nothing after — no review of
-// the chapter so far.
+// then with the learned verses back to the start of its chapter (every path kind). Nothing after.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);
   const phase = PHASES[phaseIndex] ?? PHASES[0];
-  // The closing review: the verses before this lesson's (learning 8:9 in a pericope from 8:5, it reviews 8:5–8) and then
+  // The closing review: the verses before this lesson's (learning 8:9, it reviews 8:1–8) and then
   // the lesson's own verses, typed through in order.
   const prior = usePriorLearnedVerses(day, allDays);
   const learned = useMemo(() => day.newVerses.filter((verse) => verse.text.trim().length > 0), [day.newVerses]);
