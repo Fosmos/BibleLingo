@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import type { MemorizationDay } from "@/types";
 import { X } from "lucide-react";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { usePericopeHeading } from "@/lib/usePericopeHeading";
@@ -10,20 +11,25 @@ import { formatChapterLabel } from "@/lib/chapterContent";
 import type { ParsedVerseKey } from "@/lib/verseKey";
 import { DrillHelpChips } from "@/components/gamification/DrillHelpChips";
 import { PalacePlacementChip } from "@/components/gamification/PalacePlacementChip";
+import { StoryboardRowCrumb } from "@/components/gamification/StoryboardRowCrumb";
 
 interface PathLessonTopBarProps {
   // The verse the lesson is on — its chapter and pericope.
   place: ParsedVerseKey;
+  // The lesson's path, for its storyboard row.
+  pathKey: string;
+  days: MemorizationDay[];
   onClose: () => void;
 }
 
 // A lesson's top bar on the chapter reader, in one short row: close at the left; the verse's picture
 // (lib/verseImages.ts — learned with its words); the stage's name
 // (with its "2 of 4", or a spaced review's score) over the chapter and pericope; the Letters /
-// Verse / Skip chips at the right (DrillHelpChips.tsx); and along its bottom edge, a thin step bar
+// Verse / Skip chips at the right (DrillHelpChips.tsx); under that, the verse's row of the chapter's
+// storyboard (StoryboardRowCrumb.tsx); and along its bottom edge, a thin step bar
 // across the verse's run of stages (done sand, current terracotta) or the lesson's progress.
 // `data-lesson-top`: the reader scrolls the lesson's verses in beneath it (ChapterSenseReader.tsx).
-export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
+export function PathLessonTopBar({ place, pathKey, days, onClose }: PathLessonTopBarProps) {
   const stage = useLessonSessionStore((state) => state.sheetStage);
   const progress = useLessonSessionStore((state) => state.lessonProgress) ?? 0;
   const pericope = usePericopeHeading(place.book, place.chapter, place.verseNumber);
@@ -65,6 +71,7 @@ export function PathLessonTopBar({ place, onClose }: PathLessonTopBarProps) {
         </div>
         <DrillHelpChips inBar />
       </div>
+      <StoryboardRowCrumb place={place} pathKey={pathKey} days={days} />
       <div className="flex h-1 gap-[3px]" aria-hidden="true">
         {steps > 1 ? (
           Array.from({ length: steps }, (_, index) => (

@@ -31,11 +31,11 @@ export interface StructurePassage {
 
 // The Palace tab: the whole book on one page with the reader's own memory palace built into it — at
 // the top, the real place they're building it in and its rooms (PalaceBuiltPanel.tsx); below, the
-// book's chapters in order (under its themes, for a long book), each passage with its verses' picture
-// tiles (dual coding — lib/verseImages.ts), in colour once learned. Tap a chapter to open it right
-// here (BookStructureChapter.tsx): the whole chapter as one storyboard with its passages shown within,
-// and the spots its verses are on in the palace, made and edited there. The chapter you're on starts
-// open, with the passage you're on highlighted in orange.
+// book's chapters in order (under its themes, for a long book), each its verses' storyboard (dual
+// coding — lib/verseImages.ts), in colour once learned. Tap a chapter to open it right here
+// (BookStructureChapter.tsx): its passages named, your next verse to start, and the spots its verses
+// are on in the palace, made and edited there. The chapter you're on starts open, with the passage
+// you're on highlighted in orange.
 export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStart }: BookStructureScreenProps) {
   const chosen = useProgressStore((state) => state.iconTags);
   const passages = useMemo<StructurePassage[]>(

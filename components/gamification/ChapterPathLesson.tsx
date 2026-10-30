@@ -51,7 +51,7 @@ export function ChapterPathLesson({ lesson, page, onClose, place }: ChapterPathL
   }
 
   return (
-    <PathLessonDock onClose={onClose} place={place}>
+    <PathLessonDock onClose={onClose} place={place} pathKey={page.pathKey} days={page.days}>
       {lesson.kind === "lesson" ? (
         <InPlaceLessonSession
           key={`${page.pathKey}:${lesson.dayNumber}:${lesson.mode}:${lesson.onlyVerse?.chapter}:${lesson.onlyVerse?.verseNumber}:${lesson.passage?.key}`}
