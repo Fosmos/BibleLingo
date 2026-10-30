@@ -18,6 +18,10 @@ import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
 import { BookMindMapWithLessonSheet } from "@/components/gamification/BookMindMapWithLessonSheet";
 import { ChapterPathScreen } from "@/components/gamification/ChapterPathScreen";
+import { Palace3DScreen } from "@/components/gamification/Palace3DScreen";
+import { PalaceBookScreen } from "@/components/gamification/PalaceBookScreen";
+import { DuoPathScreen } from "@/components/gamification/DuoPathScreen";
+import { QuestScreen } from "@/components/gamification/QuestScreen";
 import { PathTrailScreen } from "@/components/gamification/PathTrailScreen";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
@@ -27,10 +31,9 @@ interface PathOverviewScreenProps {
   version: string;
   versesPerDay?: number;
   startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
-  // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once (PathProgress.priorKnownVerseCount).
-  priorKnownVerseCount?: number;
+  priorKnownVerseCount?: number; // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once
   // "path" — the Path tab's trail; "reader" — the Memorized tab's reader; "map" — the Mind Map tab.
-  view?: "path" | "reader" | "map" | "palace";
+  view?: "path" | "reader" | "map" | "palace" | "palace3d" | "quest" | "duo" | "palacewalk";
   bibleFooter?: ReactNode;
 }
 
@@ -102,15 +105,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   if (!mounted) return <FetchLoading label={`Loading ${label}…`} />;
 
   if (error) {
-    return (
-      <FetchError
-        message={error}
-        onRetry={() => {
-          setError(null);
-          setRetryToken((token) => token + 1);
-        }}
-      />
-    );
+    return <FetchError message={error} onRetry={() => { setError(null); setRetryToken((token) => token + 1); }} />;
   }
   if (!verses) return <FetchLoading label={`Loading ${label}…`} />;
   if (!pericopesReady) return <FetchLoading label={`Loading ${label}…`} />; // Days chunk by section headings.
@@ -138,8 +133,10 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
     );
   }
 
-  // Path tab: the trail; Palace tab: the same as a Duolingo path with pictures; Memorized tab: the
-  // reader; Mind Map: the canon view (a topic path's is its day list).
+  if (view === "palace3d") return <Palace3DScreen key={key} pathKey={key} pathLabel={label} verses={verses} />;
+  if (view === "palacewalk") return <PalaceBookScreen key={key} label={label} verses={verses} />;
+  if (view === "duo") return <DuoPathScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
+  if (view === "quest") return <QuestScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
   if (view === "path" || view === "palace") {
     return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} palace={view === "palace"} />;
   }
@@ -179,7 +176,7 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
   }
 
   const { visibleDays, title, chapterMemorizedFraction, onNextChapter, onPreviousChapter } = resolveBookChapterView(kind, days, plan, todaysDay, label, chapterOverride, setChapterOverride);
-  const diagram = (
+  return (
     <DayPathDiagram
       label={title}
       version={version}
@@ -196,6 +193,4 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
       targetVerse={targetVerse}
     />
   );
-
-  return diagram;
 }

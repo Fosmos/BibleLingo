@@ -7,7 +7,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 interface PathOverviewPageProps {
   pathKey: string;
   searchParams: SearchParams;
-  view: "path" | "map" | "palace";
+  view: "path" | "map" | "palace" | "palace3d" | "quest" | "duo" | "palacewalk";
 }
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);

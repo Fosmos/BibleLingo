@@ -9,6 +9,7 @@ import { TrailStone } from "@/components/gamification/TrailStone";
 import { TrailNextBanner } from "@/components/gamification/TrailNextBanner";
 import type { TrailTag } from "@/lib/trailTags";
 import { TrailTagRow } from "@/components/gamification/TrailTagRow";
+import { PathViewSwitch } from "@/components/ui/PathViewSwitch";
 
 interface SectionTrailScreenProps {
   pathLabel: string;
@@ -54,6 +55,9 @@ export function SectionTrailScreen({ pathLabel, sections, index, onBack, onTapSt
           </div>
         </div>
         {tagsFor && <TrailTagRow tags={tagsFor(section)} className="mt-3 px-1" />}
+        <div className="mt-3 flex justify-center">
+          <PathViewSwitch />
+        </div>
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pb-[120px] [scrollbar-width:none]">
         <div style={{ "--h": `${height}px` } as CSSProperties} className="relative mx-auto h-[var(--h)] w-[370px] max-w-full">

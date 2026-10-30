@@ -37,6 +37,7 @@ interface PathActions {
   learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
   // A trail passage review (a pericope's, or the chapter's) is done.
   completeTrailReview: (pathKey: string, reviewKey: string) => void;
+  openPathChest: (pathKey: string, unitId: string) => void;
 }
 
 // Split out of useProgressStore.ts purely to keep that file under this codebase's 200-line
@@ -143,6 +144,13 @@ export function createPathActions(
       if (!existing || dayNumber !== existing.completedDays + 1) return;
       const paths = { ...state.paths, [pathKey]: { ...existing, versesIntoDay: Math.max(existing.versesIntoDay ?? 0, count) } };
       set(persist({ ...state, paths, memorizedEntities: syncMemorizedEntities(paths, state.memorizedEntities) }));
+    },
+
+    openPathChest: (pathKey, unitId) => {
+      const state = get();
+      const plan = state.paths[pathKey];
+      if (!plan || plan.pathChests?.includes(unitId)) return;
+      set(persist({ ...state, paths: { ...state.paths, [pathKey]: { ...plan, pathChests: [...(plan.pathChests ?? []), unitId] } } }));
     },
 
     completeTrailReview: (pathKey, reviewKey) => {

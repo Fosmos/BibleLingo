@@ -10,11 +10,11 @@ import { useHasMounted } from "@/lib/useHasMounted";
 import { FetchLoading } from "@/components/ui/FetchStatus";
 import { MemorizedCountHero } from "@/components/gamification/MemorizedCountHero";
 import { MemorizedBooksList } from "@/components/gamification/MemorizedBooksList";
-import { StrugglesCard } from "@/components/gamification/StrugglesCard";
+import { MemorizedReviewArea } from "@/components/gamification/MemorizedReviewArea";
 
 // The Memorized tab's count-first overview (design option 4b): the verse total and next milestone,
-// then your books (each opening its info page), the verses you struggle with most (StrugglesCard.tsx), and a way into the Bible reader (MemorizedReaderScreen.tsx, with its
-// Recall quiz). Verse total comes from computeMemorizedStats, so a translation's gap verses
+// then the Review area (MemorizedReviewArea.tsx), your books (each opening its info page), and a way
+// into the Bible reader (MemorizedReaderScreen.tsx). Verse total comes from computeMemorizedStats, so a translation's gap verses
 // (e.g. ESV Mark 11:26) aren't counted.
 export function MemorizedOverviewScreen() {
   const mounted = useHasMounted();
@@ -39,8 +39,8 @@ export function MemorizedOverviewScreen() {
         </p>
       ) : (
         <>
+          <MemorizedReviewArea />
           <MemorizedBooksList entities={entities} />
-          <StrugglesCard />
         </>
       )}
       <Link
@@ -52,7 +52,7 @@ export function MemorizedOverviewScreen() {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="font-heading text-[17px] leading-tight text-ink dark:text-zinc-100">Open your Bible</span>
-          <span className="text-xs font-extrabold text-ink-muted">Browse what you know, book by book · Recall quiz</span>
+          <span className="text-xs font-extrabold text-ink-muted">Browse what you know, book by book</span>
         </span>
         <ChevronRight size={18} strokeWidth={2.75} className="shrink-0 text-sand-500" />
       </Link>

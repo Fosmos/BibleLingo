@@ -85,6 +85,39 @@ export interface BuiltRoom {
 
 // A memory palace the reader builds of a path in the Palace tab — a real place they know (their
 // house, their school), its rooms in walking order and each room's spots.
+// The experimental 3D palace tab (lib/palace3d/): rooms on a grid, joined by doors where they touch,
+// and objects standing in them that can each hold a verse.
+export type Palace3DRoomStyle = "atrium" | "library" | "garden" | "sanctum";
+export type Palace3DObjectKind = "pedestal" | "statue" | "lantern" | "fountain" | "tree" | "chest" | "lectern" | "crystal" | "urn" | "throne" | "globe";
+// How an object shows its verse in the room: its first words, its picture, or a plain glowing orb.
+export type Palace3DVerseVisual = "words" | "picture" | "orb";
+
+export interface Palace3DRoom {
+  id: string;
+  style: Palace3DRoomStyle;
+  gridX: number;
+  gridZ: number;
+}
+
+export interface Palace3DObject {
+  id: string;
+  roomId: string;
+  kind: Palace3DObjectKind;
+  // World position on the floor, in metres.
+  x: number;
+  z: number;
+  rotation: number;
+  scale: number;
+  verseId?: string;
+  visual: Palace3DVerseVisual;
+}
+
+export interface Palace3D {
+  pathKey: string;
+  rooms: Palace3DRoom[];
+  objects: Palace3DObject[];
+}
+
 export interface BuiltPalace {
   id: string;
   name: string;
@@ -143,6 +176,8 @@ export interface PathProgress {
   versesIntoDay?: number;
   // The trail's passage reviews finished — a pericope's or a chapter's (lib/trailStops.ts keys).
   reviewsDone?: string[];
+  // The Duolingo-style path's milestone chests opened, by unit (lib/duoPath.ts).
+  pathChests?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +368,8 @@ export interface UserProgress {
   // know, its rooms and the spots in each, with verse ranges assigned as they go. Undefined (the
   // default) is none yet.
   builtPalaces?: BuiltPalace[];
+  // The experimental 3D palaces, one per path.
+  palaces3d?: Record<string, Palace3D>;
   // The reader's own Master Peg List — one word per NUMBER (0-99, zero-padded key — see
   // lib/pegSystem.ts's pegMasterListKey), not per scope: unlike locationTags, this is the same
   // single flat map whether it's edited from the Master Peg List settings page

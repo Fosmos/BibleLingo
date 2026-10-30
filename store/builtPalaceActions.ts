@@ -1,5 +1,5 @@
 import type { StoreApi } from "zustand";
-import type { BuiltPalace, UserProgress } from "@/types";
+import type { BuiltPalace, Palace3D, UserProgress } from "@/types";
 import type { ProgressStore } from "@/store/useProgressStore";
 
 export interface BuiltPalaceActions {
@@ -7,6 +7,8 @@ export interface BuiltPalaceActions {
   // palace — lib/builtPalaces.ts builds the edited copy).
   saveBuiltPalace: (palace: BuiltPalace) => void;
   deleteBuiltPalace: (id: string) => void;
+  // The experimental 3D tab's palace for a path (lib/palace3d/palaceEdits.ts builds the edited copy).
+  savePalace3D: (palace: Palace3D) => void;
 }
 
 // The built palaces (UserProgress.builtPalaces) — split out of useProgressStore.ts to keep
@@ -27,6 +29,11 @@ export function createBuiltPalaceActions(
     deleteBuiltPalace: (id) => {
       const state = get();
       set(persist({ ...state, builtPalaces: (state.builtPalaces ?? []).filter((palace) => palace.id !== id) }));
+    },
+
+    savePalace3D: (palace) => {
+      const state = get();
+      set(persist({ ...state, palaces3d: { ...state.palaces3d, [palace.pathKey]: palace } }));
     },
   };
 }

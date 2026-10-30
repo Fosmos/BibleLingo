@@ -7,6 +7,7 @@ import type { TrailTag } from "@/lib/trailTags";
 import { TrailTagRow } from "@/components/gamification/TrailTagRow";
 import { MapSectionStone } from "@/components/gamification/MapSectionStone";
 import { MapOutline } from "@/components/gamification/MapOutline";
+import { PathViewSwitch } from "@/components/ui/PathViewSwitch";
 
 interface PericopeMapScreenProps {
   pathLabel: string;
@@ -68,6 +69,7 @@ export function PericopeMapScreen({ pathLabel, kindLabel, sections, onOpenSectio
           {percent}%
         </span>
       </header>
+      <PathViewSwitch className="mb-2 self-center" />
       <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-[18px] pb-[140px] pt-4 [scrollbar-width:none]">
         {outlineBook ? <MapOutline book={outlineBook} sections={sections} renderStone={stone} /> : sections.map((_, index) => stone(index, index))}
       </div>

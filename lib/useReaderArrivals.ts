@@ -8,7 +8,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 import { useReviewArrival } from "@/lib/useReviewArrival";
 import { usePracticeArrival } from "@/lib/usePracticeArrival";
-import { palaceHref, trailHref } from "@/lib/readerHref";
+import { duoHref, palaceHref, questHref, trailHref } from "@/lib/readerHref";
 import type { PassageReview } from "@/lib/trailReviews";
 import type { ChapterLesson } from "@/components/gamification/ChapterPathLesson";
 
@@ -39,7 +39,7 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const setFocusVerse = useLessonSessionStore((state) => state.setFocusVerse);
   // Where a lesson begun on the Path tab's trail (or the Palace) goes back to when it's done.
   const [from] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("from")));
-  const fromTrail = from === "trail" || from === "palace";
+  const fromTrail = from === "trail" || from === "palace" || from === "quest" || from === "duo";
   // Where the path stood on arrival (days, then verses into the next day), to tell if it moved on.
   const completedAtStart = useRef(progressMark(pathKey));
 
@@ -95,7 +95,7 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const returnToTrail = useCallback(() => {
     if (!fromTrail) return false;
     const moved = progressMark(pathKey) !== completedAtStart.current;
-    router.push(`${from === "palace" ? palaceHref(pathKey, version) : trailHref(pathKey, version, "current")}${moved ? "&toast=done" : ""}`);
+    router.push(`${from === "duo" ? duoHref(pathKey, version) : from === "quest" ? questHref(pathKey, version) : from === "palace" ? palaceHref(pathKey, version) : trailHref(pathKey, version, "current")}${moved ? "&toast=done" : ""}`);
     return true;
   }, [fromTrail, from, pathKey, version, router]);
 

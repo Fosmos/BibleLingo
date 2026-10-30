@@ -73,3 +73,17 @@ body {
 .press-5, .press-6 { transition: transform .08s, box-shadow .08s; }
 .press-5:active { transform: translateY(5px); box-shadow: none !important; }
 .press-6:active { transform: translateY(6px); box-shadow: none !important; }
+
+/* The Quest map's weather (QuestAmbience.tsx). */
+@keyframes questFall { from { transform: translateY(-10vh); } to { transform: translate(4vw, 110vh); } }
+@keyframes questRise { 0% { transform: translateY(110vh); opacity: 0; } 15%, 85% { opacity: 0.9; } 100% { transform: translate(-3vw, -10vh); opacity: 0; } }
+@keyframes questDrift { from { transform: translateX(-30vw); } to { transform: translateX(120vw); } }
+@keyframes questTwinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+@keyframes questPulse { 0%, 100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .quest-fall { animation: questFall var(--dur) linear var(--delay) infinite; }
+  .quest-rise { animation: questRise var(--dur) linear var(--delay) infinite; }
+  .quest-drift { animation: questDrift var(--dur) linear var(--delay) infinite; }
+  .quest-twinkle { animation: questTwinkle var(--dur) ease-in-out var(--delay) infinite; }
+  .quest-pulse { animation: questPulse 1.8s ease-out infinite; }
+}

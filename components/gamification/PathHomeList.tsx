@@ -5,36 +5,25 @@ import { Plus } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useActivePathKeys } from "@/lib/useActivePathKeys";
-import { isDue } from "@/lib/srs";
+import { HomeDueButton } from "@/components/gamification/HomeDueButton";
 import { PathHomeCard } from "@/components/gamification/PathHomeCard";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 
-// Home's "Your paths" (design_handoff_path_picker → Screen 1): a card per path in progress, the
-// most recently opened first, then "Start a new path" — under a "Welcome back" to the signed-in user.
+// Home: a "Welcome back", what's due, then a card per path in progress, the most recently opened
+// (so the next lesson) first, then "Start a new path".
 export function PathHomeList() {
   const keys = useActivePathKeys();
   const username = useAuthStore((state) => state.currentUsername);
   const focused = useProgressStore((state) => state.activePathKey);
-  const entities = useProgressStore((state) => state.memorizedEntities);
   const ordered = focused && keys.includes(focused) ? [focused, ...keys.filter((key) => key !== focused)] : keys;
-  const now = new Date();
-  const due = entities.filter((entity) => isDue(entity.srs, now)).length;
 
   return (
     <div className="flex flex-col gap-3.5">
-      <p className="relative z-[1] -mb-1.5 break-words font-heading text-[22px] leading-tight text-brand-700 dark:text-brand-300">{username ? `Welcome back, ${username}` : "Welcome back"}</p>
-      <header className="relative flex items-start gap-3">
-        <span aria-hidden="true" className="pointer-events-none absolute -right-[110px] -top-[90px] -z-10 h-[300px] w-[300px] rounded-full bg-sage-200/70 dark:bg-sage-900/40" />
-        <span aria-hidden="true" className="pointer-events-none absolute -right-10 top-[70px] -z-10 h-[120px] w-[120px] rounded-full bg-brand-200/80 dark:bg-brand-900/40" />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs font-extrabold uppercase tracking-[.08em] text-sage-800 dark:text-sage-300">
-            {ordered.length} {ordered.length === 1 ? "path" : "paths"} in progress
-          </span>
-          <h1 className="font-heading text-[40px] leading-none text-ink dark:text-zinc-100">Your paths</h1>
-          <span className="text-sm font-bold text-sand-700 dark:text-zinc-400">{due ? `${due} ${due === 1 ? "review" : "reviews"} due today` : "All caught up on reviews"}</span>
-        </div>
-        <StreakCounter pill className="mt-1.5" />
+      <header className="flex items-center gap-3">
+        <h1 className="min-w-0 flex-1 break-words font-heading text-[32px] leading-tight text-ink dark:text-zinc-100">{username ? `Welcome back, ${username}` : "Welcome back"}</h1>
+        <StreakCounter pill />
       </header>
+      <HomeDueButton />
       {ordered.map((key) => (
         <PathHomeCard key={key} pathKey={key} />
       ))}

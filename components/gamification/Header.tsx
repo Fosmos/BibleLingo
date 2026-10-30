@@ -2,7 +2,6 @@
 
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { StreakFreezeBadge } from "@/components/gamification/StreakFreezeBadge";
-import { ShekelCounter } from "@/components/gamification/ShekelCounter";
 
 interface HeaderProps {
   className?: string;
@@ -15,7 +14,6 @@ export function Header({ className }: HeaderProps) {
     >
       <StreakCounter pill />
       <StreakFreezeBadge pill />
-      <ShekelCounter pill />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import type { TrailStop } from "@/lib/trailStops";
 import { parseToSenseLines } from "@/lib/senseLines";
@@ -13,11 +14,13 @@ interface TrailNodeSheetProps {
   onStart: () => void;
   onReview: () => void;
   onPractise: () => void;
+  // Extra details about the stop, above its action.
+  children?: ReactNode;
 }
 
 // What a tapped trail stop offers (design_handoff_path_picker → Stop sheet): start it when it's up
 // next, review it when it's due, practise it again once learned — or, locked, nothing yet.
-export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart, onReview, onPractise }: TrailNodeSheetProps) {
+export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart, onReview, onPractise, children }: TrailNodeSheetProps) {
   const due = stop.state === "done" && stop.dueIds.length > 0;
   const tag = stop.state === "current" ? "Up next" : due ? "Due for review" : stop.state === "done" ? "Memorized" : "Locked";
   const tagClass = stop.state === "current" || due ? "bg-brand-100 text-brand-900" : stop.state === "done" ? "bg-sage-200 text-sage-900" : "bg-sand-200 text-sand-800";
@@ -46,6 +49,7 @@ export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart
             ))}
           </div>
         )}
+        {children}
         <div className="pt-2">
           {stop.state === "current" && (
             <button type="button" onClick={onStart} className={primary}>

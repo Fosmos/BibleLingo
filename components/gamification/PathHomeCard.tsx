@@ -14,7 +14,7 @@ interface PathHomeCardProps {
 }
 
 // One path in progress on Home (design_handoff_path_picker → Path card): its type, translation and
-// pace, how far along it is, what's next and what's due — tapping it focuses it and opens its trail.
+// pace, how far along it is, what's next — tapping it focuses it and opens its trail.
 export function PathHomeCard({ pathKey }: PathHomeCardProps) {
   const router = useRouter();
   const plan = useProgressStore((state) => state.paths[pathKey]);
@@ -44,9 +44,7 @@ export function PathHomeCard({ pathKey }: PathHomeCardProps) {
           <span className="flex items-center gap-1 whitespace-nowrap rounded-full bg-sage-900 px-2.5 py-1 text-[11px] font-extrabold text-white">
             <Check size={12} strokeWidth={3} /> Memorized
           </span>
-        ) : (
-          summary.due > 0 && <span className="whitespace-nowrap rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-extrabold text-brand-900">{summary.due} due</span>
-        )}
+        ) : null}
       </div>
       <div className="flex items-center gap-2.5">
         <div style={{ "--fill": `${summary.percent}%` } as CSSProperties} className="h-2 flex-1 overflow-hidden rounded-full bg-sand-200 dark:bg-zinc-800">

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { MemorizationDay, VerseSegment } from "@/types";
 import { LessonCompleteScreen } from "@/components/gamification/LessonCompleteScreen";
-import { SHEKELS_PER_BOSS_BATTLE, SHEKELS_PER_VERSE_COMPLETED } from "@/lib/economy";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useCelebration } from "@/lib/useCelebration";
 import { applyDayCompletion, applyDayVerseCompletion } from "@/lib/completeDayEffects";
@@ -117,12 +116,10 @@ export function DaySessionController({ pathKey, label, day, allDays, completedDa
       day.kind === "learn" && first && last
         ? first.verseNumber === last.verseNumber && first.chapter === last.chapter ? `Verse ${first.verseNumber} learned` : first.chapter !== last.chapter ? `Verses ${first.chapter}:${first.verseNumber}–${last.chapter}:${last.verseNumber} learned` : `Verses ${first.verseNumber}–${last.verseNumber} learned`
         : completeHeading;
-    const shekelsEarned = day.newVerses.length * SHEKELS_PER_VERSE_COMPLETED + (day.kind === "section_boss_battle" ? SHEKELS_PER_BOSS_BATTLE : 0);
     return (
       <>
         <LessonCompleteScreen
           heading={learnedHeading}
-          shekelsEarned={shekelsEarned}
           continueLabel={continueLabel}
           onContinue={onExit}
           continueHref={pathHref}

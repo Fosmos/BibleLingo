@@ -24,8 +24,8 @@ export function BottomTabBar() {
   const pathHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}${versionQuery}` : "/begin";
   // The Palace (app/path/[key]/palace) took the Mind Map's tab — the Mind Map's route still counts as the Path tab's.
   const palaceHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/palace${versionQuery}` : "/begin";
-  const onPalace = pathname.startsWith("/path") && pathname.endsWith("/palace");
-
+  // The 3D and Walk palaces are views of the Palace tab, and the Quest map of the Path tab (PathViewSwitch.tsx).
+  const onPalace = pathname.startsWith("/path") && (pathname.endsWith("/palace") || pathname.endsWith("/palace3d") || pathname.endsWith("/palacewalk"));
   const items: TabItem[] = [
     { href: "/", label: "Home", icon: Home, isActive: pathname === "/" },
     {
@@ -54,7 +54,7 @@ export function BottomTabBar() {
     <nav className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-full bg-sand-100 p-1.5 shadow-organic-md dark:bg-zinc-900">
       <ul className="flex items-stretch justify-around">
         {items.map(({ href, label, icon: Icon, isActive }) => (
-          <li key={label} className="flex-1">
+          <li key={label} className="min-w-0 flex-1">
             <Link
               href={href}
               className={`flex flex-col items-center gap-0.5 rounded-full py-2 text-xs ${

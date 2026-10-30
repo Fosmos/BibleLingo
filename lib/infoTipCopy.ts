@@ -60,7 +60,6 @@ export const INFO_TIPS = {
     "5 difficulty levels — Level 1 is a slow chaser with a big head start; Level 5 requires a quick, near-mistake-free pace and grants the Mastery sticker for this passage.",
   streakCounter: "Days in a row you've completed at least one lesson. Resets if a full day is missed without a streak freeze.",
   streakFreezeBadge: "Streak freezes auto-protect one missed day. You earn one every time you hit a streak milestone.",
-  shekelCounter: "In-app currency earned by completing lessons, boss battles, and perfect SRS reviews. Currently cosmetic/for tracking only.",
   dayPathDiagram:
     "Each circle is one lesson in order — filled/checked means done, ringed means it's next up, greyed-out with a lock is still ahead (but tappable to preview). A slim bar under the current lesson shows how far into it you got before you left.",
   srsOverview:

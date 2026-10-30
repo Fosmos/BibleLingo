@@ -4,15 +4,15 @@ import { PalaceSpotEditor } from "@/components/gamification/PalaceSpotEditor";
 
 interface PassageSpotsProps {
   palace: BuiltPalace;
-  // The verse whose spot is open (from the storyboard), and the path's verses a spot can hold.
+  // The verse whose spot is open (from its sheet), and the path's verses a spot can hold.
   verse: VerseSegment;
   pathVerses: VerseSegment[];
   onSave: (palace: BuiltPalace) => void;
   onDone: () => void;
 }
 
-// The spot a verse is on in the reader's built palace, opened from its storyboard panel
-// (BookStructureChapter.tsx) and edited under the storyboard (PalaceSpotEditor.tsx).
+// The spot a verse is on in the reader's built palace, opened from its sheet
+// (VerseSpotLink.tsx) and edited there (PalaceSpotEditor.tsx).
 export function PassageSpots({ palace, verse, pathVerses, onSave, onDone }: PassageSpotsProps) {
   const placement = findPlacement([palace], verse);
   if (!placement) return null;

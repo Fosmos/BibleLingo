@@ -6,7 +6,6 @@ import { useHasMounted } from "@/lib/useHasMounted";
 import { resolvePathLabel } from "@/lib/memorizationContent";
 import { PathOverviewScreen } from "@/components/gamification/PathOverviewScreen";
 import { ChapterPathScreen } from "@/components/gamification/ChapterPathScreen";
-import { WhereYouStumble } from "@/components/gamification/WhereYouStumble";
 import { FetchLoading } from "@/components/ui/FetchStatus";
 
 // The Memorized tab: the Bible → Book → chapter reader (ChapterPathScreen.tsx) for the path a
@@ -20,16 +19,11 @@ export function MemorizedReaderScreen() {
   const paths = useProgressStore((state) => state.paths);
   const pathKey = params.get("path") ?? activePathKey;
   const label = pathKey ? resolvePathLabel(pathKey) : undefined;
-  const footer = (
-    <div className="pt-4">
-      <WhereYouStumble />
-    </div>
-  );
 
   if (!mounted) return <FetchLoading label="Loading…" />;
   if (pathKey && label) {
     const version = params.get("version") ?? paths[pathKey]?.version ?? "KJV";
-    return <PathOverviewScreen pathKey={pathKey} label={label} version={version} view="reader" bibleFooter={footer} />;
+    return <PathOverviewScreen pathKey={pathKey} label={label} version={version} view="reader" />;
   }
-  return <ChapterPathScreen pathKey="memorized" label="Your Bible" days={[]} verses={[]} version="KJV" completedDays={0} todaysDay={0} startAt={{ book: "Genesis", chapter: 1 }} startOnBible bibleFooter={footer} />;
+  return <ChapterPathScreen pathKey="memorized" label="Your Bible" days={[]} verses={[]} version="KJV" completedDays={0} todaysDay={0} startAt={{ book: "Genesis", chapter: 1 }} startOnBible />;
 }

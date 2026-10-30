@@ -44,6 +44,7 @@ interface ProgressActions {
   setPathReminder: (pathKey: string, reminder: PathReminder) => void;
   learnDayVerses: (pathKey: string, dayNumber: number, count: number) => void;
   completeTrailReview: (pathKey: string, reviewKey: string) => void;
+  openPathChest: (pathKey: string, unitId: string) => void;
   completeDay: (pathKey: string, dayNumber: number) => void;
   completeBookChapter: (chapterVerses: VerseSegment[], version: string) => void;
   awardSticker: (pathKey: string) => void;
@@ -58,14 +59,7 @@ interface ProgressActions {
   earnShekels: (amount: number) => void;
   recordChapterReviewAccuracy: (pathKey: string, accuracy: number) => void;
   recordMasteryLevel: (key: string, level: number) => void;
-  addManualMemorizedEntity: (
-    book: string,
-    chapter: number,
-    startVerse: number,
-    endVerse: number,
-    phase: SrsPhase,
-    version: string,
-  ) => void;
+  addManualMemorizedEntity: (book: string, chapter: number, startVerse: number, endVerse: number, phase: SrsPhase, version: string) => void;
   addManualMemorizedBook: (book: string, chapterVerseCounts: number[], phase: SrsPhase, version: string) => void;
   setIncludeVerseReferences: (value: boolean) => void;
   setBuildingViewEnabled: (value: boolean) => void;

@@ -22,7 +22,7 @@ function openingWords(entity: MemorizedEntity): string | undefined {
   return getChapterVerses(entity.book, entity.chapter)?.[entity.startVerse - 1]?.text;
 }
 
-// Home's Needs reviewing box (the Organic restyle): every range due for spaced review, most
+// The Memorized tab's Needs reviewing box (the Organic restyle): every range due for spaced review, most
 // overdue first. A row, or "Review all", starts reviewing in place on the path that range was
 // memorized on (lib/useReviewHref.ts); each row's pin instead just lands on its first verse. With no
 // path to open, everything points to the Memorized tab. Hidden when nothing is due.

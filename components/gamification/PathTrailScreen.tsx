@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { MemorizationDay, PathKind } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
-import { buildSteps } from "@/lib/learnSteps";
-import { STAGE_LABELS } from "@/lib/learnSheetStage";
-import { buildTrail, type TrailStop } from "@/lib/trailStops";
+import type { TrailStop } from "@/lib/trailStops";
+import { useTrailSections } from "@/lib/useTrailSections";
 import { readerHref } from "@/lib/readerHref";
 import { parsePathKey } from "@/lib/memorizationContent";
 import { pathTags, sectionTags } from "@/lib/trailTags";
@@ -15,6 +14,7 @@ import type { LocationTagLevel } from "@/types";
 import type { TrailSection } from "@/lib/trailStops";
 import { PATH_TYPE_META } from "@/lib/pathTypeMeta";
 import { useArrivalToast } from "@/lib/useArrivalToast";
+import { BookGridScreen } from "@/components/gamification/BookGridScreen";
 import { PericopeMapScreen } from "@/components/gamification/PericopeMapScreen";
 import { SectionTrailScreen } from "@/components/gamification/SectionTrailScreen";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
@@ -43,27 +43,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const entities = useProgressStore((state) => state.memorizedEntities);
-  const reviewsDone = useProgressStore((state) => state.paths[pathKey]?.reviewsDone);
-  const toggles = useProgressStore((state) => state);
-  // A verse path's trail is its one lesson's learning stages, in the order the reader has them on.
-  const stageLabels = useMemo(() => {
-    const steps = buildSteps([0], [1], {
-      understand: toggles.understandStageEnabled,
-      visualize: toggles.visualizeStageEnabled,
-      rhythm: toggles.rhythmStageEnabled ?? false,
-      writeFirstLetter: toggles.writeFirstLetterStageEnabled,
-      pray: toggles.prayStageEnabled ?? false,
-      lastLetters: toggles.lastLettersStageEnabled ?? true,
-      timedType: toggles.timedTypeStageEnabled ?? true,
-      payload: toggles.payloadStageEnabled ?? true,
-      mathBreaks: toggles.mathBreakStageEnabled ?? true,
-      wholeVerse: toggles.wholeVerseLearning,
-      sayLadder: toggles.sayLadderLearning ?? true,
-    });
-    return [...new Set(steps.filter((step) => step.phase !== "pray").map((step) => STAGE_LABELS[step.phase]))];
-  }, [toggles.understandStageEnabled, toggles.visualizeStageEnabled, toggles.writeFirstLetterStageEnabled, toggles.rhythmStageEnabled, toggles.prayStageEnabled, toggles.lastLettersStageEnabled, toggles.timedTypeStageEnabled, toggles.payloadStageEnabled, toggles.mathBreakStageEnabled, toggles.wholeVerseLearning, toggles.sayLadderLearning]);
-  const sections = useMemo(() => buildTrail(kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone), [kind, days, completedDays, entities, stageLabels, versesIntoDay, reviewsDone]);
+  const sections = useTrailSections(pathKey, kind, days, completedDays, versesIntoDay);
   const [open, setOpen] = useState<TrailStop | null>(null);
   const toast = useArrivalToast();
 
@@ -79,7 +59,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   const iconTags = useProgressStore((state) => state.iconTags);
   const emblemFor = (section: TrailSection) => sectionEmblem(section, iconTags);
   const index = kind === "verse" ? 0 : sectionParam === "current" ? currentIndex : sectionParam !== null ? Math.min(Number(sectionParam) || 0, sections.length - 1) : null;
-  // A book or chapter path's pericope opens in the reader, on the section's verse you're up to.
+  // A pericope opens in the reader, on the section's verse you're up to.
   const readerFor = (section: TrailSection | undefined) => {
     const lessons = section?.stops.filter((stop) => stop.verse) ?? [];
     const verse = (lessons.find((stop) => stop.state === "current") ?? lessons.find((stop) => stop.state !== "done") ?? lessons[0])?.verse;
@@ -105,7 +85,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
     router.push(stop.review ? readerHref(pathKey, version, { passage: stop.review, day: stop.dayNumber }, back) : practise ? readerHref(pathKey, version, { practiceDay: stop.dayNumber, verse: verseOf(stop) }, back) : readerHref(pathKey, version, { learnDay: stop.dayNumber, verse: verseOf(stop) }, back));
 
   // A link to one of their sections (Home's Continue) goes on to the reader the same way.
-  const redirect = index === null || palace ? null : readerFor(sections[index]);
+  const redirect = index === null || palace || passagePath ? null : readerFor(sections[index]);
   useEffect(() => {
     if (redirect) router.replace(redirect);
   }, [redirect, router]);
@@ -113,8 +93,10 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
 
   return (
     <>
-      {!sections.length ? null : palace ? (
-        <BookStructureScreen pathKey={pathKey} pathLabel={label} book={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} />
+      {!sections.length ? null : passagePath && !palace ? (
+        <BookGridScreen label={label} sections={sections} headerTags={headerTags} tagsFor={tagsFor} onStart={(stop) => start(stop, false)} onPractise={(stop) => start(stop, true)} onReview={(ids) => router.push(readerHref(pathKey, version, { review: ids }, back))} />
+      ) : palace ? (
+        <BookStructureScreen pathKey={pathKey} pathLabel={label} book={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} onReview={(ids) => router.push(readerHref(pathKey, version, { review: ids }, back))} />
       ) : index === null ? (
         <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} outlineBook={passagePath ? parsePathKey(pathKey).identifier.split("|")[0] : undefined} headerTags={headerTags} tagsFor={tagsFor} emblemFor={emblemFor} />
       ) : (

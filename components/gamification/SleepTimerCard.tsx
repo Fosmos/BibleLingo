@@ -6,7 +6,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { getMemorizedEntityVerses } from "@/lib/progressSummary";
 import { SleepTimerView } from "@/components/gamification/SleepTimerView";
 
-// Home's own manual entry point for SleepTimerView.tsx — unlike VespersPromptCard.tsx this
+// Profile's own manual entry point for SleepTimerView.tsx — unlike VespersPromptCard.tsx this
 // isn't time-gated or dismissible-for-the-day: falling asleep to a review isn't tied to a
 // specific evening hour the way the Vespers nudge is, so it's just always here to open when
 // the reader wants it. Hidden outright (not even a collapsed placeholder, same convention
