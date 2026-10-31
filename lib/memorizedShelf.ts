@@ -48,12 +48,16 @@ function stopFor(verse: VerseSegment, entity: MemorizedEntity | undefined, now: 
   };
 }
 
-// A chapter's verses under its pericopes, or as one group when it has no headings.
+// A chapter's verses under its pericopes, with any before the first heading in a group of their own.
 export function shelfChapter(verses: VerseSegment[], pericopes: PericopeInfo[], entities: MemorizedEntity[], stumbles: Record<string, number[]>, now: Date): RingChapter | undefined {
   const first = verses[0];
   const last = verses[verses.length - 1];
   if (!first || !last) return undefined;
-  const groups = pericopes.length ? pericopes.map(({ heading, startVerse, endVerse }) => ({ heading, startVerse, endVerse })) : [{ heading: `Verses ${first.verseNumber}–${last.verseNumber}`, startVerse: first.verseNumber, endVerse: last.verseNumber }];
+  const untitled = (startVerse: number, endVerse: number) => ({ heading: `Verses ${startVerse}–${endVerse}`, startVerse, endVerse });
+  const groups = pericopes.map(({ heading, startVerse, endVerse }) => ({ heading, startVerse, endVerse }));
+  // Verses before the chapter's first heading (Hebrews 4's runs from verse 14) get a group of their own.
+  if (!groups.length) groups.push(untitled(first.verseNumber, last.verseNumber));
+  else if (groups[0].startVerse > first.verseNumber) groups.unshift(untitled(first.verseNumber, groups[0].startVerse - 1));
   const passages = groups.flatMap(({ heading, startVerse, endVerse }) => {
     const lessons = verses
       .filter((verse) => verse.verseNumber >= startVerse && verse.verseNumber <= endVerse)
