@@ -12,6 +12,7 @@ import { usePalaceContext } from "@/lib/usePalaceContext";
 import { useProgressStore } from "@/store/useProgressStore";
 import { BookStructureBook } from "@/components/gamification/BookStructureBook";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
+import { ChapterReviewButton } from "@/components/gamification/ChapterReviewButton";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
 import { VerseSpotLink } from "@/components/gamification/VerseSpotLink";
 import { VerseStatusDetail } from "@/components/gamification/VerseStatusDetail";
@@ -119,6 +120,16 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
       </header>
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-[170px] pt-1 [scrollbar-width:none]">
         {!chapter && <PalaceBuiltPanel pathKey={pathKey} palace={built?.palace} onSave={saveBuiltPalace} />}
+        {chapter && (
+          <ChapterReviewButton
+            book={chapter.book}
+            chapter={chapter.chapter}
+            onReview={(ids) => {
+              leaving(chapter.chapter);
+              onReview(ids);
+            }}
+          />
+        )}
         {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={setSheet} /> : <BookStructureBook chapters={rings.chapters} themes={themes} onOpen={setChosenChapter} />}
         <RingKey />
       </div>

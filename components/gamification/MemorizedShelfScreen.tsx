@@ -19,6 +19,7 @@ import type { RingVerse } from "@/lib/verseRings";
 import { useProgressStore } from "@/store/useProgressStore";
 import { BookStructureBook } from "@/components/gamification/BookStructureBook";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
+import { ChapterReviewButton } from "@/components/gamification/ChapterReviewButton";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
 import { RingKey } from "@/components/gamification/VerseRing";
 import { VerseStatusDetail } from "@/components/gamification/VerseStatusDetail";
@@ -80,6 +81,7 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
         <h1 className="font-heading text-[30px] leading-[1.1] text-ink dark:text-zinc-100">{chapter === undefined ? book : formatChapterLabel(book, chapter)}</h1>
         <span className="text-[13px] font-semibold text-ink-muted">{chapter === undefined ? `${count} ${count === 1 ? "verse" : "verses"}${due ? ` · ${due} due` : " · All good"}` : openChapter ? `${openChapter.known} of ${openChapter.total} verses` : ""}</span>
       </header>
+      {chapter !== undefined && <ChapterReviewButton book={book} chapter={chapter} onReview={(ids) => router.push(reviewHref(ids, true) ?? "/memorized")} />}
       {chapter === undefined ? (
         <>
           <BookStructureBook chapters={chapters} themes={BOOK_THEMES[book] ?? []} onOpen={(number) => router.push(shelfHref(book, number))} dense />
