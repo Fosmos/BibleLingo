@@ -9,7 +9,7 @@ import { usePriorLearnedVerses } from "@/lib/usePriorLearnedVerse";
 import { usePericopesReady } from "@/lib/usePericopesReady";
 import { getChapterVerses } from "@/lib/chapterContent";
 import { getCachedPericopes } from "@/lib/pericopeCache";
-import { lessonReviewVerses } from "@/lib/lessonReview";
+import { lessonPairVerses, lessonReviewVerses } from "@/lib/lessonReview";
 import { ReviewSection } from "@/components/gamification/ReviewSection";
 import { LearnSection } from "@/components/gamification/LearnSection";
 
@@ -32,8 +32,9 @@ interface VerseLessonFlowProps {
 
 const PHASES = ["learn", "finalReview"] as const;
 
-// A single verse lesson: learn the verse, then review it with the verses before it — the last five,
-// or on every fifth verse the block so far (lib/lessonReview.ts; every path kind). Nothing after.
+// A single verse lesson: learn the verse, review it with the verse just before it, then with the verses
+// before it — the last five, or on every fifth verse the block so far (lib/lessonReview.ts; every path
+// kind). Nothing after.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);
@@ -49,6 +50,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
     const chapterLength = first ? (getChapterVerses(first.book, first.chapter)?.length ?? first.verseNumber) : 0;
     return { ...day, previousVerses: lessonReviewVerses(prior, learned, chapterLength, (pericopes ?? []).map((pericope) => pericope.startVerse)) };
   }, [day, prior, learned, first, pericopes]);
+  const pairVerses = useMemo(() => lessonPairVerses(prior, learned, reviewDay.previousVerses), [prior, learned, reviewDay]);
   // Only used by the review below (LearnSection computes its own for "learn") — called
   // unconditionally regardless, since hooks can't be called after an early return.
   const [senseCardFillHeightPx, senseCardColumnWidthPx] = useEmbeddedSenseCardOverride(embeddedInMindMap);
@@ -77,6 +79,7 @@ export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label,
       onComplete={onComplete}
       sessionKey={sessionKey}
       phase="final"
+      pairVerses={pairVerses}
       layout={layout}
       lessonLabel={label}
       version={version}

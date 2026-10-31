@@ -38,3 +38,11 @@ export function lessonReviewVerses(prior: VerseSegment[], learned: VerseSegment[
   const from = Math.min(blockStart, last.verseNumber - WINDOW + 1);
   return [...prior.filter((verse) => verse.verseNumber >= from), ...learned];
 }
+
+// The shorter review before that one: the verse just before the lesson with the lesson's own. Unset
+// when it would be no shorter than the review that follows it.
+export function lessonPairVerses(prior: VerseSegment[], learned: VerseSegment[], reviewVerses: VerseSegment[]): VerseSegment[] | undefined {
+  const before = prior[prior.length - 1];
+  if (!before || learned.length === 0 || learned.length + 1 >= reviewVerses.length) return undefined;
+  return [before, ...learned];
+}
