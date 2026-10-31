@@ -8,7 +8,7 @@ import type { ChapterRef } from "@/lib/adjacentChapter";
 import { formatChapterLabel, formatVerseRangeLabel } from "@/lib/chapterContent";
 import { useContinuousChapters } from "@/lib/useContinuousChapters";
 import { verseKey, type ParsedVerseKey } from "@/lib/verseKey";
-import { bookPalace, chapterLoci } from "@/lib/chapterLoci";
+import { bookPalace, chapterLoci, chapterRoom } from "@/lib/chapterLoci";
 import { tapRun } from "@/lib/readerRun";
 import { statusNote, type VerseStatus } from "@/lib/readerVerseStatus";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
@@ -130,6 +130,7 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const activeStatus = active ? statusOf(active.book, active.chapter, active.verseNumber) : "open";
   const covering = active ? entities.filter((entity) => entity.book === active.book && entity.chapter === active.chapter && active.verseNumber >= entity.startVerse && active.verseNumber <= entity.endVerse) : [];
 
+  const viewRoom = chapterRoom(palaces ?? [], inView.book, inView.chapter)?.room.name;
   const viewPalace = bookPalace(palaces ?? [], inView.book);
   const activeLocus = active ? chapterLoci(palaces ?? [], active.book, active.chapter).find((entry) => highlighted.every((verse) => verse.verseNumber >= entry.from && verse.verseNumber <= entry.to)) : undefined;
 
@@ -170,10 +171,13 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
           type="button"
           onClick={() => onBook(inView.book)}
           aria-label={`Back to ${inView.book}`}
-          className="absolute left-3 top-[calc(0.5rem+env(safe-area-inset-top))] z-[5] flex items-center gap-1 rounded-full border border-sand-200 bg-[#FEFDFB]/95 py-2 pl-2 pr-3.5 text-[13px] font-extrabold text-ink shadow-organic-md backdrop-blur-sm hover:bg-sand-100 dark:border-zinc-800 dark:bg-zinc-900/95 dark:text-zinc-100"
+          className="absolute left-3 top-[calc(0.5rem+env(safe-area-inset-top))] z-[5] flex max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-full border border-sand-200 bg-[#FEFDFB]/95 py-2 pl-2 pr-3.5 text-[13px] font-extrabold text-ink shadow-organic-md backdrop-blur-sm hover:bg-sand-100 dark:border-zinc-800 dark:bg-zinc-900/95 dark:text-zinc-100"
         >
-          <ChevronLeft size={18} strokeWidth={2.75} />
-          {inView.book}
+          <ChevronLeft size={18} strokeWidth={2.75} className="shrink-0" />
+          <span className="truncate">
+            {formatChapterLabel(inView.book, inView.chapter)}
+            {viewRoom ? ` · ${viewRoom}` : ""}
+          </span>
         </button>
       )}
       {!lessonRunning && active && (

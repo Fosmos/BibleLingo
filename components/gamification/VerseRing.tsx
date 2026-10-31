@@ -19,13 +19,13 @@ interface VerseRingProps {
   children: ReactNode;
 }
 
-const TODAY = "#2B6CB0";
+const TODAY = "#4F8A3C";
 // Light enough for its black number.
 const NEXT = "#6FA8DC";
 const FILL = ringColor(0);
 
 // A verse's or chapter's box, filled once it's learned: green to red as its review comes due. An empty
-// blue outline is for today, solid blue for what's next, and a pale outline for not learned yet. The
+// green outline is for today, solid blue for what's next, and a pale outline for not learned yet. The
 // button is bigger than the box, for tapping. A chapter fills green as far as it's memorized, with an orange dot when a verse in it is due.
 export function VerseRing({ kind, age, size = "verse", seal = null, fill, due = false, label, onTap, children }: VerseRingProps) {
   const color = fill !== undefined && kind !== "today" ? FILL : kind === "learned" ? ringColor(age) : kind === "next" ? NEXT : TODAY;

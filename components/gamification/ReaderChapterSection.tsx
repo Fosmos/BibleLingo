@@ -12,6 +12,7 @@ import { verseKey } from "@/lib/verseKey";
 import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { ReaderVerseRow } from "@/components/gamification/ReaderVerseRow";
 import { AddLocusButton } from "@/components/gamification/AddLocusButton";
+import { ReaderChapterTag } from "@/components/gamification/ReaderChapterTag";
 import { ReaderLocusSheet } from "@/components/gamification/ReaderLocusSheet";
 import { ReaderLocusTag } from "@/components/gamification/ReaderLocusTag";
 import { ReaderProseRun } from "@/components/gamification/ReaderProseRun";
@@ -45,7 +46,7 @@ function runPosition(run: number[], verseNumber: number): "single" | "first" | "
   return before && after ? "middle" : before ? "last" : after ? "first" : "single";
 }
 
-// One chapter in the continuous reader (ChapterSenseReader.tsx): its title (with its memory palace room), then its pericopes — in sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
+// One chapter in the continuous reader (ChapterSenseReader.tsx): its title and memory palace room (ReaderChapterTag.tsx), then its pericopes — in sense lines — or, with sense lines off ("Learn line by line" off), as continuous paragraphs
 // (ReaderProseRun.tsx) — the path's own chapters straight from its verses, any other fetched in `version`.
 export function ReaderChapterSection({ at, version, pathVerses, statusOf, highlighted, onTap, lessonVerse, duringLesson, isHidden, isRecalled, onLoaded, locusOpen, onLocusClosed }: ReaderChapterSectionProps) {
   const prose = useProgressStore((state) => state.wholeVerseLearning) ?? false;
@@ -63,7 +64,6 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
   const realVerses = (verses ?? []).filter((verse) => verse.text.trim());
   const lastVerse = realVerses[realVerses.length - 1]?.verseNumber ?? 0;
   const tagged = useMemo(() => chapterRoom(palaces, at.book, at.chapter)?.room, [palaces, at.book, at.chapter]);
-  const room = tagged?.name;
   const tagOf = (entry: ChapterLocus) => <ReaderLocusTag key={entry.locus.id} entry={entry} lastVerse={lastVerse} onTap={duringLesson ? undefined : () => setLocusSheet({ editing: entry })} />;
 
   const row = (verse: VerseSegment) => (
@@ -87,11 +87,10 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
       <div className="flex items-start gap-2 px-3.5 pt-3">
         <h2 className="min-w-0 flex-1 font-heading text-[30px] leading-none text-ink dark:text-zinc-100">
           {formatChapterLabel(at.book, at.chapter)}
-          {room ? ` - ${room}` : ""}
         </h2>
         {!duringLesson && realVerses.length > 0 && <AddLocusButton onTap={() => setLocusSheet({ chapter: true })} className="-mt-1.5" />}
       </div>
-      {tagged?.scene && <p className="-mt-3 px-3.5 text-[14px] italic leading-snug text-sand-700 dark:text-zinc-400">{tagged.scene}</p>}
+      {tagged && <ReaderChapterTag room={tagged} onTap={duringLesson ? undefined : () => setLocusSheet({ chapter: true })} />}
       {loaded.error && <p className="px-3.5 text-sm font-semibold text-sand-700">{loaded.error}</p>}
       {!verses && !loaded.error && (
         <div aria-hidden="true" className="flex flex-col gap-3 px-3.5">
