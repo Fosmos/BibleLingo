@@ -13,6 +13,7 @@ import { useStartNewPath } from "@/lib/useStartNewPath";
 import type { PathChoice } from "@/lib/pathChoice";
 import { SetupStepFrame } from "@/components/gamification/SetupStepFrame";
 import { PathOptionRow } from "@/components/gamification/PathOptionRow";
+import { PATH_REMINDERS } from "@/lib/pathEdit";
 import { PaceStepper } from "@/components/gamification/PaceStepper";
 import { LearnIntensityPicker } from "@/components/gamification/LearnIntensityPicker";
 import { StartingPointFlow } from "@/components/gamification/StartingPointFlow";
@@ -24,13 +25,6 @@ interface PathSetupWizardProps {
 }
 
 type Step = "translation" | "pace" | "intensity" | "start" | "reminder";
-const REMINDERS: { value: PathReminder; title: string; sub: string }[] = [
-  { value: "morning", title: "Morning", sub: "7:00 AM" },
-  { value: "midday", title: "Lunchtime", sub: "12:30 PM" },
-  { value: "evening", title: "Evening", sub: "8:00 PM" },
-  { value: "off", title: "No reminder", sub: "I'll remember myself" },
-];
-
 // Setting up a new path (design_handoff_path_picker → Setup): translation, new verses a day, then
 // — as before — Learn intensity and "already learned some of this?" for books and chapters, and
 // last a daily reminder (saved only, for now). Verse paths skip the pace; topics, whose verses
@@ -123,7 +117,7 @@ export function PathSetupWizard({ choice, onBack }: PathSetupWizardProps) {
   }
   return (
     <SetupStepFrame {...frame} question="When should we remind you?" sub="One gentle nudge a day." cta={{ label: `Start ${choice.title}`, onClick: () => startNewPath({ key: choice.key, version, versesPerDay: finish.versesPerDay, priorKnownVerseCount: finish.prior, reminder }) }}>
-      {REMINDERS.map((entry) => (
+      {PATH_REMINDERS.map((entry) => (
         <PathOptionRow key={entry.value} title={entry.title} meta={entry.sub} suggested={entry.value === "morning"} selected={reminder === entry.value} onSelect={() => setReminder(entry.value)} />
       ))}
     </SetupStepFrame>

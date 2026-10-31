@@ -18,6 +18,9 @@ interface PathActions {
     priorKnownDayCount?: number,
   ) => void;
   resetPathProgress: (pathKey: string) => void;
+  // A path's own settings, edited after it's started (PathEditSheet.tsx). A new pace comes with its
+  // progress worked out again (lib/pathEdit.ts), and any lesson in progress starts over.
+  updatePath: (pathKey: string, patch: Partial<Pick<PathProgress, "version" | "versesPerDay" | "completedDays" | "versesIntoDay">>) => void;
   // Focuses `pathKey`, adding it to the active set if it isn't there yet.
   setActivePath: (pathKey: string) => void;
   // Stops working through `pathKey` (its progress is kept). If it was the focused path, focus
@@ -101,6 +104,14 @@ export function createPathActions(
       delete chapterReviewBestAccuracy[pathKey];
       set(persist({ ...state, paths, chapterReviewBestAccuracy }));
       get().clearSessionCheckpointsWithPrefix(`${pathKey}:`);
+    },
+
+    updatePath: (pathKey, patch) => {
+      const state = get();
+      const existing = state.paths[pathKey];
+      if (!existing) return;
+      set(persist({ ...state, paths: { ...state.paths, [pathKey]: { ...existing, ...patch } } }));
+      if ("versesPerDay" in patch) get().clearSessionCheckpointsWithPrefix(`${pathKey}:`);
     },
 
     setActivePath: (pathKey) => {

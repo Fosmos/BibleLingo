@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder } from "@/types";
+import type { CustomClauseRole, LocationTagLevel, SrsBox, SrsReviewRun, UserProgress, VersePOA, VerseSegment, PathReminder, PathProgress } from "@/types";
 import { clearProgress, getDefaultProgress, loadProgress, saveProgress } from "@/lib/storage";
 import { syncProgressToServer } from "@/lib/accountApiClient";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -36,6 +36,7 @@ interface ProgressActions {
   evaluateStreakOnLoad: () => { status: StreakLoadStatus; previousStreak: number };
   setPath: (pathKey: string, version: string, versesPerDay?: number, priorKnownVerseCount?: number, priorKnownDayCount?: number) => void;
   resetPathProgress: (pathKey: string) => void;
+  updatePath: (pathKey: string, patch: Partial<Pick<PathProgress, "version" | "versesPerDay" | "completedDays" | "versesIntoDay">>) => void;
   setActivePath: (pathKey: string) => void;
   removeActivePath: (pathKey: string) => void;
   retireLearnedPath: (pathKey: string) => void;
