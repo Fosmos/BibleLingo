@@ -45,34 +45,42 @@ export const NUMBER_CLASS: Record<VerseStatus, string> = {
 // One verse in the chapter reader (design_handoff_bible_progress): its number circle, coloured by
 // state, beside its natural sense lines of about 5–8 words (lib/naturalSenseLines.ts).
 // Selecting tints the row and adds a left bar without moving anything. A lesson or review runs in
-// its verse's own row (PathLessonVerseSlot.tsx), the controls docked below (PathLessonDock.tsx).
+// its verse's own row, raised as a card with its reference in the margin (PathLessonVerseSlot.tsx),
+// the controls docked below (PathLessonDock.tsx); its neighbours show quieter around it.
 export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, hostsLesson, duringLesson, hidden, recalled, run = "single", seal = null }: ReaderVerseRowProps) {
   const lettersOnly = duringLesson && !recalled && !hidden && status !== "open" && status !== "current";
   // The selected verse — and the verse a lesson or review is running on — carries the highlight.
-  const highlighted = selected || hostsLesson;
+  const highlighted = !duringLesson && selected;
   const lines = parseToSenseLines(joinStrayPunctuation(verse.text));
 
   return (
     <div
       data-verse-key={rowKey}
-      onClick={hostsLesson ? undefined : onSelect}
-      className={`relative grid cursor-pointer grid-cols-[30px_minmax(0,1fr)] gap-3 px-3.5 py-2 ${highlighted ? RUN_SHAPE[run] : "rounded-[20px]"} ${highlighted ? "bg-sage-200/55 dark:bg-sage-900/40" : ""}`}
+      onClick={duringLesson ? undefined : onSelect}
+      className={`relative grid gap-3 ${duringLesson ? "grid-cols-[38px_minmax(0,1fr)] gap-2" : "cursor-pointer grid-cols-[30px_minmax(0,1fr)]"} ${hostsLesson ? "-mx-1 my-1 rounded-[24px] bg-white px-3 py-5 shadow-[0_6px_20px_rgba(32,30,29,0.14)] dark:bg-zinc-800" : "px-3.5 py-2"} ${!hostsLesson && (highlighted ? RUN_SHAPE[run] : "rounded-[20px]")} ${highlighted ? "bg-sage-200/55 dark:bg-sage-900/40" : ""}`}
     >
       {highlighted && <span aria-hidden="true" className={`absolute left-1.5 w-[5px] rounded-full bg-sage-700 ${RUN_BAR[run]}`} />}
-      <span className={`relative flex h-[30px] w-[30px] items-center justify-center rounded-full font-heading text-[13px] ${NUMBER_CLASS[status]}`}>
-        {verse.verseNumber}
-        {seal !== null && (
-          <span className="absolute -bottom-1.5 -right-1.5">
-            <SrsSeal tier={seal} size={16} />
-          </span>
-        )}
-      </span>
+      {duringLesson ? (
+        // Blank while the reference itself is being recalled (data-ref-slot, PathLessonTopBar.tsx).
+        <span className={`[body:has([data-ref-slot]:not(:empty))_&]:invisible ${hostsLesson ? "font-heading text-[17px] leading-[1.5] text-brand-800 dark:text-brand-300" : "pt-[1px] text-sm font-extrabold leading-[1.5] text-sand-700 dark:text-zinc-400"}`}>
+          {verse.chapter}:{verse.verseNumber}
+        </span>
+      ) : (
+        <span className={`relative flex h-[30px] w-[30px] items-center justify-center rounded-full font-heading text-[13px] ${NUMBER_CLASS[status]}`}>
+          {verse.verseNumber}
+          {seal !== null && (
+            <span className="absolute -bottom-1.5 -right-1.5">
+              <SrsSeal tier={seal} size={16} />
+            </span>
+          )}
+        </span>
+      )}
       {hostsLesson ? (
         <PathLessonVerseSlot className="relative z-[2] min-w-0 pt-[1px] text-[17px] leading-[1.5]" />
       ) : (
         <div
           aria-hidden={hidden || undefined}
-          className={`flex min-w-0 flex-col gap-3 pt-[1px] text-[17px] font-medium leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}
+          className={`flex min-w-0 flex-col pt-[1px] font-medium ${duringLesson ? "gap-1 text-[15px] leading-[1.4] text-sand-700 dark:text-zinc-400" : `gap-3 text-[17px] leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}`}
         >
           {lines.map((line, index) => (
             // The lesson's verse zone lays its lines out the same way (SenseLineRow.tsx), so nothing moves.

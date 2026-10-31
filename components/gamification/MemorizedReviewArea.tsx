@@ -1,26 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Trophy } from "lucide-react";
-import { NeedsReviewingCard } from "@/components/gamification/NeedsReviewingCard";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { TOOL_ROW } from "@/lib/memorizedShelf";
 import { RecallQuizButton } from "@/components/gamification/RecallQuizButton";
 import { WhereYouStumble } from "@/components/gamification/WhereYouStumble";
 
-// The Memorized tab's one place for going back over verses: what's due, where you stumble (each
-// spot opening Relearn), then the Recall quiz and Mastery mode.
+const ARROW = "text-sand-500";
+
+// The Memorized tab's tools, as plain rows under your books: where you stumble (each spot opening
+// Relearn), then the Recall quiz, Mastery mode and the Bible reader.
 export function MemorizedReviewArea() {
+  const [stumblesOpen, setStumblesOpen] = useState(false);
   return (
-    <section id="review" aria-label="Review" className="flex flex-col gap-3.5">
-      <NeedsReviewingCard />
-      <WhereYouStumble />
-      <RecallQuizButton />
-      <Link href="/memorized/mastery" className="flex items-center gap-3 rounded-[22px] bg-sand-100 px-4 py-3.5 dark:bg-zinc-900">
-        <Trophy size={20} strokeWidth={2.5} className="shrink-0 text-brand-600" />
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-heading text-[17px] leading-tight text-ink dark:text-zinc-100">Mastery mode</span>
-          <span className="text-xs font-extrabold text-ink-muted">Test a passage from memory, level by level</span>
-        </span>
-        <ChevronRight size={18} strokeWidth={2.75} className="shrink-0 text-sand-500" />
+    <section id="review" aria-label="Review tools" className="flex flex-col border-t border-sand-200 dark:border-zinc-900">
+      <button type="button" aria-expanded={stumblesOpen} onClick={() => setStumblesOpen(!stumblesOpen)} className={TOOL_ROW}>
+        Where you stumble
+        <ChevronDown size={18} strokeWidth={2.75} className={`${ARROW} transition-transform ${stumblesOpen ? "rotate-180" : ""}`} />
+      </button>
+      {stumblesOpen && (
+        <div className="border-b border-sand-200 py-3 dark:border-zinc-900">
+          <WhereYouStumble />
+        </div>
+      )}
+      <RecallQuizButton plain />
+      <Link href="/memorized/mastery" className={TOOL_ROW}>
+        Mastery mode
+        <ChevronRight size={18} strokeWidth={2.75} className={ARROW} />
+      </Link>
+      <Link href="/memorized?view=bible" className={TOOL_ROW}>
+        Open your Bible
+        <ChevronRight size={18} strokeWidth={2.75} className={ARROW} />
       </Link>
     </section>
   );

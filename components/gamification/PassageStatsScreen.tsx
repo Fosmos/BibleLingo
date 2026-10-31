@@ -32,9 +32,10 @@ export function PassageStatsScreen() {
   const mounted = useHasMounted();
   const params = useSearchParams();
   const id = params.get("id");
-  // Back to where it was opened from — its book's page (BookStatsScreen.tsx) — else the tab.
+  // Back to where it was opened from — its book's page (BookStatsScreen.tsx) or chapter — else the tab.
   const from = params.get("from");
-  const back = from?.startsWith("/memorized/book") ? <MemorizedBackLink href={from} label={new URLSearchParams(from.split("?")[1]).get("name") ?? "Back"} /> : <MemorizedBackLink />;
+  const fromQuery = new URLSearchParams(from?.split("?")[1]);
+  const back = from?.startsWith("/memorized/book") || from?.startsWith("/memorized?book=") ? <MemorizedBackLink href={from} label={fromQuery.get("name") ?? fromQuery.get("book") ?? "Back"} /> : <MemorizedBackLink />;
   const entity = useProgressStore((state) => state.memorizedEntities.find((candidate) => candidate.id === id));
   const threshold = useProgressStore((state) => state.srsPromotionThreshold) ?? PROMOTION_ACCURACY_THRESHOLD;
   const best = useProgressStore((state) => (id ? state.srsBestAccuracy[id] : undefined));

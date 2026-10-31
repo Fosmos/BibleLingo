@@ -6,7 +6,7 @@ import { RING_KEY, ringColor, type RingKind } from "@/lib/verseRings";
 interface VerseRingProps {
   kind: RingKind;
   age: number;
-  size?: "verse" | "chapter";
+  size?: "verse" | "chapter" | "dense";
   label: string;
   onTap: () => void;
   children: ReactNode;
@@ -24,7 +24,7 @@ export function VerseRing({ kind, age, size = "verse", label, onTap, children }:
   const look = kind === "new" ? "border-sand-300 text-ink dark:border-zinc-700 dark:text-zinc-100" : kind === "today" ? "border-[var(--ring)] text-ink dark:text-zinc-100" : "border-[var(--ring)] bg-[var(--ring)] text-ink";
   return (
     <button type="button" aria-label={label} onClick={onTap} className={`flex w-full items-center justify-center ${size === "chapter" ? "h-12" : "h-11"}`}>
-      <span style={{ "--ring": color } as CSSProperties} className={`flex items-center justify-center rounded-[10px] border-[3px] font-bold ${size === "chapter" ? "h-[46px] w-[46px] text-base" : "h-[38px] w-[38px] text-sm"} ${look}`}>
+      <span style={{ "--ring": color } as CSSProperties} className={`flex items-center justify-center rounded-[10px] border-[3px] font-bold ${size === "chapter" ? "h-[46px] w-[46px] text-base" : size === "dense" ? "h-10 w-10 text-sm" : "h-[38px] w-[38px] text-sm"} ${look}`}>
         {children}
       </span>
     </button>
@@ -32,7 +32,7 @@ export function VerseRing({ kind, age, size = "verse", label, onTap, children }:
 }
 
 // What the box colours mean.
-export function RingKey() {
+export function RingKey({ showToday = true }: { showToday?: boolean }) {
   return (
     <div className="flex items-center justify-center gap-2 text-xs font-bold text-sand-700 dark:text-zinc-400">
       <span>Reviewed</span>
@@ -40,8 +40,12 @@ export function RingKey() {
         <span key={color} style={{ "--ring": color } as CSSProperties} className="h-4 w-4 rounded-[4px] bg-[var(--ring)]" />
       ))}
       <span>Due</span>
-      <span style={{ "--ring": TODAY } as CSSProperties} className="ml-2 h-4 w-4 rounded-[4px] border-[3px] border-[var(--ring)]" />
-      <span>Today</span>
+      {showToday && (
+        <>
+          <span style={{ "--ring": TODAY } as CSSProperties} className="ml-2 h-4 w-4 rounded-[4px] border-[3px] border-[var(--ring)]" />
+          <span>Today</span>
+        </>
+      )}
     </div>
   );
 }

@@ -18,11 +18,12 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
   const sayLadder = useProgressStore((state) => state.sayLadderLearning) ?? true;
-  // A palace built for this path (the Palace tab) — each verse is placed in it as it's learned.
+  // A palace built for this path (the Palace tab) — with the setting on, each verse is placed in it as it's learned.
   const palaces = useProgressStore((state) => state.builtPalaces);
+  const palaceInLessons = useProgressStore((state) => state.palaceInLessons) ?? false;
   const activePathKey = useProgressStore((state) => state.activePathKey);
   const first = verses[realVerseIndices[0]];
-  const palace = Boolean(first && palaces?.length && (findPlacement(palaces, first) || palaceToPlaceIn(palaces, first, activePathKey)));
+  const palace = Boolean(palaceInLessons && first && palaces?.length && (findPlacement(palaces, first) || palaceToPlaceIn(palaces, first, activePathKey)));
   // On unless turned off — undefined for progress saved before these stages existed.
   const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;

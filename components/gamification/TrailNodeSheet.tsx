@@ -14,15 +14,18 @@ interface TrailNodeSheetProps {
   onStart: () => void;
   onReview: () => void;
   onPractise: () => void;
+  // What a locked stop says, where a screen means something other than "finish what's before it".
+  lockedTag?: string;
+  lockedAction?: string;
   // Extra details about the stop, above its action.
   children?: ReactNode;
 }
 
 // What a tapped trail stop offers (design_handoff_path_picker → Stop sheet): start it when it's up
 // next, review it when it's due, practise it again once learned — or, locked, nothing yet.
-export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart, onReview, onPractise, children }: TrailNodeSheetProps) {
+export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart, onReview, onPractise, lockedTag = "Locked", lockedAction = "Finish earlier steps first", children }: TrailNodeSheetProps) {
   const due = stop.state === "done" && stop.dueIds.length > 0;
-  const tag = stop.state === "current" ? "Up next" : due ? "Due for review" : stop.state === "done" ? "Memorized" : "Locked";
+  const tag = stop.state === "current" ? "Up next" : due ? "Due for review" : stop.state === "done" ? "Memorized" : lockedTag;
   const tagClass = stop.state === "current" || due ? "bg-brand-100 text-brand-900" : stop.state === "done" ? "bg-sage-200 text-sage-900" : "bg-sand-200 text-sand-800";
   const primary = "w-full rounded-full bg-brand-500 py-4 text-base font-extrabold text-white shadow-[0_6px_0_#8C491A] hover:bg-brand-600";
   const secondary = "w-full rounded-full bg-sand-200 py-4 text-base font-extrabold text-ink hover:bg-sand-300 dark:bg-zinc-800 dark:text-zinc-100";
@@ -68,7 +71,7 @@ export function TrailNodeSheet({ stop, sectionTitle, pathLabel, onClose, onStart
           )}
           {stop.state === "locked" && (
             <button type="button" onClick={onClose} className={secondary}>
-              Finish earlier steps first
+              {lockedAction}
             </button>
           )}
         </div>

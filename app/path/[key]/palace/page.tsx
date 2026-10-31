@@ -1,7 +1,8 @@
-import { PathOverviewPage } from "@/components/gamification/PathOverviewPage";
+import { redirect } from "next/navigation";
 
-// The Palace tab: the active path's book as a memory palace, a picture for every verse (BookStructureScreen.tsx).
-export default async function PalaceTabPage({ params, searchParams }: PageProps<"/path/[key]/palace">) {
+// The old home of the book view, now the Path tab itself (BookStructureScreen.tsx).
+export default async function OldPalacePage({ params, searchParams }: PageProps<"/path/[key]/palace">) {
   const { key } = await params;
-  return <PathOverviewPage pathKey={key} searchParams={await searchParams} view="palace" />;
+  const { version } = await searchParams;
+  redirect(`/path/${encodeURIComponent(decodeURIComponent(key))}${typeof version === "string" ? `?version=${encodeURIComponent(version)}` : ""}`);
 }

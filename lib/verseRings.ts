@@ -8,11 +8,11 @@ const STOPS: [number, number, number][] = [
   [0x4f, 0x8a, 0x3c],
   [0xe0, 0xb4, 0x00],
   [0xe0, 0x70, 0x1f],
-  [0xc8, 0x32, 0x1f],
+  [0xd9, 0x4a, 0x36],
 ];
 
 // The ring's colours in order, for the key under the rings.
-export const RING_KEY = ["#4F8A3C", "#E0B400", "#E0701F", "#C8321F"];
+export const RING_KEY = ["#4F8A3C", "#E0B400", "#E0701F", "#D94A36"];
 
 // How far through its wait for the next review a range is: 0 just reviewed, 1 due.
 export function reviewAge(srs: SRSState, now: Date): number {

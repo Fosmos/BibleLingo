@@ -1,14 +1,16 @@
 import type { PassageReview } from "@/lib/trailReviews";
 
+export type AltPathView = "verses" | "duo" | "quest";
+
 // The Memorized tab's chapter reader, opened onto a path's lesson, review or practice
 // (ChapterPathScreen.tsx reads these once on arrival). `fromTrail` sends you back to the Path
-// tab's trail when it's done (lib/useReaderArrivals.ts) — or, "palace", to the Palace path, or, "quest", to the Quest map, or, "duo", to the Duolingo-style path.
+// tab when it's done (lib/useReaderArrivals.ts) — or, naming one of the other path views, to that.
 // `verse` ("chapter:verse") narrows a lesson or practice to that one verse of its day. `passage`
 // reviews a pericope or chapter of the trail (lib/trailReviews.ts), on the page of lesson `day`.
 // `select` ("chapter:verse") just opens the reader on that verse, selected, its action ready.
 type ReaderAction = { select: string } | { learnDay: number; verse?: string } | { review: string[] } | { practiceDay: number; verse?: string } | { passage: PassageReview; day: number };
 
-export function readerHref(pathKey: string, version: string, action: ReaderAction, fromTrail: boolean | "palace" | "quest" | "duo" = true): string {
+export function readerHref(pathKey: string, version: string, action: ReaderAction, fromTrail: boolean | AltPathView = true): string {
   const query = new URLSearchParams({ path: pathKey, version });
   if ("passage" in action) {
     const { key, chapter, from, to } = action.passage;
@@ -28,14 +30,8 @@ export function readerHref(pathKey: string, version: string, action: ReaderActio
 }
 
 // The Path tab for a path: its map, or with `section` one section's trail ("current": the one you're on).
-// The Palace tab for a path (BookStructureScreen.tsx).
-export const palaceHref = (pathKey: string, version: string): string => `/path/${encodeURIComponent(pathKey)}/palace?version=${encodeURIComponent(version)}`;
-
-// The experimental Quest tab for a path (QuestScreen.tsx).
-export const questHref = (pathKey: string, version: string): string => `/path/${encodeURIComponent(pathKey)}/quest?version=${encodeURIComponent(version)}`;
-
-// The Path tab's Duolingo-style path for a path (DuoPathScreen.tsx).
-export const duoHref = (pathKey: string, version: string): string => `/path/${encodeURIComponent(pathKey)}/duo?version=${encodeURIComponent(version)}`;
+// One of the other path views, apart from the Path tab's main one (components/gamification/altPaths/).
+export const altPathHref = (pathKey: string, version: string, view: AltPathView): string => `/path/${encodeURIComponent(pathKey)}/alt/${view}?version=${encodeURIComponent(version)}`;
 
 export const trailHref = (pathKey: string, version: string, section?: number | "current"): string =>
   `/path/${encodeURIComponent(pathKey)}?version=${encodeURIComponent(version)}${section === undefined ? "" : `&section=${section}`}`;

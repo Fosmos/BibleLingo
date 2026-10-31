@@ -10,11 +10,11 @@ interface PathViewSwitchProps {
 }
 
 const VIEWS = {
-  path: [{ label: "Verses", suffix: "" }, { label: "Path", suffix: "/duo" }, { label: "Quest", suffix: "/quest" }],
-  palace: [{ label: "2D", suffix: "/palace" }, { label: "3D", suffix: "/palace3d" }, { label: "Walk", suffix: "/palacewalk" }],
+  path: [{ label: "Main", suffix: "" }, { label: "Verses", suffix: "/alt/verses" }, { label: "Path", suffix: "/alt/duo" }, { label: "Quest", suffix: "/alt/quest" }],
+  palace: [{ label: "Walk", suffix: "/palacewalk" }, { label: "3D", suffix: "/palace3d" }],
 };
 
-// The two views of the Path tab (the verses, the Duolingo-style path, the Quest map) and of the Palace tab (2D, 3D, Walk).
+// The Palace tab's two views, and the way between the other path views and back to the main one.
 export function PathViewSwitch({ dark = false, className = "" }: PathViewSwitchProps) {
   const pathname = usePathname();
   const key = String(useParams().key ?? "");
@@ -28,7 +28,7 @@ export function PathViewSwitch({ dark = false, className = "" }: PathViewSwitchP
         const on = dark ? "bg-white text-zinc-950" : "bg-white text-ink shadow-sm dark:bg-zinc-700 dark:text-zinc-100";
         const off = dark ? "text-zinc-200" : "text-ink-muted";
         return (
-          <Link key={label} href={`${base}${suffix}${version ? `?version=${encodeURIComponent(version)}` : ""}`} aria-current={active ? "page" : undefined} className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${active ? on : off}`}>
+          <Link key={label} href={`${base}${suffix}${version ? `?version=${encodeURIComponent(version)}` : ""}`} aria-current={active ? "page" : undefined} className={`rounded-full px-2.5 py-1.5 text-xs font-extrabold ${active ? on : off}`}>
             {label}
           </Link>
         );

@@ -474,6 +474,9 @@ export interface UserProgress {
   // Learn each verse with the say-it ladder (lib/sayLadder.ts) instead of the stages above.
   // Undefined (the default) is on.
   sayLadderLearning?: boolean;
+  // Whether lessons and reviews use a palace built in the Palace tab: the "Your palace" step and
+  // the tag showing a verse's spot. Undefined (the default) is off.
+  palaceInLessons?: boolean;
   // Whether the Last letters stage (type the first letters with each word's last letter showing)
   // runs during Learn (lib/learnSteps.ts). Undefined (the default) is on.
   lastLettersStageEnabled?: boolean;

@@ -19,9 +19,11 @@ interface DrillHelpChipsProps {
   // In the reader's lesson top bar (PathLessonTopBar.tsx), at its right: small icon buttons (their
   // names as labels), and the tab opens below the whole bar, across its width.
   inBar?: boolean;
+  // Under the reader's lesson dock: quiet text links, centred.
+  quiet?: boolean;
 }
 
-export function DrillHelpChips({ inBar = false }: DrillHelpChipsProps) {
+export function DrillHelpChips({ inBar = false, quiet = false }: DrillHelpChipsProps) {
   const stage = useLessonSessionStore((state) => state.sheetStage);
   const peek = useLessonSessionStore((state) => state.peek);
   const setPeek = useLessonSessionStore((state) => state.setPeek);
@@ -40,7 +42,7 @@ export function DrillHelpChips({ inBar = false }: DrillHelpChipsProps) {
   const toggle = (kind: Exclude<Peek, null>) => setPeek(peek === kind ? null : kind);
 
   return (
-    <div className={`flex shrink-0 justify-end gap-1.5 ${inBar ? "" : "relative px-4"}`}>
+    <div className={`flex shrink-0 gap-1.5 ${quiet ? "relative justify-center gap-3.5" : "justify-end"} ${inBar || quiet ? "" : "relative px-4"}`}>
       {peek && verseText && (
         <div className={`absolute inset-x-3 z-10 ${inBar ? "top-[calc(100%+8px)]" : "bottom-[calc(100%+10px)]"} flex max-h-[50dvh] flex-col gap-1.5 overflow-y-auto rounded-[20px] border-2 border-sand-300 bg-white px-5 py-4 shadow-[0_4px_0_#DCD3C4] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-none`}>
           {parseToSenseLines(verseText).map((line, index) => (
@@ -51,18 +53,18 @@ export function DrillHelpChips({ inBar = false }: DrillHelpChipsProps) {
         </div>
       )}
       {inputSwap && (
-        <Chip on={false} onClick={() => inputSwap.choose(inputSwap.to)} icon={inBar ? inputSwap.to === "type" ? <Keyboard size={16} strokeWidth={2.5} /> : <Mic size={16} strokeWidth={2.5} /> : undefined}>
+        <Chip quiet={quiet} on={false} onClick={() => inputSwap.choose(inputSwap.to)} icon={inBar ? inputSwap.to === "type" ? <Keyboard size={16} strokeWidth={2.5} /> : <Mic size={16} strokeWidth={2.5} /> : undefined}>
           {inputSwap.to === "type" ? "Type instead" : "Speak instead"}
         </Chip>
       )}
-      <Chip on={peek === "letters"} onClick={() => toggle("letters")} icon={inBar ? <CaseSensitive size={18} strokeWidth={2.5} /> : undefined}>
-        Letters
+      <Chip quiet={quiet} on={peek === "letters"} onClick={() => toggle("letters")} icon={inBar ? <CaseSensitive size={18} strokeWidth={2.5} /> : undefined}>
+        {quiet ? "First letters" : "Letters"}
       </Chip>
-      <Chip on={peek === "whole"} onClick={() => toggle("whole")} icon={inBar ? <BookOpen size={16} strokeWidth={2.5} /> : undefined}>
-        Verse
+      <Chip quiet={quiet} on={peek === "whole"} onClick={() => toggle("whole")} icon={inBar ? <BookOpen size={16} strokeWidth={2.5} /> : undefined}>
+        {quiet ? "Show verse" : "Verse"}
       </Chip>
       {skip && (
-        <Chip on={false} muted onClick={skip} icon={inBar ? <SkipForward size={16} strokeWidth={2.5} /> : undefined}>
+        <Chip quiet={quiet} on={false} muted onClick={skip} icon={inBar ? <SkipForward size={16} strokeWidth={2.5} /> : undefined}>
           Skip
         </Chip>
       )}
@@ -73,13 +75,21 @@ export function DrillHelpChips({ inBar = false }: DrillHelpChipsProps) {
 interface ChipProps {
   on: boolean;
   muted?: boolean;
+  quiet?: boolean;
   onClick: () => void;
   // Shown in place of the name (which becomes its label) — the top bar's compact buttons.
   icon?: ReactNode;
   children: string;
 }
 
-function Chip({ on, muted, onClick, icon, children }: ChipProps) {
+function Chip({ on, muted, quiet, onClick, icon, children }: ChipProps) {
+  if (quiet) {
+    return (
+      <button type="button" onClick={onClick} aria-pressed={on} className={`min-h-11 whitespace-nowrap text-[13px] font-extrabold ${on ? "text-ink underline underline-offset-4 dark:text-zinc-100" : muted ? "text-sand-700 dark:text-zinc-400" : "text-brand-800 dark:text-brand-300"}`}>
+        {children}
+      </button>
+    );
+  }
   return (
     <button
       type="button"

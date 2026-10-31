@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { altPathHref } from "@/lib/readerHref";
 import { Settings2 } from "lucide-react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { NO_LOCATION_TAG_LEVELS } from "@/lib/locationTags";
@@ -21,9 +22,22 @@ import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 // disclosure, so the main Profile screen reads as a short, calm page rather than a wall of
 // toggles. Nothing here is removed or behaves differently — it's
 // the exact same settings, just not competing for attention by default.
+function OtherPathViewsLink() {
+  const key = useProgressStore((state) => state.activePathKey);
+  const version = useProgressStore((state) => (key ? state.paths[key]?.version : undefined));
+  if (!key || !version) return null;
+  return (
+    <Link href={altPathHref(key, version, "duo")} className="self-start text-sm font-medium text-brand-600 hover:underline">
+      Other path views (Verses, Path, Quest)
+    </Link>
+  );
+}
+
 export function ProfileAdvancedSettings() {
   const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   const setBuildingViewEnabled = useProgressStore((state) => state.setBuildingViewEnabled);
+  const palaceInLessons = useProgressStore((state) => state.palaceInLessons) ?? false;
+  const setPalaceInLessons = useProgressStore((state) => state.setPalaceInLessons);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
   const locationTagLevels = useProgressStore((state) => state.locationTagLevels) ?? NO_LOCATION_TAG_LEVELS;
@@ -53,6 +67,13 @@ export function ProfileAdvancedSettings() {
         />
         <InfoTip text={INFO_TIPS.buildingViewToggle} />
       </div>
+      <OtherPathViewsLink />
+      <ToggleSwitch
+        checked={palaceInLessons}
+        onChange={setPalaceInLessons}
+        label="Memory palace in lessons"
+        description="Lessons add a step placing each verse in the palace you built for that path, and lessons and reviews show a tag with the verse's spot."
+      />
       <MemoryPalaceTagLevelToggles />
       <LearnStageToggles />
       <div>

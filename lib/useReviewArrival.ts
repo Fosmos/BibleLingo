@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useProgressStore } from "@/store/useProgressStore";
 import { useLessonSessionStore } from "@/store/useLessonSessionStore";
 
-// Links from Home's Needs reviewing box (NeedsReviewingCard.tsx) onto the path's Mind Map:
+// Links from Home's Needs reviewing box (HomeDueButton.tsx) onto the path's Mind Map:
 // `?review=<id>[,<id>…]`, plus `&start=1` to begin reviewing those ranges straight away (a row
 // tap, "Review all") rather than just landing on the first one with its review tab (the row's map pin).
 export function reviewArrivalHref(pathKey: string, version: string, entityIds: string[], start: boolean): string {

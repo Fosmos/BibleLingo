@@ -88,9 +88,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   }, [lessonVerse, ensure]);
 
   // The selected verse ~150px below the top (instantly on entry, smoothly after). While a lesson or
-  // review runs nothing moves while the verse drilled is in view between its top bar and dock; once
-  // it isn't, the verse before it opens the screen under the top bar, then the verse drilled — only
-  // the end of a long verse before, so the drilled one stays clear of the dock.
+  // review runs, each verse drilled shifts up to sit just under the verse before it, under the top
+  // bar — only the end of a long verse before, so the drilled one stays clear of the dock.
   const target = lessonVerse ?? (active ? { book: active.book, chapter: active.chapter, verseNumber: active.verseNumber } : null);
   const targetKey = target ? verseKey(target.book, target.chapter, target.verseNumber) : null;
   const targetLoaded = target ? Boolean(loaded[chapterKey(target)]) : false;
@@ -102,9 +101,6 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
       const row = scroller?.querySelector<HTMLElement>(`[data-verse-key="${CSS.escape(targetKey)}"]`);
       if (!scroller || !row) return;
       const stripBottom = document.querySelector("[data-lesson-top]")?.getBoundingClientRect().bottom;
-      const dockTop = document.querySelector("[data-lesson-dock]")?.getBoundingClientRect().top ?? window.innerHeight;
-      const rowBox = row.getBoundingClientRect();
-      if (lessonRunning && stripBottom !== undefined && rowBox.top >= stripBottom && rowBox.bottom <= dockTop) return;
       const rows = [...scroller.querySelectorAll<HTMLElement>("[data-verse-key]")];
       const before = lessonRunning ? rows[rows.indexOf(row) - 1] : undefined;
       // Under the lesson's top bar (PathLessonTopBar.tsx).

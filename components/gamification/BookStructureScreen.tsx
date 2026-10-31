@@ -17,7 +17,6 @@ import { VerseSpotLink } from "@/components/gamification/VerseSpotLink";
 import { VerseStatusDetail } from "@/components/gamification/VerseStatusDetail";
 import { RingKey } from "@/components/gamification/VerseRing";
 import { PalaceBuiltPanel } from "@/components/gamification/PalaceBuiltPanel";
-import { PathViewSwitch } from "@/components/ui/PathViewSwitch";
 
 interface BookStructureScreenProps {
   pathKey: string;
@@ -117,7 +116,6 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
             {chapter ? `${chapter.known} of ${chapter.total}` : `${rings.known} of ${rings.total}`} verses{rings.today > 0 && (!chapter || chapter.hasToday) ? ` · ${rings.today} today` : ""}
           </span>
         </div>
-        <PathViewSwitch className="shrink-0" />
       </header>
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-[170px] pt-1 [scrollbar-width:none]">
         {!chapter && <PalaceBuiltPanel pathKey={pathKey} palace={built?.palace} onSave={saveBuiltPalace} />}

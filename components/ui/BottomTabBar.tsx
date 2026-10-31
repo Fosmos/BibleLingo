@@ -22,10 +22,9 @@ export function BottomTabBar() {
   // overwrite an already-selected translation via PathOverviewScreen's sync effect.
   const versionQuery = activePlan ? `?version=${encodeURIComponent(activePlan.version)}` : "";
   const pathHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}${versionQuery}` : "/begin";
-  // The Palace (app/path/[key]/palace) took the Mind Map's tab — the Mind Map's route still counts as the Path tab's.
-  const palaceHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/palace${versionQuery}` : "/begin";
-  // The 3D and Walk palaces are views of the Palace tab, and the Quest map of the Path tab (PathViewSwitch.tsx).
-  const onPalace = pathname.startsWith("/path") && (pathname.endsWith("/palace") || pathname.endsWith("/palace3d") || pathname.endsWith("/palacewalk"));
+  // The Palace tab opens on the ready-made palace; its 3D view is beside it (PathViewSwitch.tsx).
+  const palaceHref = activePathKey ? `/path/${encodeURIComponent(activePathKey)}/palacewalk${versionQuery}` : "/begin";
+  const onPalace = pathname.startsWith("/path") && (pathname.endsWith("/palace3d") || pathname.endsWith("/palacewalk"));
   const items: TabItem[] = [
     { href: "/", label: "Home", icon: Home, isActive: pathname === "/" },
     {

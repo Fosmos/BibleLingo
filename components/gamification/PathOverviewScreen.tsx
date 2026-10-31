@@ -18,10 +18,11 @@ import { DayPathDiagram } from "@/components/gamification/DayPathDiagram";
 import { InPlaceLessonSession } from "@/components/gamification/InPlaceLessonSession";
 import { BookMindMapWithLessonSheet } from "@/components/gamification/BookMindMapWithLessonSheet";
 import { ChapterPathScreen } from "@/components/gamification/ChapterPathScreen";
-import { Palace3DScreen } from "@/components/gamification/Palace3DScreen";
-import { PalaceBookScreen } from "@/components/gamification/PalaceBookScreen";
-import { DuoPathScreen } from "@/components/gamification/DuoPathScreen";
-import { QuestScreen } from "@/components/gamification/QuestScreen";
+import { Palace3DScreen } from "@/components/gamification/palaceTab/Palace3DScreen";
+import { PalaceBookScreen } from "@/components/gamification/palaceTab/PalaceBookScreen";
+import { VersesScreen } from "@/components/gamification/altPaths/VersesScreen";
+import { DuoPathScreen } from "@/components/gamification/altPaths/DuoPathScreen";
+import { QuestScreen } from "@/components/gamification/altPaths/QuestScreen";
 import { PathTrailScreen } from "@/components/gamification/PathTrailScreen";
 import { FetchLoading, FetchError } from "@/components/ui/FetchStatus";
 
@@ -33,7 +34,7 @@ interface PathOverviewScreenProps {
   startLesson?: boolean; // see BookMindMapWithLessonSheet.tsx's `autoStartLesson`
   priorKnownVerseCount?: number; // GuidedPathFlow.tsx's "I've already learned some of this" step — arrives once
   // "path" — the Path tab's trail; "reader" — the Memorized tab's reader; "map" — the Mind Map tab.
-  view?: "path" | "reader" | "map" | "palace" | "palace3d" | "quest" | "duo" | "palacewalk";
+  view?: "path" | "reader" | "map" | "palace3d" | "palacewalk" | "verses" | "duo" | "quest";
   bibleFooter?: ReactNode;
 }
 
@@ -135,10 +136,11 @@ export function PathOverviewScreen({ pathKey: key, label, version, versesPerDay,
 
   if (view === "palace3d") return <Palace3DScreen key={key} pathKey={key} pathLabel={label} verses={verses} />;
   if (view === "palacewalk") return <PalaceBookScreen key={key} label={label} verses={verses} />;
+  if (view === "verses") return <VersesScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
   if (view === "duo") return <DuoPathScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
   if (view === "quest") return <QuestScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
-  if (view === "path" || view === "palace") {
-    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} palace={view === "palace"} />;
+  if (view === "path") {
+    return <PathTrailScreen key={key} pathKey={key} kind={kind} label={label} days={days} version={version} completedDays={plan.completedDays} versesIntoDay={plan.versesIntoDay} />;
   }
   const onMindMap = kind === "book" || kind === "chapter" || kind === "verse";
   if (view === "reader") {
