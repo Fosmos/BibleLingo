@@ -8,6 +8,7 @@ import { useProgressStore } from "@/store/useProgressStore";
 import { computeMemorizedStats } from "@/lib/progressSummary";
 import { sealTier } from "@/lib/srsSeals";
 import { useMemorizedChaptersLoaded } from "@/lib/useMemorizedChaptersLoaded";
+import { bookPalace } from "@/lib/chapterLoci";
 import { heldCount } from "@/lib/verseMemoryState";
 import { bookLength, chapterLength, matchesFilter, type ProgressFilter as Filter } from "@/lib/bibleProgress";
 import { AddLocusButton } from "@/components/gamification/AddLocusButton";
@@ -35,6 +36,7 @@ interface BookProgressLevelProps {
 // grouped by its themes (lib/bookMovements.ts) — tap one to read it in sense lines.
 export function BookProgressLevel({ book, version, filter, onFilter, hereChapter, onBible, onOpenChapter }: BookProgressLevelProps) {
   const [addingLocus, setAddingLocus] = useState(false);
+  const palace = useProgressStore((state) => bookPalace(state.builtPalaces ?? [], book));
   const memory = useVerseMemory();
   // This book's ranges in spaced review — its fully memorized chapters and verses, as on the Memorized page.
   const entities = useProgressStore((state) => state.memorizedEntities);
@@ -55,7 +57,7 @@ export function BookProgressLevel({ book, version, filter, onFilter, hereChapter
 
   return (
     <div className="flex h-full flex-col gap-[18px] overflow-y-auto px-[18px] pb-[140px] pt-1.5 [scrollbar-width:none]">
-      <ProgressHeader crumbs={[{ label: "Bible", onTap: onBible }, { label: book }]} eyebrow={`${chapterCount} ${chapterCount === 1 ? "chapter" : "chapters"}`} title={book} />
+      <ProgressHeader crumbs={[{ label: "Bible", onTap: onBible }, { label: book }]} eyebrow={`${chapterCount} ${chapterCount === 1 ? "chapter" : "chapters"}`} title={palace ? `${book} - ${palace.name}` : book} note={palace?.scene} />
       <ProgressSummaryCard
         known={known}
         due={bookCounts.due}

@@ -8,7 +8,8 @@ import type { ChapterRef } from "@/lib/adjacentChapter";
 import { formatChapterLabel, formatVerseRangeLabel } from "@/lib/chapterContent";
 import { useContinuousChapters } from "@/lib/useContinuousChapters";
 import { verseKey, type ParsedVerseKey } from "@/lib/verseKey";
-import { chapterLoci } from "@/lib/chapterLoci";
+import { bookPalace, chapterLoci } from "@/lib/chapterLoci";
+import { tapRun } from "@/lib/readerRun";
 import { statusNote, type VerseStatus } from "@/lib/readerVerseStatus";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
 import { ReaderChapterSection } from "@/components/gamification/ReaderChapterSection";
@@ -77,13 +78,22 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const active = cleared ? undefined : selected ? loaded[chapterKey(selected)]?.find((verse) => verse.verseNumber === selected.verseNumber) : entryVerse;
   // A verse of the next lesson stands for the whole lesson: all its verses carry the highlight.
   const inLesson = active && lessonRange.some((verse) => verse.book === active.book && verse.chapter === active.chapter && verse.verseNumber === active.verseNumber);
-  const highlighted = active ? (inLesson ? lessonRange : [active]) : [];
-  const highlightedIn = (at: ChapterRef) => highlighted.filter((verse) => verse.book === at.book && verse.chapter === at.chapter).map((verse) => verse.verseNumber);
-  // Tapping the highlighted verse(s) again clears the highlight and the bar; tapping any verse brings them back.
+  // Several verses selected together, in one chapter, holding the selected verse.
+  const [run, setRun] = useState<{ chapter: string; from: number; to: number } | null>(null);
+  const runVerses = active && run?.chapter === chapterKey(active) && active.verseNumber >= run.from && active.verseNumber <= run.to ? (loaded[run.chapter] ?? []).filter((verse) => verse.verseNumber >= run.from && verse.verseNumber <= run.to) : null;
+  const highlighted = active ? (runVerses ?? (inLesson ? lessonRange : [active])) : [];
+  const highlightedIn = (at: { book: string; chapter: number }) => highlighted.filter((verse) => verse.book === at.book && verse.chapter === at.chapter).map((verse) => verse.verseNumber);
+  // Tapping the verse next to the selection adds it, and an end of the selection takes it off (lib/readerRun.ts).
   const tap = (verse: VerseSegment) => {
-    const again = highlighted.some((entry) => entry.book === verse.book && entry.chapter === verse.chapter && entry.verseNumber === verse.verseNumber);
-    setCleared(again);
-    if (!again) onSelect({ book: verse.book, chapter: verse.chapter, verseNumber: verse.verseNumber });
+    const place = { book: verse.book, chapter: verse.chapter };
+    const action = tapRun(highlightedIn(place).sort((a, b) => a - b), verse.verseNumber);
+    setCleared(action.kind === "clear");
+    if (action.kind !== "range") setRun(null);
+    if (action.kind === "move") onSelect({ ...place, verseNumber: verse.verseNumber });
+    if (action.kind === "range") {
+      setRun({ chapter: chapterKey(place), from: action.from, to: action.to });
+      if (!active || active.verseNumber < action.from || active.verseNumber > action.to) onSelect({ ...place, verseNumber: action.from });
+    }
   };
 
   // A lesson moving on into another chapter: make sure it's in the scroll.
@@ -120,7 +130,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const activeStatus = active ? statusOf(active.book, active.chapter, active.verseNumber) : "open";
   const covering = active ? entities.filter((entity) => entity.book === active.book && entity.chapter === active.chapter && active.verseNumber >= entity.startVerse && active.verseNumber <= entity.endVerse) : [];
 
-  const activeLocus = active ? chapterLoci(palaces ?? [], active.book, active.chapter).find((entry) => active.verseNumber >= entry.from && active.verseNumber <= entry.to) : undefined;
+  const viewPalace = bookPalace(palaces ?? [], inView.book);
+  const activeLocus = active ? chapterLoci(palaces ?? [], active.book, active.chapter).find((entry) => highlighted.every((verse) => verse.verseNumber >= entry.from && verse.verseNumber <= entry.to)) : undefined;
 
   return (
     <div className="relative flex h-full flex-col">
@@ -131,7 +142,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
             plain
             crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
             eyebrow={`Sense lines · ${version}`}
-            title={inView.book}
+            title={viewPalace ? `${inView.book} - ${viewPalace.name}` : inView.book}
+            note={viewPalace?.scene}
           />
           {chapters.map((at) => (
             <ReaderChapterSection
@@ -169,6 +181,7 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
           reference={highlighted.length > 1 ? formatVerseRangeLabel(highlighted) : `${formatChapterLabel(active.book, active.chapter)}:${active.verseNumber}`}
           status={activeStatus}
           note={statusNote(activeStatus, covering)}
+          several={highlighted.length > 1 ? highlighted.length : undefined}
           onAction={() => onAction(active, activeStatus)}
           onLocus={() => setLocusChapter(chapterKey(active))}
           locusName={activeLocus?.locus.name || undefined}

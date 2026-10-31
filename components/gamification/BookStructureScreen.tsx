@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { TrailSection, TrailStop } from "@/lib/trailStops";
+import { bookPalace, chapterRoom } from "@/lib/chapterLoci";
 import { BOOK_THEMES } from "@/lib/bookThemes";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { buildRingBook, type RingVerse } from "@/lib/verseRings";
@@ -101,6 +102,8 @@ export function BookStructureScreen({ pathKey, pathLabel, version, book, section
   const back = "-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-sand-600 hover:bg-sand-100 dark:text-zinc-400 dark:hover:bg-zinc-900";
   const [addingLocus, setAddingLocus] = useState(false);
   const locusBook = chapter?.book ?? rings.next?.verse.book ?? rings.chapters[0]?.book;
+  const palaceTag = useProgressStore((state) => (locusBook ? bookPalace(state.builtPalaces ?? [], locusBook) : undefined));
+  const roomTag = useProgressStore((state) => (chapter ? chapterRoom(state.builtPalaces ?? [], chapter.book, chapter.chapter)?.room : undefined));
   const nextHere = chapter ? chapter.hasNext : rings.next !== null;
 
   return (
@@ -116,7 +119,7 @@ export function BookStructureScreen({ pathKey, pathLabel, version, book, section
           </Link>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-heading text-[24px] leading-none text-ink dark:text-zinc-100">{chapter ? formatChapterLabel(chapter.book, chapter.chapter) : pathLabel}</span>
+          <span className="truncate font-heading text-[24px] leading-none text-ink dark:text-zinc-100">{chapter ? `${formatChapterLabel(chapter.book, chapter.chapter)}${roomTag ? ` - ${roomTag.name}` : ""}` : palaceTag ? `${pathLabel} - ${palaceTag.name}` : pathLabel}</span>
           <span className="truncate pt-1 text-xs font-bold text-ink-muted">
             {chapter ? `${chapter.known} of ${chapter.total}` : `${rings.known} of ${rings.total}`} verses{rings.today > 0 && (!chapter || chapter.hasToday) ? ` · ${rings.today} today` : ""}
           </span>

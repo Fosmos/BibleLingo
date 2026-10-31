@@ -12,11 +12,13 @@ interface ProgressHeaderProps {
   title: string;
   // The chapter reader: without the decorative circles, like a lesson's plain screen.
   plain?: boolean;
+  // What's happening in the memory palace place tagged here.
+  note?: string;
 }
 
 // The Bible progress screens' shared header (design_handoff_bible_progress): breadcrumb pills,
 // an eyebrow and a big title, over two decorative circles.
-export function ProgressHeader({ crumbs, eyebrow, title, plain = false }: ProgressHeaderProps) {
+export function ProgressHeader({ crumbs, eyebrow, title, plain = false, note }: ProgressHeaderProps) {
   return (
     <header className="relative flex flex-col gap-3 pt-[calc(0.5rem+env(safe-area-inset-top))]">
       {!plain && (
@@ -44,6 +46,7 @@ export function ProgressHeader({ crumbs, eyebrow, title, plain = false }: Progre
       <div className="flex flex-col gap-1">
         <span className="text-xs font-extrabold uppercase tracking-[.08em] text-sage-800 dark:text-sage-300">{eyebrow}</span>
         <h1 className="font-heading text-[40px] leading-none text-ink [text-wrap:balance] dark:text-zinc-100">{title}</h1>
+        {note && <p className="pt-1 text-[14px] italic leading-snug text-sand-700 dark:text-zinc-400">{note}</p>}
       </div>
     </header>
   );

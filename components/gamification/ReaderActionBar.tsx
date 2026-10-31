@@ -9,6 +9,8 @@ interface ReaderActionBarProps {
   reference: string;
   status: VerseStatus;
   note: string;
+  // How many verses are selected, when it's more than one: they can get a locus, but a lesson or review is one verse's.
+  several?: number;
   onAction: () => void;
   // Add a memory palace locus on this verse, or open the one it's on (named `locusName`).
   onLocus: () => void;
@@ -27,9 +29,9 @@ const DOT_CLASS: Record<VerseStatus, string> = {
 // The chapter reader's floating card for the selected verse (design_handoff_bible_progress → Action
 // bar): its reference over its status ("Due · 3 days overdue" — kept here so selecting a verse
 // never moves its text), and its one action — Learn, Review or Practise. Rises in on selection.
-export function ReaderActionBar({ reference, status, note, onAction, onLocus, locusName }: ReaderActionBarProps) {
+export function ReaderActionBar({ reference, status, note, several, onAction, onLocus, locusName }: ReaderActionBarProps) {
   const Icon = ICON[status];
-  const detail = status === "current" ? "Your next verse" : `${STATUS_LABEL[status]} · ${note}`;
+  const detail = several ? `${several} verses selected` : status === "current" ? "Your next verse" : `${STATUS_LABEL[status]} · ${note}`;
   return (
     <motion.div
       key={reference}
@@ -43,19 +45,19 @@ export function ReaderActionBar({ reference, status, note, onAction, onLocus, lo
         <span className="truncate">{locusName ?? "Add locus"}</span>
       </button>
       <div className="flex w-full items-center gap-3 rounded-[26px] border border-sand-200 bg-[#FEFDFB]/95 py-2.5 pl-4 pr-2.5 shadow-organic-lg backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95">
-      <span aria-hidden="true" className={`h-3 w-3 shrink-0 rounded-full ${DOT_CLASS[status]}`} />
+      {!several && <span aria-hidden="true" className={`h-3 w-3 shrink-0 rounded-full ${DOT_CLASS[status]}`} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-heading text-[17px] leading-tight text-ink dark:text-zinc-100">{reference}</span>
         <span className="truncate text-xs font-bold text-sand-700 dark:text-zinc-400">{detail}</span>
       </div>
-      <button
+      {!several && <button
         type="button"
         onClick={onAction}
         className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-500 py-2.5 pl-4 pr-5 text-sm font-extrabold text-white shadow-organic-sm transition-colors hover:bg-brand-600 active:scale-[.97]"
       >
         <Icon size={16} strokeWidth={2.75} />
         {ACTION_WORD[status]}
-      </button>
+      </button>}
       </div>
     </motion.div>
   );

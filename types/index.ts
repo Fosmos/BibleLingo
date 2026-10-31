@@ -80,6 +80,8 @@ export interface BuiltRoom {
   id: string;
   name: string;
   range?: PalaceVerseRange;
+  // What's happening in this room, when it's tagged on a chapter.
+  scene?: string;
   loci: BuiltLocus[];
 }
 
@@ -123,6 +125,8 @@ export interface BuiltPalace {
   name: string;
   pathKey: string;
   range?: PalaceVerseRange;
+  // What's happening in this place, when it's tagged on a book.
+  scene?: string;
   rooms: BuiltRoom[];
   createdAt: string;
 }

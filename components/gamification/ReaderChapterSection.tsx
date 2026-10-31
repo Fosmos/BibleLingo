@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { BuiltPalace, VerseSegment } from "@/types";
 import type { ChapterRef } from "@/lib/adjacentChapter";
 import { formatChapterLabel } from "@/lib/chapterContent";
-import { chapterLoci, type ChapterLocus } from "@/lib/chapterLoci";
+import { chapterLoci, chapterRoom, type ChapterLocus } from "@/lib/chapterLoci";
 import { chapterPathVerses } from "@/lib/chapterPathVerses";
 import { useChapterText } from "@/lib/useChapterText";
 import { useReaderGroups } from "@/lib/useReaderGroups";
@@ -59,10 +59,11 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
 
   const palaces = useProgressStore((state) => state.builtPalaces) ?? NO_PALACES;
   const loci = useMemo(() => chapterLoci(palaces, at.book, at.chapter), [palaces, at.book, at.chapter]);
-  const [locusSheet, setLocusSheet] = useState<{ editing?: ChapterLocus } | null>(null);
+  const [locusSheet, setLocusSheet] = useState<{ editing?: ChapterLocus; chapter?: boolean } | null>(null);
   const realVerses = (verses ?? []).filter((verse) => verse.text.trim());
   const lastVerse = realVerses[realVerses.length - 1]?.verseNumber ?? 0;
-  const room = loci[0]?.room.name;
+  const tagged = useMemo(() => chapterRoom(palaces, at.book, at.chapter)?.room, [palaces, at.book, at.chapter]);
+  const room = tagged?.name;
   const tagOf = (entry: ChapterLocus) => <ReaderLocusTag key={entry.locus.id} entry={entry} lastVerse={lastVerse} onTap={duringLesson ? undefined : () => setLocusSheet({ editing: entry })} />;
 
   const row = (verse: VerseSegment) => (
@@ -88,8 +89,9 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
           {formatChapterLabel(at.book, at.chapter)}
           {room ? ` - ${room}` : ""}
         </h2>
-        {!duringLesson && realVerses.length > 0 && <AddLocusButton onTap={() => setLocusSheet({})} className="-mt-1.5" />}
+        {!duringLesson && realVerses.length > 0 && <AddLocusButton onTap={() => setLocusSheet({ chapter: true })} className="-mt-1.5" />}
       </div>
+      {tagged?.scene && <p className="-mt-3 px-3.5 text-[14px] italic leading-snug text-sand-700 dark:text-zinc-400">{tagged.scene}</p>}
       {loaded.error && <p className="px-3.5 text-sm font-semibold text-sand-700">{loaded.error}</p>}
       {!verses && !loaded.error && (
         <div aria-hidden="true" className="flex flex-col gap-3 px-3.5">
@@ -136,8 +138,10 @@ export function ReaderChapterSection({ at, version, pathVerses, statusOf, highli
           chapter={at.chapter}
           verses={realVerses}
           loci={loci}
-          editing={locusSheet ? locusSheet.editing : loci.find((entry) => highlighted[0] >= entry.from && highlighted[0] <= entry.to)}
+          editing={locusSheet ? locusSheet.editing : loci.find((entry) => highlighted.every((verseNumber) => verseNumber >= entry.from && verseNumber <= entry.to))}
+          initialScope={locusSheet?.chapter ? "chapter" : "verses"}
           startVerse={highlighted[0]}
+          endVerse={highlighted[highlighted.length - 1]}
           onClose={() => {
             setLocusSheet(null);
             onLocusClosed();

@@ -6,7 +6,7 @@ import { findBook } from "@/lib/bibleBooks";
 import { chapterLoci } from "@/lib/chapterLoci";
 import { useChapterText } from "@/lib/useChapterText";
 import { useProgressStore } from "@/store/useProgressStore";
-import { ReaderLocusSheet } from "@/components/gamification/ReaderLocusSheet";
+import { ReaderLocusSheet, type TagScope } from "@/components/gamification/ReaderLocusSheet";
 
 interface BookLocusSheetProps {
   book: string;
@@ -19,11 +19,12 @@ interface BookLocusSheetProps {
 
 const NONE: BuiltPalace[] = [];
 
-// The add-a-locus screen opened away from the reader (the Path tab's book and chapter views, the
+// The memory palace screen opened away from the reader (the Path tab's book and chapter views, the
 // Bible's book level): it loads the chapter's verses itself.
 export function BookLocusSheet({ book, version, chapter: startChapter, chooseChapter = false, onClose }: BookLocusSheetProps) {
   const [chapter, setChapter] = useState(startChapter);
   const [changed, setChanged] = useState(false);
+  const [scope, setScope] = useState<TagScope>(chooseChapter ? "book" : "chapter");
   const { verses, error } = useChapterText(book, chapter, version, false);
   const palaces = useProgressStore((state) => state.builtPalaces) ?? NONE;
   const loci = useMemo(() => chapterLoci(palaces, book, chapter), [palaces, book, chapter]);
@@ -50,5 +51,5 @@ export function BookLocusSheet({ book, version, chapter: startChapter, chooseCha
     </label>
   ) : undefined;
 
-  return <ReaderLocusSheet key={`${chapter}|${Boolean(verses)}`} book={book} chapter={chapter} verses={real} loci={loci} picker={picker} animateIn={!changed} onClose={onClose} />;
+  return <ReaderLocusSheet key={`${chapter}|${Boolean(verses)}`} book={book} chapter={chapter} verses={real} loci={loci} picker={picker} initialScope={scope} onScope={setScope} animateIn={!changed} onClose={onClose} />;
 }
