@@ -41,6 +41,8 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
   const [from] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("from")));
   const altView = from === "verses" || from === "duo" || from === "quest" ? (from as AltPathView) : null;
   const fromTrail = from === "trail" || altView !== null;
+  // A review begun on a Memorized chapter (MemorizedShelfScreen.tsx) goes straight back to it.
+  const [fromShelf] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("shelf"));
   // Where the path stood on arrival (days, then verses into the next day), to tell if it moved on.
   const completedAtStart = useRef(progressMark(pathKey));
 
@@ -92,13 +94,17 @@ export function useReaderArrivals({ pathKey, version, days, openVerse, setSheet 
     if (book && chapter > 0 && verseNumber > 0) openVerse(book, chapter, verseNumber);
   }, [startDay, days, openVerse]);
 
-  // Back to the trail after a lesson begun there — true when it navigated.
+  // Back to the trail or Memorized chapter a lesson or review was begun on — true when it navigated.
   const returnToTrail = useCallback(() => {
+    if (fromShelf) {
+      router.back();
+      return true;
+    }
     if (!fromTrail) return false;
     const moved = progressMark(pathKey) !== completedAtStart.current;
     router.push(`${altView ? altPathHref(pathKey, version, altView) : trailHref(pathKey, version, "current")}${moved ? "&toast=done" : ""}`);
     return true;
-  }, [fromTrail, altView, pathKey, version, router]);
+  }, [fromShelf, fromTrail, altView, pathKey, version, router]);
 
   return { returnToTrail };
 }

@@ -69,10 +69,15 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
   const back = chapter === undefined ? "/memorized" : shelfHref(book);
   const here = shelfHref(book, chapter);
   const entity = sheet?.entity;
+  // `shelf`: closing the review comes straight back here (lib/useReaderArrivals.ts).
+  const review = (ids: string[]) => {
+    const href = reviewHref(ids, true);
+    router.push(href ? `${href}&shelf=1` : "/memorized");
+  };
   const relearn = sheet && relearnHref(book, sheet.verse.chapter, entity?.startVerse ?? sheet.verse.verseNumber, version, entity?.endVerse, here);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pb-28 pt-2">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pb-44 pt-2">
       <Link href={back} className="flex min-h-11 items-center gap-1 self-start text-sm font-extrabold text-sand-700 dark:text-zinc-400">
         <ChevronLeft size={16} strokeWidth={3} />
         {chapter === undefined ? "Memorized" : book}
@@ -81,7 +86,6 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
         <h1 className="font-heading text-[30px] leading-[1.1] text-ink dark:text-zinc-100">{chapter === undefined ? book : formatChapterLabel(book, chapter)}</h1>
         <span className="text-[13px] font-semibold text-ink-muted">{chapter === undefined ? `${count} ${count === 1 ? "verse" : "verses"}${due ? ` · ${due} due` : " · All good"}` : openChapter ? `${openChapter.known} of ${openChapter.total} verses` : ""}</span>
       </header>
-      {chapter !== undefined && <ChapterReviewButton book={book} chapter={chapter} onReview={(ids) => router.push(reviewHref(ids, true) ?? "/memorized")} />}
       {chapter === undefined ? (
         <>
           <BookStructureBook chapters={chapters} themes={BOOK_THEMES[book] ?? []} onOpen={(number) => router.push(shelfHref(book, number))} dense />
@@ -98,8 +102,9 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
         <FetchLoading label="Loading chapter…" />
       )}
       <RingKey showToday={false} />
+      {chapter !== undefined && <ChapterReviewButton book={book} chapter={chapter} onReview={review} />}
       {sheet && (
-        <TrailNodeSheet stop={sheet.stop} sectionTitle={formatChapterLabel(book, sheet.verse.chapter)} pathLabel={book} lockedTag="Not memorized yet" lockedAction="Close" onClose={() => setSheet(null)} onStart={() => setSheet(null)} onReview={() => router.push(reviewHref(sheet.stop.dueIds, true) ?? "/memorized")} onPractise={() => relearn && router.push(relearn)}>
+        <TrailNodeSheet stop={sheet.stop} sectionTitle={formatChapterLabel(book, sheet.verse.chapter)} pathLabel={book} lockedTag="Not memorized yet" lockedAction="Close" onClose={() => setSheet(null)} onStart={() => setSheet(null)} onReview={() => review(sheet.stop.dueIds)} onPractise={() => relearn && router.push(relearn)}>
           <VerseStatusDetail entity={entity} strength={sheet.strength} />
           {entity && (
             <Link href={`/memorized/passage?id=${encodeURIComponent(entity.id)}&from=${encodeURIComponent(here)}`} className="flex min-h-11 items-center self-start text-[13px] font-black text-brand-700 dark:text-brand-300">
