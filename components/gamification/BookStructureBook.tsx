@@ -1,6 +1,6 @@
 "use client";
 
-import type { RingChapter } from "@/lib/verseRings";
+import { chapterFill, chapterSeal, type RingChapter } from "@/lib/verseRings";
 import { VerseRing } from "@/components/gamification/VerseRing";
 
 interface BookStructureBookProps {
@@ -13,7 +13,7 @@ interface BookStructureBookProps {
 }
 
 // The Palace tab's whole book: its themes in the margin, its chapters as boxes beside them. A
-// chapter's box shows its most urgent verse, or a blue outline if today's verses are in it.
+// chapter's box fills green as it's memorized, with an orange dot when a verse in it is due and a blue outline if today's verses are in it.
 export function BookStructureBook({ chapters, themes, onOpen, dense = false }: BookStructureBookProps) {
   const groups = themes.length ? themes : [{ label: "Chapters", startChapter: chapters[0]?.chapter ?? 1, endChapter: chapters[chapters.length - 1]?.chapter ?? 1 }];
   return (
@@ -29,9 +29,10 @@ export function BookStructureBook({ chapters, themes, onOpen, dense = false }: B
             </div>
             <div className={`grid content-start gap-1 ${dense ? "grid-cols-5" : "grid-cols-4"}`}>
               {within.map((chapter) => {
+                const due = (chapter.age ?? 0) >= 1;
                 const kind = chapter.hasToday ? "today" : chapter.age !== undefined ? "learned" : "new";
                 return (
-                  <VerseRing key={chapter.chapter} size={dense ? "dense" : "chapter"} kind={kind} age={chapter.age ?? 0} label={`Open chapter ${chapter.chapter}, ${chapter.known} ${chapter.known === 1 ? "verse" : "verses"} learned`} onTap={() => onOpen(chapter.chapter)}>
+                  <VerseRing key={chapter.chapter} size={dense ? "dense" : "chapter"} kind={kind} age={chapter.age ?? 0} seal={chapterSeal(chapter)} fill={chapter.age !== undefined ? chapterFill(chapter) : undefined} due={due} label={`Open chapter ${chapter.chapter}, ${chapter.known} ${chapter.known === 1 ? "verse" : "verses"} learned${due ? ", review due" : ""}`} onTap={() => onOpen(chapter.chapter)}>
                     {chapter.chapter}
                   </VerseRing>
                 );

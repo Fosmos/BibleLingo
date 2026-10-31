@@ -10,15 +10,21 @@ interface ProgressHeaderProps {
   crumbs: ProgressCrumb[];
   eyebrow: string;
   title: string;
+  // The chapter reader: without the decorative circles, like a lesson's plain screen.
+  plain?: boolean;
 }
 
 // The Bible progress screens' shared header (design_handoff_bible_progress): breadcrumb pills,
 // an eyebrow and a big title, over two decorative circles.
-export function ProgressHeader({ crumbs, eyebrow, title }: ProgressHeaderProps) {
+export function ProgressHeader({ crumbs, eyebrow, title, plain = false }: ProgressHeaderProps) {
   return (
     <header className="relative flex flex-col gap-3 pt-[calc(0.5rem+env(safe-area-inset-top))]">
-      <span aria-hidden="true" className="pointer-events-none absolute -right-[110px] -top-[90px] -z-10 h-[300px] w-[300px] rounded-full bg-sage-200/70 dark:bg-sage-900/40" />
-      <span aria-hidden="true" className="pointer-events-none absolute -right-10 top-[70px] -z-10 h-[120px] w-[120px] rounded-full bg-brand-200/80 dark:bg-brand-900/40" />
+      {!plain && (
+        <>
+        <span aria-hidden="true" className="pointer-events-none absolute -right-[110px] -top-[90px] -z-10 h-[300px] w-[300px] rounded-full bg-sage-200/70 dark:bg-sage-900/40" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-10 top-[70px] -z-10 h-[120px] w-[120px] rounded-full bg-brand-200/80 dark:bg-brand-900/40" />
+        </>
+      )}
       <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1.5">
         {crumbs.map((crumb, index) => (
           <Fragment key={crumb.label}>

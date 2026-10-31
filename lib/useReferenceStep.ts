@@ -38,7 +38,7 @@ function stepVerse(step: FlatStep, day: MemorizationDay): VerseSegment | undefin
 // sense-line stage, only one that takes in the verse's first line, which the reference belongs to.
 export function useReferenceStep(step: FlatStep | undefined, stepIndex: number, day: MemorizationDay): ReferenceStep {
   const [answeredAt, setAnsweredAt] = useState<number | null>(null);
-  const mode = step && (!step.lines || step.lines[0] === 0) ? MODES[step.phase] : undefined;
+  const mode = step && !step.noReference && (!step.lines || step.lines[0] === 0) ? MODES[step.phase] : undefined;
   const verse = step ? stepVerse(step, day) : undefined;
   return {
     asking: mode && verse && answeredAt !== stepIndex ? { verse, mode } : null,

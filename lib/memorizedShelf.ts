@@ -1,6 +1,8 @@
 import type { MemorizedEntity, VerseSegment } from "@/types";
 import type { PericopeInfo } from "@/lib/chapterPericopes";
+import { chapterLength } from "@/lib/bibleProgress";
 import { isDue } from "@/lib/srs";
+import { sealTier } from "@/lib/srsSeals";
 import type { TrailSection, TrailStop } from "@/lib/trailStops";
 import { buildRingBook, reviewAge, type RingChapter } from "@/lib/verseRings";
 
@@ -16,15 +18,18 @@ export function shelfChapters(book: string, chapterCount: number, entities: Memo
   return Array.from({ length: chapterCount }, (_, at): RingChapter => {
     const chapter = at + 1;
     const ranges = entities.filter((entity) => entity.book === book && entity.chapter === chapter);
+    const known = ranges.reduce((sum, entity) => sum + entity.endVerse - entity.startVerse + 1, 0);
+    const { total, exact } = chapterLength(book, chapter);
     return {
       chapter,
       book,
       passages: [],
-      known: ranges.reduce((sum, entity) => sum + entity.endVerse - entity.startVerse + 1, 0),
+      known,
       total: 0,
       hasToday: false,
       hasNext: false,
       age: ranges.length ? Math.max(...ranges.map((entity) => reviewAge(entity.srs, now))) : undefined,
+      seal: exact && known >= total ? sealTier(entities, { book, chapter }) : null,
     };
   });
 }

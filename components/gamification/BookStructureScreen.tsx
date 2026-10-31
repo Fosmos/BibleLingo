@@ -12,21 +12,22 @@ import { usePalaceContext } from "@/lib/usePalaceContext";
 import { useProgressStore } from "@/store/useProgressStore";
 import { BookStructureBook } from "@/components/gamification/BookStructureBook";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
-import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
-import { VerseSpotLink } from "@/components/gamification/VerseSpotLink";
-import { VerseStatusDetail } from "@/components/gamification/VerseStatusDetail";
 import { RingKey } from "@/components/gamification/VerseRing";
+import { AddLocusButton } from "@/components/gamification/AddLocusButton";
+import { BookLocusSheet } from "@/components/gamification/BookLocusSheet";
 import { PalaceBuiltPanel } from "@/components/gamification/PalaceBuiltPanel";
 
 interface BookStructureScreenProps {
   pathKey: string;
   pathLabel: string;
+  version: string;
   // The book's name, for its themes (lib/bookThemes.ts) — unset for a path that isn't one book.
   book?: string;
   sections: TrailSection[];
   // Start (or practise) a lesson — it runs in the reader (PathTrailScreen.tsx).
   onStart: (stop: TrailStop) => void;
-  onReview: (ids: string[]) => void;
+  // Open the reader on a verse.
+  onOpenVerse: (ring: RingVerse) => void;
 }
 
 export interface StructurePassage {
@@ -58,9 +59,9 @@ const writeReturn = (value: string | null) => {
 
 // The Palace tab: the whole book, its chapters as boxes under its themes, with the real place the
 // reader is building a palace in on top (PalaceBuiltPanel.tsx). Tapping a chapter opens it: its
-// pericopes in the margin, its verses as boxes (BookStructureChapter.tsx). Tapping a verse gives its
-// strength, review dates and palace spot. A filled box's colour is how close its review is (lib/verseRings.ts).
-export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStart, onReview }: BookStructureScreenProps) {
+// pericopes in the margin, its verses as boxes (BookStructureChapter.tsx). Tapping a verse opens the
+// reader on it. A filled box's colour is how close its review is (lib/verseRings.ts).
+export function BookStructureScreen({ pathKey, pathLabel, version, book, sections, onStart, onOpenVerse }: BookStructureScreenProps) {
   const chosen = useProgressStore((state) => state.iconTags);
   const entities = useProgressStore((state) => state.memorizedEntities);
   const stumbles = useProgressStore((state) => state.wordStumbleCounts);
@@ -79,7 +80,6 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
   const [chosenChapter, setChosenChapter] = useState<number | null>(() => readReturn(pathKey));
   const openNumber = single ?? chosenChapter;
   const chapter = rings.chapters.find((entry) => entry.chapter === openNumber);
-  const [sheet, setSheet] = useState<RingVerse | null>(null);
   const built = usePalaceContext(pathKey, passages);
   const saveBuiltPalace = useProgressStore((state) => state.saveBuiltPalace);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -93,9 +93,14 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
     leaving(stop.verse?.chapter);
     onStart(stop);
   };
-  const sectionOf = (ring: RingVerse) => sections.find((section) => section.stops.includes(ring.stop))?.title ?? "";
+  const openVerse = (ring: RingVerse) => {
+    leaving(ring.verse.chapter);
+    onOpenVerse(ring);
+  };
   const themes = (book && BOOK_THEMES[book]) || [];
   const back = "-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-sand-600 hover:bg-sand-100 dark:text-zinc-400 dark:hover:bg-zinc-900";
+  const [addingLocus, setAddingLocus] = useState(false);
+  const locusBook = chapter?.book ?? rings.next?.verse.book ?? rings.chapters[0]?.book;
   const nextHere = chapter ? chapter.hasNext : rings.next !== null;
 
   return (
@@ -116,11 +121,12 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
             {chapter ? `${chapter.known} of ${chapter.total}` : `${rings.known} of ${rings.total}`} verses{rings.today > 0 && (!chapter || chapter.hasToday) ? ` · ${rings.today} today` : ""}
           </span>
         </div>
+        {locusBook && <AddLocusButton onTap={() => setAddingLocus(true)} />}
       </header>
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-[170px] pt-1 [scrollbar-width:none]">
         {!chapter && <PalaceBuiltPanel pathKey={pathKey} palace={built?.palace} onSave={saveBuiltPalace} />}
-        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={setSheet} /> : <BookStructureBook chapters={rings.chapters} themes={themes} onOpen={setChosenChapter} />}
-        <RingKey />
+        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={openVerse} /> : <BookStructureBook chapters={rings.chapters} themes={themes} onOpen={setChosenChapter} />}
+        {chapter && <RingKey />}
       </div>
       {nextHere && rings.next && (
         <div className="absolute inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] mx-auto max-w-md">
@@ -129,23 +135,7 @@ export function BookStructureScreen({ pathKey, pathLabel, book, sections, onStar
           </button>
         </div>
       )}
-      {sheet && (
-        <TrailNodeSheet
-          stop={sheet.stop}
-          sectionTitle={sectionOf(sheet)}
-          pathLabel={pathLabel}
-          onClose={() => setSheet(null)}
-          onStart={() => start(sheet.stop)}
-          onReview={() => {
-            leaving(sheet.verse.chapter);
-            onReview(sheet.stop.dueIds);
-          }}
-          onPractise={() => start(sheet.stop)}
-        >
-          <VerseStatusDetail entity={sheet.entity} strength={sheet.strength} />
-          {built && <VerseSpotLink key={sheet.verse.id} built={built} verse={sheet.verse} />}
-        </TrailNodeSheet>
-      )}
+      {addingLocus && locusBook && <BookLocusSheet book={locusBook} version={version} chapter={chapter?.chapter ?? rings.next?.verse.chapter ?? rings.chapters[0]?.chapter ?? 1} chooseChapter={!chapter} onClose={() => setAddingLocus(false)} />}
     </div>
   );
 }

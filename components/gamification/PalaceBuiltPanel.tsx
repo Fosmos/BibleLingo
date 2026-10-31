@@ -15,8 +15,7 @@ const FIELD = "w-full rounded-xl border border-sand-300 bg-paper px-3 py-2 text-
 
 // The top of the Palace tab: the place the reader builds this path's palace in — a real place they
 // know, its rooms in walking order (renamed, added, removed here). With none yet, it offers to start
-// one. The spots themselves are made where their verses are, passage by passage (PassageSpots.tsx),
-// and as verses are learned (PalacePlaceStep.tsx).
+// one. The spots themselves are added on their verses in the chapter reader (ReaderLocusSheet.tsx).
 export function PalaceBuiltPanel({ pathKey, palace, onSave }: PalaceBuiltPanelProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");

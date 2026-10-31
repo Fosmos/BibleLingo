@@ -72,7 +72,7 @@ export function ProfileAdvancedSettings() {
         checked={palaceInLessons}
         onChange={setPalaceInLessons}
         label="Memory palace in lessons"
-        description="Lessons add a step placing each verse in the palace you built for that path, and lessons and reviews show a tag with the verse's spot."
+        description="Verses on a spot in your palace open with a walk to it, and lessons and reviews show a tag with the verse's spot."
       />
       <MemoryPalaceTagLevelToggles />
       <LearnStageToggles />

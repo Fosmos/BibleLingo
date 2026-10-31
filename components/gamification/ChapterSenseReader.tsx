@@ -8,6 +8,7 @@ import type { ChapterRef } from "@/lib/adjacentChapter";
 import { formatChapterLabel, formatVerseRangeLabel } from "@/lib/chapterContent";
 import { useContinuousChapters } from "@/lib/useContinuousChapters";
 import { verseKey, type ParsedVerseKey } from "@/lib/verseKey";
+import { chapterLoci } from "@/lib/chapterLoci";
 import { statusNote, type VerseStatus } from "@/lib/readerVerseStatus";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
 import { ReaderChapterSection } from "@/components/gamification/ReaderChapterSection";
@@ -44,6 +45,7 @@ const LESSON_LEAD_MAX_PX = 150;
 export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const { start, version, pathVerses, statusOf, selected, onSelect, onAction, onBible, onBook, lessonVerse, isHidden, isRecalled, lessonRange } = props;
   const entities = useProgressStore((state) => state.memorizedEntities);
+  const palaces = useProgressStore((state) => state.builtPalaces);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
@@ -70,6 +72,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const startVerses = loaded[chapterKey(start)] ?? [];
   const entryVerse = (["current", "due", "open"] as const).map((status) => startVerses.find((verse) => statusOf(start.book, start.chapter, verse.verseNumber) === status)).find(Boolean) ?? startVerses[0];
   const [cleared, setCleared] = useState(false);
+  // The chapter whose locus sheet the action bar opened, on the selected verse.
+  const [locusChapter, setLocusChapter] = useState<string | null>(null);
   const active = cleared ? undefined : selected ? loaded[chapterKey(selected)]?.find((verse) => verse.verseNumber === selected.verseNumber) : entryVerse;
   // A verse of the next lesson stands for the whole lesson: all its verses carry the highlight.
   const inLesson = active && lessonRange.some((verse) => verse.book === active.book && verse.chapter === active.chapter && verse.verseNumber === active.verseNumber);
@@ -116,12 +120,15 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
   const activeStatus = active ? statusOf(active.book, active.chapter, active.verseNumber) : "open";
   const covering = active ? entities.filter((entity) => entity.book === active.book && entity.chapter === active.chapter && active.verseNumber >= entity.startVerse && active.verseNumber <= entity.endVerse) : [];
 
+  const activeLocus = active ? chapterLoci(palaces ?? [], active.book, active.chapter).find((entry) => active.verseNumber >= entry.from && active.verseNumber <= entry.to) : undefined;
+
   return (
     <div className="relative flex h-full flex-col">
       <div ref={scrollRef} onScroll={handleScroll} className={`min-h-0 flex-1 overflow-y-auto px-[18px] pt-1.5 [overflow-anchor:none] [scrollbar-width:none] ${lessonRunning ? "pb-[70dvh]" : "pb-[220px]"}`}>
         <div ref={contentRef} className="flex flex-col gap-[18px]">
           {/* Kept through a lesson too, so nothing below it moves. */}
           <ProgressHeader
+            plain
             crumbs={[{ label: "Bible", onTap: onBible }, { label: inView.book, onTap: () => onBook(inView.book) }, { label: `Chapter ${inView.chapter}` }]}
             eyebrow={`Sense lines · ${version}`}
             title={inView.book}
@@ -140,6 +147,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
               isHidden={(verseNumber) => isHidden(at.book, at.chapter, verseNumber)}
               isRecalled={(verseNumber) => isRecalled(at.book, at.chapter, verseNumber)}
               onLoaded={onLoaded}
+              locusOpen={locusChapter === chapterKey(at)}
+              onLocusClosed={() => setLocusChapter(null)}
             />
           ))}
         </div>
@@ -161,6 +170,8 @@ export function ChapterSenseReader(props: ChapterSenseReaderProps) {
           status={activeStatus}
           note={statusNote(activeStatus, covering)}
           onAction={() => onAction(active, activeStatus)}
+          onLocus={() => setLocusChapter(chapterKey(active))}
+          locusName={activeLocus?.locus.name || undefined}
         />
       )}
     </div>

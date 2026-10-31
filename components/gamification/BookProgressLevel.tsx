@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { findBook } from "@/lib/bibleBooks";
 import { bookMovements } from "@/lib/bookMovements";
 import { useVerseMemory } from "@/lib/useVerseMemory";
@@ -10,6 +10,8 @@ import { sealTier } from "@/lib/srsSeals";
 import { useMemorizedChaptersLoaded } from "@/lib/useMemorizedChaptersLoaded";
 import { heldCount } from "@/lib/verseMemoryState";
 import { bookLength, chapterLength, matchesFilter, type ProgressFilter as Filter } from "@/lib/bibleProgress";
+import { AddLocusButton } from "@/components/gamification/AddLocusButton";
+import { BookLocusSheet } from "@/components/gamification/BookLocusSheet";
 import { ProgressHeader } from "@/components/gamification/ProgressHeader";
 import { ProgressSummaryCard } from "@/components/gamification/ProgressSummaryCard";
 import { ProgressFilter } from "@/components/gamification/ProgressFilter";
@@ -20,6 +22,7 @@ import { RecallQuizButton } from "@/components/gamification/RecallQuizButton";
 
 interface BookProgressLevelProps {
   book: string;
+  version: string;
   filter: Filter;
   onFilter: (filter: Filter) => void;
   // The active path's chapter in this book (ringed), if any.
@@ -30,7 +33,8 @@ interface BookProgressLevelProps {
 
 // The Path tab's Book level (design_handoff_bible_progress): the book's chapters as circles,
 // grouped by its themes (lib/bookMovements.ts) — tap one to read it in sense lines.
-export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible, onOpenChapter }: BookProgressLevelProps) {
+export function BookProgressLevel({ book, version, filter, onFilter, hereChapter, onBible, onOpenChapter }: BookProgressLevelProps) {
+  const [addingLocus, setAddingLocus] = useState(false);
   const memory = useVerseMemory();
   // This book's ranges in spaced review — its fully memorized chapters and verses, as on the Memorized page.
   const entities = useProgressStore((state) => state.memorizedEntities);
@@ -60,6 +64,8 @@ export function BookProgressLevel({ book, filter, onFilter, hereChapter, onBible
         showBooks={false}
       />
       <RecallQuizButton book={book} />
+      <AddLocusButton onTap={() => setAddingLocus(true)} className="-my-2 self-start" />
+      {addingLocus && <BookLocusSheet book={book} version={version} chapter={hereChapter ?? 1} chooseChapter onClose={() => setAddingLocus(false)} />}
       <ProgressFilter heading="Chapters" value={filter} onChange={onFilter} />
       {bookMovements(book).map((movement) => {
         const entries = movement.chapters.map((chapter) => chapters[chapter - 1]);

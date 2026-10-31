@@ -101,7 +101,7 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
       ) : (
         <FetchLoading label="Loading chapter…" />
       )}
-      <RingKey showToday={false} />
+      {chapter !== undefined && <RingKey showToday={false} />}
       {chapter !== undefined && <ChapterReviewButton book={book} chapter={chapter} onReview={review} />}
       {sheet && (
         <TrailNodeSheet stop={sheet.stop} sectionTitle={formatChapterLabel(book, sheet.verse.chapter)} pathLabel={book} lockedTag="Not memorized yet" lockedAction="Close" onClose={() => setSheet(null)} onStart={() => setSheet(null)} onReview={() => review(sheet.stop.dueIds)} onPractise={() => relearn && router.push(relearn)}>

@@ -18,6 +18,8 @@ export interface FlatStep {
   lines?: [number, number];
   lineModes?: LineMode[];
   cumulativeVerseIndices?: number[];
+  // A recall stage that doesn't open on the verse's reference (lib/useReferenceStep.ts).
+  noReference?: boolean;
 }
 
 // The optional stages (Profile > Advanced, and the Learn intensity picker's presets).
@@ -38,8 +40,8 @@ export interface LearnStageOptions {
   wholeVerse?: boolean;
   // The say-it ladder in place of the stages above (UserProgress.sayLadderLearning — on unless turned off).
   sayLadder?: boolean;
-  // Open each verse by placing it in (or walking to its spot in) the reader's built palace for the
-  // path (the Palace tab — PalacePlaceStep.tsx). Set when they've built one.
+  // Open each verse on a spot in the reader's built palace by walking to it (PalacePlaceStep.tsx).
+  // Set when the lesson's verse has a spot.
   palace?: boolean;
 }
 
@@ -73,6 +75,13 @@ function wholeVerseSteps(verseIndex: number, options: LearnStageOptions): FlatSt
   return phases.map((phase) => ({ phase, verseIndex }));
 }
 
+// The say-it ladder (lib/sayLadder.ts), with the verse's words tapped back in from a bank, a sense
+// line at a time (FillInTheBlankRep.tsx), between reading it aloud and its first first-letters step.
+function ladderSteps(verseIndex: number, lineCount: number): FlatStep[] {
+  const [read, ...rest] = sayLadder(lineCount).map((lineModes): FlatStep => ({ phase: "say_ladder", verseIndex, lineModes }));
+  return [read, { phase: "fill_in_the_blank", verseIndex, noReference: true }, ...rest];
+}
+
 // Once a verse is learned, the optional challenges over the whole of it, in this order: type it
 // by first letter against the clock; say it from memory holding a number and color in mind; and
 // type it by first letter with a math problem after each sense line.
@@ -85,7 +94,7 @@ function challengeSteps(verseIndex: number, options: LearnStageOptions): FlatSte
 }
 
 // A Learn lesson: the optional whole-lesson stages (Understand, Visualize), then each verse — its
-// optional Rhythm read-through, its say-it ladder (lib/sayLadder.ts — read it aloud, then say it as
+// optional Rhythm read-through, its say-it ladder (lib/sayLadder.ts — read it aloud, tap its words in from a bank, then say it as
 // its lines turn to first letters and then to blanks, one at a time; or, with that setting off, its
 // sense-line stages above, or with the whole-verse option its stages over the whole verse), its optional challenges (above), then its optional Write First Letter — a typing check of all of
 // today's verses together when there are several, and the optional Pray.
@@ -104,7 +113,7 @@ export function buildSteps(verseIndices: number[], lineCounts: number[], options
     if (options.rhythm) steps.push({ phase: "rhythm", verseIndex });
     if (options.palace) steps.push({ phase: "place_in_palace", verseIndex });
     const lineCount = Math.max(1, lineCounts[position] ?? 1);
-    if (options.sayLadder) steps.push(...sayLadder(lineCount).map((lineModes) => ({ phase: "say_ladder" as const, verseIndex, lineModes })));
+    if (options.sayLadder) steps.push(...ladderSteps(verseIndex, lineCount));
     else steps.push(...(options.wholeVerse ? wholeVerseSteps(verseIndex, options) : senseLineSteps(verseIndex, lineCount, options)));
     steps.push(...challengeSteps(verseIndex, options));
     if (options.writeFirstLetter) steps.push({ phase: "draw_first_letters", verseIndex });

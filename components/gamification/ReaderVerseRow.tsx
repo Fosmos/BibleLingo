@@ -1,19 +1,16 @@
 "use client";
 
 import type { VerseSegment } from "@/types";
-import type { VerseStatus } from "@/lib/readerVerseStatus";
 import { parseToSenseLines } from "@/lib/senseLines";
 import { joinStrayPunctuation } from "@/lib/verseWords";
 import { PathLessonVerseSlot } from "@/components/gamification/PathLessonVerseSlot";
 import { HiddenWord } from "@/components/drills/HiddenWord";
 import { HeldVerseWords } from "@/components/gamification/HeldVerseWords";
-import { SrsSeal } from "@/components/ui/SrsSeal";
 
 interface ReaderVerseRowProps {
   // "Book|chapter|verse" — how the continuous reader finds and anchors rows across chapters.
   rowKey: string;
   verse: VerseSegment;
-  status: VerseStatus;
   selected: boolean;
   onSelect: () => void;
   // A lesson runs on this verse: the text column becomes the lesson's verse zone.
@@ -24,31 +21,22 @@ interface ReaderVerseRowProps {
   hidden: boolean;
   // Already typed or said through in this lesson or review: stays in full, not first letters.
   recalled: boolean;
+  // Learned already: during a lesson it drops to first letters.
+  held: boolean;
   // Where this verse sits in a run of highlighted verses (a several-verse lesson), so the run
   // reads as one block: rounded only at its ends, one unbroken left bar.
   run?: "single" | "first" | "middle" | "last";
-  // The verse's spaced-review seal (1–6, lib/srsSeals.ts), when it's in review.
-  seal?: number | null;
 }
 
 const RUN_SHAPE = { single: "rounded-[20px]", first: "rounded-t-[20px]", middle: "rounded-none", last: "rounded-b-[20px]" };
-const RUN_BAR = { single: "top-3 bottom-3", first: "top-3 bottom-0 rounded-b-none", middle: "top-0 bottom-0 rounded-none", last: "top-0 bottom-3 rounded-t-none" };
 
-export const NUMBER_CLASS: Record<VerseStatus, string> = {
-  rooted: "bg-sage-700 text-white",
-  due: "bg-sage-700 text-white",
-  growing: "bg-[color-mix(in_oklch,#3D472B_50%,#F0FAE1)] text-white",
-  current: "border-[2.5px] border-dashed border-ink text-ink dark:border-zinc-100 dark:text-zinc-100",
-  open: "border-2 border-sand-300 text-sand-700 dark:border-zinc-700 dark:text-zinc-400",
-};
-
-// One verse in the chapter reader (design_handoff_bible_progress): its number circle, coloured by
-// state, beside its natural sense lines of about 5–8 words (lib/naturalSenseLines.ts).
-// Selecting tints the row and adds a left bar without moving anything. A lesson or review runs in
+// One verse in the chapter reader: its reference in the margin beside its natural sense lines of about
+// 5–8 words (lib/naturalSenseLines.ts), the same with or without a lesson running, so nothing moves.
+// Selecting raises the row as a white card, as a lesson does, without moving anything. A lesson or review runs in
 // its verse's own row, raised as a card with its reference in the margin (PathLessonVerseSlot.tsx),
 // the controls docked below (PathLessonDock.tsx); its neighbours show quieter around it.
-export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, hostsLesson, duringLesson, hidden, recalled, run = "single", seal = null }: ReaderVerseRowProps) {
-  const lettersOnly = duringLesson && !recalled && !hidden && status !== "open" && status !== "current";
+export function ReaderVerseRow({ rowKey, verse, selected, onSelect, hostsLesson, duringLesson, hidden, recalled, held, run = "single" }: ReaderVerseRowProps) {
+  const lettersOnly = duringLesson && !recalled && !hidden && held;
   // The selected verse — and the verse a lesson or review is running on — carries the highlight.
   const highlighted = !duringLesson && selected;
   const lines = parseToSenseLines(joinStrayPunctuation(verse.text));
@@ -57,30 +45,18 @@ export function ReaderVerseRow({ rowKey, verse, status, selected, onSelect, host
     <div
       data-verse-key={rowKey}
       onClick={duringLesson ? undefined : onSelect}
-      className={`relative grid gap-3 ${duringLesson ? "grid-cols-[38px_minmax(0,1fr)] gap-2" : "cursor-pointer grid-cols-[30px_minmax(0,1fr)]"} ${hostsLesson ? "-mx-1 my-1 rounded-[24px] bg-white px-3 py-5 shadow-[0_6px_20px_rgba(32,30,29,0.14)] dark:bg-zinc-800" : "px-3.5 py-2"} ${!hostsLesson && (highlighted ? RUN_SHAPE[run] : "rounded-[20px]")} ${highlighted ? "bg-sage-200/55 dark:bg-sage-900/40" : ""}`}
+      className={`relative grid grid-cols-[38px_minmax(0,1fr)] gap-2 ${duringLesson ? "" : "cursor-pointer"} ${hostsLesson ? "-mx-1 my-1 rounded-[24px] bg-white px-3 py-5 shadow-[0_6px_20px_rgba(32,30,29,0.14)] dark:bg-zinc-800" : "px-3.5 py-2"} ${!hostsLesson && (highlighted ? RUN_SHAPE[run] : "rounded-[20px]")} ${highlighted ? "bg-white shadow-[0_6px_20px_rgba(32,30,29,0.14)] dark:bg-zinc-800" : ""}`}
     >
-      {highlighted && <span aria-hidden="true" className={`absolute left-1.5 w-[5px] rounded-full bg-sage-700 ${RUN_BAR[run]}`} />}
-      {duringLesson ? (
-        // Blank while the reference itself is being recalled (data-ref-slot, PathLessonTopBar.tsx).
-        <span className={`[body:has([data-ref-slot]:not(:empty))_&]:invisible ${hostsLesson ? "font-heading text-[17px] leading-[1.5] text-brand-800 dark:text-brand-300" : "pt-[1px] text-sm font-extrabold leading-[1.5] text-sand-700 dark:text-zinc-400"}`}>
-          {verse.chapter}:{verse.verseNumber}
-        </span>
-      ) : (
-        <span className={`relative flex h-[30px] w-[30px] items-center justify-center rounded-full font-heading text-[13px] ${NUMBER_CLASS[status]}`}>
-          {verse.verseNumber}
-          {seal !== null && (
-            <span className="absolute -bottom-1.5 -right-1.5">
-              <SrsSeal tier={seal} size={16} />
-            </span>
-          )}
-        </span>
-      )}
+      {/* Blank while the reference itself is being recalled (data-ref-slot, PathLessonTopBar.tsx). */}
+      <span className={`[body:has([data-ref-slot]:not(:empty))_&]:invisible ${hostsLesson ? "font-heading text-[17px] leading-[1.5] text-brand-800 dark:text-brand-300" : "pt-[1px] text-sm font-extrabold leading-[1.5] text-sand-700 dark:text-zinc-400"}`}>
+        {verse.chapter}:{verse.verseNumber}
+      </span>
       {hostsLesson ? (
         <PathLessonVerseSlot className="relative z-[2] min-w-0 pt-[1px] text-[17px] leading-[1.5]" />
       ) : (
         <div
           aria-hidden={hidden || undefined}
-          className={`flex min-w-0 flex-col pt-[1px] font-medium ${duringLesson ? "gap-1 text-[15px] leading-[1.4] text-sand-700 dark:text-zinc-400" : `gap-3 text-[17px] leading-[1.5] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-800 dark:text-zinc-300"}`}`}
+          className={`flex min-w-0 flex-col pt-[1px] font-medium gap-1 text-[15px] leading-[1.4] ${selected ? "text-ink dark:text-zinc-50" : "text-sand-700 dark:text-zinc-400"}`}
         >
           {lines.map((line, index) => (
             // The lesson's verse zone lays its lines out the same way (SenseLineRow.tsx), so nothing moves.

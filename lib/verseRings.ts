@@ -1,6 +1,7 @@
 import type { MemorizedEntity, SRSState, VerseSegment } from "@/types";
+import { chapterLength } from "@/lib/bibleProgress";
 import { verseStrength, type VerseStrength } from "@/lib/bookGrid";
-import { BOX_INTERVAL_DAYS, isDue } from "@/lib/srs";
+import { BOX_INTERVAL_DAYS, boxDisplayNumber, isDue } from "@/lib/srs";
 import type { TrailSection, TrailStop } from "@/lib/trailStops";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,6 +57,8 @@ export interface RingChapter {
   hasNext: boolean;
   // Its most urgent learned verse; unset until one is learned.
   age?: number;
+  // Its seal, for a chapter listed without its verses (lib/memorizedShelf.ts).
+  seal?: number | null;
 }
 
 export interface RingBook {
@@ -102,4 +105,26 @@ export function buildRingBook(passages: { section: TrailSection; lessons: TrailS
   }
   const list = [...chapters.values()];
   return { chapters: list, next, today, known: list.reduce((sum, chapter) => sum + chapter.known, 0), total: list.reduce((sum, chapter) => sum + chapter.total, 0) };
+}
+
+// A fully memorized chapter's seal (lib/srsSeals.ts): its lowest box, a chapter being only as strong as
+// its weakest verse. Null until every verse is in spaced review.
+export function chapterSeal(chapter: RingChapter): number | null {
+  if (chapter.seal !== undefined) return chapter.seal;
+  const rings = chapter.passages.flatMap((passage) => passage.verses);
+  const { total, exact } = chapterLength(chapter.book, chapter.chapter);
+  if (!rings.length || rings.some((ring) => !ring.entity) || (exact && rings.length < total)) return null;
+  return Math.min(...rings.map((ring) => Math.max(1, boxDisplayNumber(ring.entity!.srs.box))));
+}
+
+// A verse's seal: only inside a chapter not fully memorized yet, which has no seal of its own.
+export function verseSeal(chapter: RingChapter, ring: RingVerse): number | null {
+  if (!ring.entity || chapterSeal(chapter) !== null) return null;
+  return Math.max(1, boxDisplayNumber(ring.entity.srs.box));
+}
+
+// How much of a chapter is memorized, 0 to 1, against the whole chapter rather than just a path's verses.
+export function chapterFill(chapter: RingChapter): number {
+  const { total } = chapterLength(chapter.book, chapter.chapter);
+  return Math.min(chapter.known / Math.max(total, chapter.total, 1), 1);
 }

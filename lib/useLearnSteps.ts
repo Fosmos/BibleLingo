@@ -5,7 +5,7 @@ import type { VerseSegment } from "@/types";
 import { useProgressStore } from "@/store/useProgressStore";
 import { buildSteps, type FlatStep } from "@/lib/learnSteps";
 import { senseLineCount } from "@/lib/senseLineSlice";
-import { findPlacement, palaceToPlaceIn } from "@/lib/palacePlacement";
+import { findPlacement } from "@/lib/palacePlacement";
 
 // Reads the optional Learn-stage toggles (Profile > Advanced) and builds this day's own flat step
 // list from them and each verse's sense lines — split out of LearnSection.tsx purely to keep that
@@ -18,12 +18,11 @@ export function useLearnSteps(realVerseIndices: number[], verses: VerseSegment[]
   const rhythm = useProgressStore((state) => state.rhythmStageEnabled) ?? false;
   const wholeVerse = useProgressStore((state) => state.wholeVerseLearning) ?? false;
   const sayLadder = useProgressStore((state) => state.sayLadderLearning) ?? true;
-  // A palace built for this path (the Palace tab) — with the setting on, each verse is placed in it as it's learned.
+  // A palace built for this path (the Palace tab) — with the setting on, a verse on one of its spots opens by walking there.
   const palaces = useProgressStore((state) => state.builtPalaces);
   const palaceInLessons = useProgressStore((state) => state.palaceInLessons) ?? false;
-  const activePathKey = useProgressStore((state) => state.activePathKey);
   const first = verses[realVerseIndices[0]];
-  const palace = Boolean(palaceInLessons && first && palaces?.length && (findPlacement(palaces, first) || palaceToPlaceIn(palaces, first, activePathKey)));
+  const palace = Boolean(palaceInLessons && first && palaces?.length && findPlacement(palaces, first));
   // On unless turned off — undefined for progress saved before these stages existed.
   const lastLetters = useProgressStore((state) => state.lastLettersStageEnabled) ?? true;
   const timedType = useProgressStore((state) => state.timedTypeStageEnabled) ?? true;

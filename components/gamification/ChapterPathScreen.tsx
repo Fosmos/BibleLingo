@@ -135,6 +135,7 @@ export function ChapterPathScreen({ pathKey, label, days, verses, version, compl
         {zoom.level === 1 && (
           <BookProgressLevel
             book={place.book}
+            version={version}
             filter={filter}
             onFilter={setFilter}
             hereChapter={place.book === current?.book ? current.chapter : null}

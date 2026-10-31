@@ -1,7 +1,7 @@
 "use client";
 
 import type { BuiltPalace, VerseSegment } from "@/types";
-import type { RingChapter, RingVerse } from "@/lib/verseRings";
+import { verseSeal, type RingChapter, type RingVerse } from "@/lib/verseRings";
 import { VerseRing } from "@/components/gamification/VerseRing";
 
 // The reader's built palace for the path, with what its spot editors need (BookStructureScreen.tsx).
@@ -36,7 +36,7 @@ export function BookStructureChapter({ chapter, onTapVerse }: BookStructureChapt
           <div className="grid content-start grid-cols-5">
             {verses.map((ring) => (
               <div key={ring.stop.key} data-next={ring.kind === "next" || undefined}>
-                <VerseRing kind={ring.kind} age={ring.age} label={`Verse ${ring.verse.verseNumber}, ${ring.kind === "learned" && ring.age >= 1 ? "needs review" : STATE[ring.kind]}`} onTap={() => onTapVerse(ring)}>
+                <VerseRing kind={ring.kind} age={ring.age} seal={verseSeal(chapter, ring)} label={`Verse ${ring.verse.verseNumber}, ${ring.kind === "learned" && ring.age >= 1 ? "needs review" : STATE[ring.kind]}`} onTap={() => onTapVerse(ring)}>
                   {ring.verse.verseNumber}
                 </VerseRing>
               </div>
