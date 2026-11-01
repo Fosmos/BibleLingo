@@ -33,8 +33,8 @@ interface VerseLessonFlowProps {
 const PHASES = ["learn", "finalReview"] as const;
 
 // A single verse lesson: learn the verse, review it with the verse just before it, then with the verses
-// before it — the last five, or on every fifth verse the block so far (lib/lessonReview.ts; every path
-// kind). Nothing after.
+// before it — on a pericope's last verse the whole pericope, else the last five, or on every fifth verse
+// the block so far (lib/lessonReview.ts; every path kind). Nothing after.
 export function VerseLessonFlow({ day, allDays, completedDays, todaysDay, label, version, onComplete, onExit, sessionKey, embeddedInMindMap }: VerseLessonFlowProps) {
   // Its own checkpoint key: a lesson saved under the old order (review first) starts over cleanly.
   const [phaseIndex, setPhaseIndex] = useCheckpointField(sessionKey, "lessonPhase", 0);

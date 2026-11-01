@@ -26,12 +26,25 @@ export function reviewBlockStarts(chapterLength: number, pericopeStarts: number[
   return starts;
 }
 
+// The first verse of the pericope a verse ends, if it's that pericope's last verse; verses before a
+// chapter's first heading count as a pericope. Undefined with no headings to go by.
+function pericopeEndedBy(verse: number, chapterLength: number, pericopeStarts: number[]): number | undefined {
+  if (!pericopeStarts.length) return undefined;
+  const starts = [...pericopeStarts].sort((a, b) => a - b);
+  const next = starts.find((start) => start > verse);
+  if (next === undefined ? verse < chapterLength : next !== verse + 1) return undefined;
+  return starts.filter((start) => start <= verse).at(-1) ?? 1;
+}
+
 // What a lesson's closing review covers, from `prior` (the learned verses before the lesson, back
-// through its chapter — lib/usePriorLearnedVerse.ts) and its own `learned` verses: the last five
-// verses, or on every fifth verse the whole block so far (the chapter so far, in a chapter of up to 40).
+// through its chapter — lib/usePriorLearnedVerse.ts) and its own `learned` verses: on a pericope's last
+// verse, that whole pericope, however long; otherwise the last five verses, or on every fifth verse the
+// whole block so far (the chapter so far, in a chapter of up to 40).
 export function lessonReviewVerses(prior: VerseSegment[], learned: VerseSegment[], chapterLength: number, pericopeStarts: number[]): VerseSegment[] {
   const last = learned[learned.length - 1];
   if (!last) return prior;
+  const pericopeStart = pericopeEndedBy(last.verseNumber, chapterLength, pericopeStarts);
+  if (pericopeStart !== undefined) return [...prior.filter((verse) => verse.verseNumber >= pericopeStart), ...learned];
   if (!learned.some((verse) => verse.verseNumber % BLOCK_EVERY === 0)) return [...prior.slice(-WINDOW), ...learned].slice(-Math.max(WINDOW, learned.length));
   const blockStart = reviewBlockStarts(chapterLength, pericopeStarts).filter((start) => start <= last.verseNumber).at(-1) ?? 1;
   // Never less than the window, just after a new block starts — that keeps the join between blocks.
