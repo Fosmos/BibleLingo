@@ -13,7 +13,7 @@ import { HomeDueButton } from "@/components/gamification/HomeDueButton";
 import { MemorizedReviewArea } from "@/components/gamification/MemorizedReviewArea";
 
 // The Memorized tab's count-first overview (design option 4b): the verse total and next milestone,
-// then a button for what's due, your books (each opening its chapters), the review tools
+// then a button for what's due, every book with its chapters (MemorizedBooksList.tsx), the review tools
 // (MemorizedReviewArea.tsx), and a way
 // into the Bible reader (MemorizedReaderScreen.tsx). Verse total comes from computeMemorizedStats, so a translation's gap verses
 // (e.g. ESV Mark 11:26) aren't counted.
@@ -45,7 +45,7 @@ export function MemorizedOverviewScreen() {
       ) : (
         <>
           <HomeDueButton quiet />
-          <h2 className="-mb-3 text-base font-extrabold text-ink dark:text-zinc-100">Your books</h2>
+          <h2 className="-mb-3 text-base font-extrabold text-ink dark:text-zinc-100">Your Bible</h2>
           <MemorizedBooksList entities={entities} />
           <MemorizedReviewArea />
         </>

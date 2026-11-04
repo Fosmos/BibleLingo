@@ -8,16 +8,17 @@ import type { VerseSegment } from "@/types";
 import { isDue } from "@/lib/srs";
 import { ensureChapterLoaded } from "@/lib/bibleApiClient";
 import { findBook } from "@/lib/bibleBooks";
-import { BOOK_THEMES } from "@/lib/bookThemes";
 import { ensurePericopesLoaded, getAllPericopesForChapter } from "@/lib/chapterPericopes";
 import { formatChapterLabel } from "@/lib/chapterContent";
-import { shelfChapter, shelfChapters, shelfHref } from "@/lib/memorizedShelf";
+import { chapterRoom } from "@/lib/chapterLoci";
+import { shelfChapter, shelfHref } from "@/lib/memorizedShelf";
 import { relearnHref } from "@/lib/relearnHref";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { useReviewHref } from "@/lib/useReviewHref";
+import { useShelfBookChapters } from "@/lib/useShelfBookChapters";
 import type { RingVerse } from "@/lib/verseRings";
 import { useProgressStore } from "@/store/useProgressStore";
-import { BookStructureBook } from "@/components/gamification/BookStructureBook";
+import { BookChaptersList } from "@/components/gamification/BookChaptersList";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
 import { ChapterReviewButton } from "@/components/gamification/ChapterReviewButton";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
@@ -30,12 +31,13 @@ interface MemorizedShelfScreenProps {
   chapter?: number;
 }
 
-// The Memorized tab's book, then one of its chapters: the same boxes as the Palace tab, from what
-// you've memorized. A chapter's verse opens its strength, review dates and what to do with it.
+// The Memorized tab's book, every chapter on one page (BookChaptersList.tsx), then one of its chapters:
+// the same boxes as the Palace tab, from what you've memorized. A chapter's verse opens its strength, review dates and what to do with it.
 export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProps) {
   const router = useRouter();
   const mounted = useHasMounted();
   const entities = useProgressStore((state) => state.memorizedEntities);
+  const room = useProgressStore((state) => (chapter === undefined ? undefined : chapterRoom(state.builtPalaces ?? [], book, chapter)?.room.name));
   const stumbles = useProgressStore((state) => state.wordStumbleCounts);
   const reviewHref = useReviewHref();
   const [now] = useState(() => new Date());
@@ -59,10 +61,10 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
   }, [book, chapter, version]);
   const openChapter = useMemo(() => (chapter !== undefined && verses?.chapter === chapter ? shelfChapter(verses.list, getAllPericopesForChapter(book, chapter), entities, stumbles, now) : undefined), [book, chapter, verses, entities, stumbles, now]);
   const info = findBook(book);
+  const bookChapters = useShelfBookChapters(book, info?.chapterCount ?? 0, entities, stumbles, now);
   if (!mounted) return <FetchLoading label="Loading…" />;
   if (!info) return <p className="p-6 text-ink-muted">That book wasn’t found.</p>;
 
-  const chapters = shelfChapters(book, info.chapterCount, entities, now);
   const within = entities.filter((entity) => entity.book === book);
   const count = within.reduce((sum, entity) => sum + entity.endVerse - entity.startVerse + 1, 0);
   const due = within.filter((entity) => isDue(entity.srs, now)).length;
@@ -83,12 +85,12 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
         {chapter === undefined ? "Memorized" : book}
       </Link>
       <header className="flex flex-col gap-0.5">
-        <h1 className="font-heading text-[30px] leading-[1.1] text-ink dark:text-zinc-100">{chapter === undefined ? book : formatChapterLabel(book, chapter)}</h1>
+        <h1 className="font-heading text-[30px] leading-[1.1] text-ink dark:text-zinc-100">{chapter === undefined ? book : `${formatChapterLabel(book, chapter)}${room ? ` - ${room}` : ""}`}</h1>
         <span className="text-[13px] font-semibold text-ink-muted">{chapter === undefined ? `${count} ${count === 1 ? "verse" : "verses"}${due ? ` · ${due} due` : " · All good"}` : openChapter ? `${openChapter.known} of ${openChapter.total} verses` : ""}</span>
       </header>
       {chapter === undefined ? (
         <>
-          <BookStructureBook chapters={chapters} themes={BOOK_THEMES[book] ?? []} onOpen={(number) => router.push(shelfHref(book, number))} dense />
+          <BookChaptersList chapters={bookChapters} isOpen={(entry) => entry.known > 0} onOpenChapter={(number) => router.push(shelfHref(book, number))} onTapVerse={setSheet} />
           <Link href={`/memorized/book?name=${encodeURIComponent(book)}`} className="flex min-h-[52px] items-center justify-between border-t border-sand-200 text-[15px] font-extrabold text-ink dark:border-zinc-900 dark:text-zinc-100">
             Stats and passages
             <ChevronRight size={18} strokeWidth={2.75} className="text-sand-500" />

@@ -5,13 +5,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { TrailSection, TrailStop } from "@/lib/trailStops";
 import { bookPalace, chapterRoom } from "@/lib/chapterLoci";
-import { BOOK_THEMES } from "@/lib/bookThemes";
 import { formatChapterLabel } from "@/lib/chapterContent";
 import { buildRingBook, type RingVerse } from "@/lib/verseRings";
 import { passagePictures } from "@/lib/verseImages";
 import { usePalaceContext } from "@/lib/usePalaceContext";
 import { useProgressStore } from "@/store/useProgressStore";
-import { BookStructureBook } from "@/components/gamification/BookStructureBook";
+import { PathBooksGrid } from "@/components/gamification/PathBooksGrid";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
 import { RingKey } from "@/components/gamification/VerseRing";
 import { AddLocusButton } from "@/components/gamification/AddLocusButton";
@@ -22,8 +21,6 @@ interface BookStructureScreenProps {
   pathKey: string;
   pathLabel: string;
   version: string;
-  // The book's name, for its themes (lib/bookThemes.ts) — unset for a path that isn't one book.
-  book?: string;
   sections: TrailSection[];
   // Start (or practise) a lesson — it runs in the reader (PathTrailScreen.tsx).
   onStart: (stop: TrailStop) => void;
@@ -58,11 +55,11 @@ const writeReturn = (value: string | null) => {
   }
 };
 
-// The Palace tab: the whole book, its chapters as boxes under its themes, with the real place the
+// The Palace tab: the whole book, its chapters as small boxes beside its name (PathBooksGrid.tsx), with the real place the
 // reader is building a palace in on top (PalaceBuiltPanel.tsx). Tapping a chapter opens it: its
 // pericopes in the margin, its verses as boxes (BookStructureChapter.tsx). Tapping a verse opens the
 // reader on it. A filled box's colour is how close its review is (lib/verseRings.ts).
-export function BookStructureScreen({ pathKey, pathLabel, version, book, sections, onStart, onOpenVerse }: BookStructureScreenProps) {
+export function BookStructureScreen({ pathKey, pathLabel, version, sections, onStart, onOpenVerse }: BookStructureScreenProps) {
   const chosen = useProgressStore((state) => state.iconTags);
   const entities = useProgressStore((state) => state.memorizedEntities);
   const stumbles = useProgressStore((state) => state.wordStumbleCounts);
@@ -98,7 +95,6 @@ export function BookStructureScreen({ pathKey, pathLabel, version, book, section
     leaving(ring.verse.chapter);
     onOpenVerse(ring);
   };
-  const themes = (book && BOOK_THEMES[book]) || [];
   const back = "-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-sand-600 hover:bg-sand-100 dark:text-zinc-400 dark:hover:bg-zinc-900";
   const [addingLocus, setAddingLocus] = useState(false);
   const locusBook = chapter?.book ?? rings.next?.verse.book ?? rings.chapters[0]?.book;
@@ -128,7 +124,7 @@ export function BookStructureScreen({ pathKey, pathLabel, version, book, section
       </header>
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-[170px] pt-1 [scrollbar-width:none]">
         {!chapter && <PalaceBuiltPanel pathKey={pathKey} palace={built?.palace} onSave={saveBuiltPalace} />}
-        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={openVerse} /> : <BookStructureBook chapters={rings.chapters} themes={themes} onOpen={setChosenChapter} />}
+        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={openVerse} /> : <PathBooksGrid chapters={rings.chapters} onOpen={setChosenChapter} />}
         {chapter && <RingKey />}
       </div>
       {nextHere && rings.next && (

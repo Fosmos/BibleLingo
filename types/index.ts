@@ -74,6 +74,8 @@ export interface BuiltLocus {
   name: string;
   range?: PalaceVerseRange;
   scene?: string;
+  // Your own title for the verses on this spot — a way of dividing the chapter, shown beside the locus.
+  title?: string;
 }
 
 export interface BuiltRoom {
@@ -481,6 +483,8 @@ export interface UserProgress {
   // Whether lessons and reviews use a palace built in the Palace tab: the "Your palace" step and
   // the tag showing a verse's spot. Undefined (the default) is off.
   palaceInLessons?: boolean;
+  // The built-in section headings turned off: every chapter is one section (lib/sectionOverrides.ts).
+  builtInSectionsOff?: boolean;
   // Whether the Last letters stage (type the first letters with each word's last letter showing)
   // runs during Learn (lib/learnSteps.ts). Undefined (the default) is on.
   lastLettersStageEnabled?: boolean;

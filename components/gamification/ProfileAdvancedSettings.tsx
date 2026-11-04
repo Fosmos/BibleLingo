@@ -37,6 +37,8 @@ export function ProfileAdvancedSettings() {
   const buildingViewEnabled = useProgressStore((state) => state.buildingViewEnabled);
   const setBuildingViewEnabled = useProgressStore((state) => state.setBuildingViewEnabled);
   const palaceInLessons = useProgressStore((state) => state.palaceInLessons) ?? false;
+  const builtInSectionsOff = useProgressStore((state) => state.builtInSectionsOff) ?? false;
+  const setBuiltInSectionsOff = useProgressStore((state) => state.setBuiltInSectionsOff);
   const setPalaceInLessons = useProgressStore((state) => state.setPalaceInLessons);
   const pegSystemEnabled = useProgressStore((state) => state.pegSystemEnabled);
   const setPegSystemEnabled = useProgressStore((state) => state.setPegSystemEnabled);
@@ -73,6 +75,12 @@ export function ProfileAdvancedSettings() {
         onChange={setPalaceInLessons}
         label="Memory palace in lessons"
         description="Verses on a spot in your palace open with a walk to it, and lessons and reviews show a tag with the verse's spot."
+      />
+      <ToggleSwitch
+        checked={!builtInSectionsOff}
+        onChange={(on) => setBuiltInSectionsOff(!on)}
+        label="Built-in section headings"
+        description="Chapters split into titled sections. Off, each chapter reads as one section; you can still title verses yourself on a memory palace locus."
       />
       <MemoryPalaceTagLevelToggles />
       <LearnStageToggles />

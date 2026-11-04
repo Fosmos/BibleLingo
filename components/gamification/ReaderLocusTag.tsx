@@ -11,7 +11,7 @@ interface ReaderLocusTagProps {
 }
 
 // A locus in the chapter reader, above its first verse, on the verse rows' own columns (ReaderVerseRow.tsx):
-// a pin over the verse numbers, then where it is, the verses it holds, and what's happening there.
+// a pin over the verses' references, then where it is, the verses it holds, your title for them, and what's happening there.
 // Tapping it opens it for editing (ReaderLocusSheet.tsx).
 export function ReaderLocusTag({ entry, lastVerse, onTap }: ReaderLocusTagProps) {
   const body = (
@@ -23,6 +23,7 @@ export function ReaderLocusTag({ entry, lastVerse, onTap }: ReaderLocusTagProps)
         <span className="flex items-baseline gap-2">
           <span className="min-w-0 truncate font-heading text-[17px] leading-[24px] text-brand-800 dark:text-brand-300">{entry.locus.name || "Locus"}</span>
           <span className="shrink-0 text-[12px] font-extrabold text-sand-700 dark:text-zinc-400">{locusVerses(entry.from, entry.to, lastVerse)}</span>
+          {entry.locus.title && <span className="min-w-0 truncate text-[14px] font-extrabold text-ink dark:text-zinc-100">· {entry.locus.title}</span>}
         </span>
         {entry.locus.scene && <span className="text-[14px] italic leading-snug text-sand-700 dark:text-zinc-400">{entry.locus.scene}</span>}
       </span>

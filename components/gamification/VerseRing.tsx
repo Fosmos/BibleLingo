@@ -7,7 +7,7 @@ import { RING_KEY, ringColor, type RingKind } from "@/lib/verseRings";
 interface VerseRingProps {
   kind: RingKind;
   age: number;
-  size?: "verse" | "chapter" | "dense";
+  size?: "verse" | "chapter" | "dense" | "mini";
   // Its spaced-review box as a seal on its corner (lib/srsSeals.ts).
   seal?: number | null;
   // How much of a chapter is memorized, 0 to 1: the box fills that far from the bottom, in green.
@@ -32,18 +32,18 @@ export function VerseRing({ kind, age, size = "verse", seal = null, fill, due = 
   const filled = fill !== undefined && fill > 0;
   const look = filled ? "border-[var(--ring)] bg-[#FEFDFB] text-ink" : kind === "new" ? "border-sand-300 text-ink dark:border-zinc-700 dark:text-zinc-100" : kind === "today" ? "border-[var(--ring)] text-ink dark:text-zinc-100" : "border-[var(--ring)] bg-[var(--ring)] text-ink";
   return (
-    <button type="button" aria-label={label} onClick={onTap} className={`flex w-full items-center justify-center ${size === "chapter" ? "h-12" : "h-11"}`}>
-      <span style={{ "--ring": color, "--fill": `${(fill ?? 0) * 100}%`, "--fill-color": FILL } as CSSProperties} className={`relative flex items-center justify-center rounded-[10px] border-[3px] font-bold ${size === "chapter" ? "h-[46px] w-[46px] text-base" : size === "dense" ? "h-10 w-10 text-sm" : "h-[38px] w-[38px] text-sm"} ${look}`}>
+    <button type="button" aria-label={label} onClick={onTap} className={`flex w-full items-center justify-center ${size === "chapter" ? "h-12" : size === "mini" ? "h-9" : "h-11"}`}>
+      <span style={{ "--ring": color, "--fill": `${(fill ?? 0) * 100}%`, "--fill-color": FILL } as CSSProperties} className={`relative flex items-center justify-center font-bold ${size === "mini" ? "h-[30px] w-[30px] rounded-[8px] border-2 text-[11px]" : "rounded-[10px] border-[3px]"} ${size === "chapter" ? "h-[46px] w-[46px] text-base" : size === "dense" ? "h-10 w-10 text-sm" : size === "mini" ? "" : "h-[38px] w-[38px] text-sm"} ${look}`}>
         {filled && (
-          <span aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-[7px]">
+          <span aria-hidden="true" className={`absolute inset-0 overflow-hidden ${size === "mini" ? "rounded-[6px]" : "rounded-[7px]"}`}>
             <span className="absolute inset-x-0 bottom-0 h-[var(--fill)] bg-[var(--fill-color)]" />
           </span>
         )}
         <span className="relative">{children}</span>
-        {due && <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#E0701F]" />}
+        {due && <span aria-hidden="true" className={`absolute rounded-full border-white bg-[#E0701F] ${size === "mini" ? "-right-1 -top-1 h-2.5 w-2.5 border-[1.5px]" : "-right-1.5 -top-1.5 h-3.5 w-3.5 border-2"}`} />}
         {seal !== null && (
-          <span className="absolute -bottom-1.5 -right-1.5">
-            <SrsSeal tier={seal} size={18} />
+          <span className={`absolute ${size === "mini" ? "-bottom-1 -right-1" : "-bottom-1.5 -right-1.5"}`}>
+            <SrsSeal tier={seal} size={size === "mini" ? 13 : 18} />
           </span>
         )}
       </span>

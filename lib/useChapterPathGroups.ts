@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { VerseSegment } from "@/types";
 import { ensurePericopesLoaded, getAllPericopesForChapter, type PericopeInfo } from "@/lib/chapterPericopes";
 import { formatChapterLabel } from "@/lib/chapterContent";
+import { useProgressStore } from "@/store/useProgressStore";
 import { pericopeColour, type PericopeColour } from "@/lib/chapterPathPalette";
 
 export interface ChapterPathGroup {
@@ -19,6 +20,8 @@ export interface ChapterPathGroup {
 // none), each with its colour from lib/chapterPathPalette.ts — the Chapter Path View's boxes.
 export function useChapterPathGroups(book: string, chapter: number, verses: VerseSegment[]): ChapterPathGroup[] {
   const [pericopes, setPericopes] = useState<PericopeInfo[]>(() => getAllPericopesForChapter(book, chapter));
+  // Read again when the built-in headings are turned off or on.
+  const builtInOff = useProgressStore((state) => state.builtInSectionsOff);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +31,7 @@ export function useChapterPathGroups(book: string, chapter: number, verses: Vers
     return () => {
       cancelled = true;
     };
-  }, [book, chapter]);
+  }, [book, chapter, builtInOff]);
 
   return useMemo(() => {
     const last = verses[verses.length - 1]?.verseNumber ?? 1;

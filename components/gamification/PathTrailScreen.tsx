@@ -7,7 +7,6 @@ import { useProgressStore } from "@/store/useProgressStore";
 import type { TrailSection, TrailStop } from "@/lib/trailStops";
 import { useTrailSections } from "@/lib/useTrailSections";
 import { readerHref } from "@/lib/readerHref";
-import { parsePathKey } from "@/lib/memorizationContent";
 import { sectionEmblem } from "@/lib/sectionEmblems";
 import { PATH_TYPE_META } from "@/lib/pathTypeMeta";
 import { useArrivalToast } from "@/lib/useArrivalToast";
@@ -65,7 +64,7 @@ export function PathTrailScreen({ pathKey, kind, label, days, version, completed
   return (
     <>
       {!sections.length ? null : passagePath ? (
-        <BookStructureScreen pathKey={pathKey} pathLabel={label} version={version} book={parsePathKey(pathKey).identifier.split("|")[0]} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} onOpenVerse={({ verse }) => router.push(readerHref(pathKey, version, { select: `${verse.chapter}:${verse.verseNumber}` }))} />
+        <BookStructureScreen pathKey={pathKey} pathLabel={label} version={version} sections={sections} onStart={(stop) => start(stop, stop.state === "done")} onOpenVerse={({ verse }) => router.push(readerHref(pathKey, version, { select: `${verse.chapter}:${verse.verseNumber}` }))} />
       ) : index === null ? (
         <PericopeMapScreen pathLabel={label} kindLabel={`${PATH_TYPE_META[kind].name} path`} sections={sections} onOpenSection={showSection} emblemFor={emblemFor} />
       ) : (

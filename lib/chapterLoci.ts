@@ -18,6 +18,8 @@ export interface ChapterLocusInput {
   roomName: string;
   name: string;
   scene: string;
+  // Your own title for these verses, shown beside the locus.
+  title?: string;
   // The room to use, when the chapter has one already.
   roomId?: string;
   // The locus being edited, when it isn't a new one.
@@ -51,7 +53,7 @@ export const locusVerses = (from: number, to: number, lastVerse: number) => {
 export function saveChapterLocus(palace: BuiltPalace | undefined, input: ChapterLocusInput): BuiltPalace {
   const base = palace ?? { id: newPalaceId(), name: "My palace", pathKey: input.pathKey, rooms: [], createdAt: new Date().toISOString() };
   const range = { book: input.book, startChapter: input.chapter, startVerse: input.from, endChapter: input.chapter, endVerse: input.to };
-  const fields = { name: input.name, scene: input.scene || undefined, range };
+  const fields = { name: input.name, scene: input.scene || undefined, title: input.title || undefined, range };
   const sameName = (room: BuiltRoom) => room.name.toLowerCase() === input.roomName.toLowerCase();
   const room = base.rooms.find((entry) => entry.id === input.roomId) ?? base.rooms.find(sameName);
   if (!room) return { ...base, rooms: [...base.rooms, { id: newPalaceId(), name: input.roomName, loci: [{ id: newPalaceId(), ...fields }] }] };

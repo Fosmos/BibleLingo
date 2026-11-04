@@ -23,6 +23,7 @@ import { createPathActions } from "@/store/pathActions";
 import { createStumbleTrackingActions } from "@/store/stumbleTrackingActions";
 import { createVespersActions } from "@/store/vespersActions";
 import { createRankActions } from "@/store/rankActions";
+import { setBuiltInSectionsOff } from "@/lib/sectionOverrides";
 import { setProseMode } from "@/lib/senseLineMode";
 
 export type { StreakLoadStatus };
@@ -193,3 +194,5 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
 
 // Sense lines follow "Learn line by line" (lib/senseLineMode.ts): off, every verse reads as continuous text.
 useProgressStore.subscribe((state) => setProseMode(state.wholeVerseLearning ?? false));
+// The built-in section headings on or off (lib/sectionOverrides.ts).
+useProgressStore.subscribe((state) => setBuiltInSectionsOff(state.builtInSectionsOff));

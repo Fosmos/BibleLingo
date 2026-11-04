@@ -63,6 +63,7 @@ export function ReaderLocusSheet({ book, chapter, verses, loci, editing, startVe
   const [roomName, setRoomName] = useState(room?.name ?? "");
   const [name, setName] = useState(editing?.locus.name ?? "");
   const [scene, setScene] = useState(editing?.locus.scene ?? "");
+  const [title, setTitle] = useState(editing?.locus.title ?? "");
   const ready = from !== null && to !== null && roomName.trim() !== "" && name.trim() !== "";
 
   const tapVerse = (verseNumber: number) => {
@@ -74,7 +75,7 @@ export function ReaderLocusSheet({ book, chapter, verses, loci, editing, startVe
   const submit = () => {
     if (from === null || to === null) return;
     const palace = editing?.palace ?? tagged?.palace ?? palaceToPlaceIn(palaces, { book, chapter, verseNumber: from }, activePathKey);
-    save(saveChapterLocus(palace, { book, chapter, from, to, roomName: roomName.trim(), name: name.trim(), scene: scene.trim(), roomId: room?.id, locusId: editing?.locus.id, pathKey: activePathKey ?? "" }));
+    save(saveChapterLocus(palace, { book, chapter, from, to, roomName: roomName.trim(), name: name.trim(), scene: scene.trim(), title: title.trim(), roomId: room?.id, locusId: editing?.locus.id, pathKey: activePathKey ?? "" }));
     onClose();
   };
   const remove = () => {
@@ -130,6 +131,10 @@ export function ReaderLocusSheet({ book, chapter, verses, loci, editing, startVe
         <label className={LABEL}>
           Locus
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Fridge" className={FIELD} />
+        </label>
+        <label className={LABEL}>
+          Title for these verses (optional)
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="The blessed man" className={FIELD} />
         </label>
         <label className={LABEL}>
           What&apos;s happening there

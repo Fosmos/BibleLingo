@@ -8,6 +8,8 @@ export interface Pericope {
   startVerse: number;
 }
 
+import { sectionOverride } from "@/lib/sectionOverrides";
+
 const CACHE_STORAGE_KEY = "verses:pericopeCache:v1";
 
 type PericopeCache = Record<string, Pericope[]>;
@@ -47,7 +49,10 @@ function writeCache(cache: PericopeCache): void {
   }
 }
 
+// With the built-in headings turned off, no chapter has any (lib/sectionOverrides.ts).
 export function getCachedPericopes(book: string, chapter: number): Pericope[] | undefined {
+  const own = sectionOverride();
+  if (own) return own;
   const key = cacheKey(book, chapter);
   return readCache()[key] ?? sessionCache[key];
 }

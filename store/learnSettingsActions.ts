@@ -10,6 +10,7 @@ export interface LearnSettingsActions {
   setWholeVerseLearning: (value: boolean) => void;
   setSayLadderLearning: (value: boolean) => void;
   setPalaceInLessons: (value: boolean) => void;
+  setBuiltInSectionsOff: (value: boolean) => void;
   setPrayStageEnabled: (value: boolean) => void;
   setLastLettersStageEnabled: (value: boolean) => void;
   setTimedTypeStageEnabled: (value: boolean) => void;
@@ -54,6 +55,7 @@ export function createLearnSettingsActions(
     setSayLadderLearning: (value) => set(persist({ ...get(), sayLadderLearning: value })),
 
     setPalaceInLessons: (value) => set(persist({ ...get(), palaceInLessons: value })),
+    setBuiltInSectionsOff: (value) => set(persist({ ...get(), builtInSectionsOff: value })),
 
     setPrayStageEnabled: (value) => set(persist({ ...get(), prayStageEnabled: value })),
 
