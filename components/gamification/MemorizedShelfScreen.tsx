@@ -23,6 +23,7 @@ import { BookStructureChapter } from "@/components/gamification/BookStructureCha
 import { ChapterReviewButton } from "@/components/gamification/ChapterReviewButton";
 import { TrailNodeSheet } from "@/components/gamification/TrailNodeSheet";
 import { RingKey } from "@/components/gamification/VerseRing";
+import { SrsBoxPicker } from "@/components/gamification/SrsBoxPicker";
 import { VerseStatusDetail } from "@/components/gamification/VerseStatusDetail";
 import { FetchLoading } from "@/components/ui/FetchStatus";
 
@@ -70,7 +71,8 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
   const due = within.filter((entity) => isDue(entity.srs, now)).length;
   const back = chapter === undefined ? "/memorized" : shelfHref(book);
   const here = shelfHref(book, chapter);
-  const entity = sheet?.entity;
+  // Read live, so a box changed in the sheet (SrsBoxPicker.tsx) shows its new review date straight away.
+  const entity = sheet?.entity && entities.find((candidate) => candidate.id === sheet.entity?.id);
   // `shelf`: closing the review comes straight back here (lib/useReaderArrivals.ts).
   const review = (ids: string[]) => {
     const href = reviewHref(ids, true);
@@ -108,6 +110,7 @@ export function MemorizedShelfScreen({ book, chapter }: MemorizedShelfScreenProp
       {sheet && (
         <TrailNodeSheet stop={sheet.stop} sectionTitle={formatChapterLabel(book, sheet.verse.chapter)} pathLabel={book} lockedTag="Not memorized yet" lockedAction="Close" onClose={() => setSheet(null)} onStart={() => setSheet(null)} onReview={() => review(sheet.stop.dueIds)} onPractise={() => relearn && router.push(relearn)}>
           <VerseStatusDetail entity={entity} strength={sheet.strength} />
+          {entity && <SrsBoxPicker entityId={entity.id} />}
           {entity && (
             <Link href={`/memorized/passage?id=${encodeURIComponent(entity.id)}&from=${encodeURIComponent(here)}`} className="flex min-h-11 items-center self-start text-[13px] font-black text-brand-700 dark:text-brand-300">
               Passage stats

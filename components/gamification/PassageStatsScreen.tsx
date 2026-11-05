@@ -13,6 +13,7 @@ import { PROMOTION_ACCURACY_THRESHOLD } from "@/lib/srs";
 import { useProgressStore } from "@/store/useProgressStore";
 import { SrsSeal } from "@/components/ui/SrsSeal";
 import { ReviewAccuracyChart } from "@/components/gamification/ReviewAccuracyChart";
+import { SrsBoxPicker } from "@/components/gamification/SrsBoxPicker";
 import { MemorizedBackLink } from "@/components/gamification/MemorizedBackLink";
 import { memorizedDateText } from "@/lib/memorizedDates";
 
@@ -91,6 +92,11 @@ export function PassageStatsScreen() {
           </span>
         </section>
       </div>
+
+      <section className={SECTION}>
+        <h3 className={HEADING}>Change box</h3>
+        <SrsBoxPicker entityId={entity.id} />
+      </section>
 
       <section className={SECTION}>
         <h3 className={HEADING}>Accuracy</h3>
