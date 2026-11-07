@@ -10,7 +10,7 @@ import { buildRingBook, type RingVerse } from "@/lib/verseRings";
 import { passagePictures } from "@/lib/verseImages";
 import { usePalaceContext } from "@/lib/usePalaceContext";
 import { useProgressStore } from "@/store/useProgressStore";
-import { PathBooksGrid } from "@/components/gamification/PathBooksGrid";
+import { PathChaptersGrid } from "@/components/gamification/PathChaptersGrid";
 import { BookStructureChapter } from "@/components/gamification/BookStructureChapter";
 import { RingKey } from "@/components/gamification/VerseRing";
 import { AddLocusButton } from "@/components/gamification/AddLocusButton";
@@ -55,7 +55,7 @@ const writeReturn = (value: string | null) => {
   }
 };
 
-// The Palace tab: the whole book, its chapters as small boxes beside its name (PathBooksGrid.tsx), with the real place the
+// The Path tab: the whole book, each chapter with its verses as small boxes beside it (PathChaptersGrid.tsx), with the real place the
 // reader is building a palace in on top (PalaceBuiltPanel.tsx). Tapping a chapter opens it: its
 // pericopes in the margin, its verses as boxes (BookStructureChapter.tsx). Tapping a verse opens the
 // reader on it. A filled box's colour is how close its review is (lib/verseRings.ts).
@@ -124,8 +124,8 @@ export function BookStructureScreen({ pathKey, pathLabel, version, sections, onS
       </header>
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-[170px] pt-1 [scrollbar-width:none]">
         {!chapter && <PalaceBuiltPanel pathKey={pathKey} palace={built?.palace} onSave={saveBuiltPalace} />}
-        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={openVerse} /> : <PathBooksGrid chapters={rings.chapters} onOpen={setChosenChapter} />}
-        {chapter && <RingKey />}
+        {chapter ? <BookStructureChapter chapter={chapter} onTapVerse={openVerse} /> : <PathChaptersGrid chapters={rings.chapters} onOpen={setChosenChapter} onTapVerse={openVerse} />}
+        <RingKey />
       </div>
       {nextHere && rings.next && (
         <div className="absolute inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] mx-auto max-w-md">

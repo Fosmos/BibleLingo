@@ -18,9 +18,9 @@ interface MemorizedBooksListProps {
 const ROW = 7;
 const LONG_BOOK = 42;
 
-// The Memorized tab's books, all 66 in Bible order: each book's name in the left column, its chapters
-// in small boxes beside it (filled green as they're memorized, a seal when complete, a dot when due).
-// A book with nothing memorized yet is one quiet line, opening its chapters when tapped.
+// The Memorized tab's books, in Bible order — only those with at least one verse memorized: each book's
+// name in the left column, its chapters in small boxes beside it (filled green as they're memorized, a
+// seal when complete, a dot when due).
 export function MemorizedBooksList({ entities }: MemorizedBooksListProps) {
   const router = useRouter();
   const [now] = useState(() => new Date());
@@ -32,14 +32,7 @@ export function MemorizedBooksList({ entities }: MemorizedBooksListProps) {
     <section className="flex flex-col" aria-label="Your Bible by book">
       {BIBLE_BOOKS.map((book) => {
         const verses = counts.get(book.name) ?? 0;
-        if (!verses && !opened.has(book.name)) {
-          return (
-            <button key={book.name} type="button" onClick={() => open(book.name)} className="grid min-h-9 grid-cols-[96px_minmax(0,1fr)] items-center gap-x-3 border-t border-sand-200 text-left dark:border-zinc-900">
-              <span className="truncate text-[13px] font-bold text-sand-700 dark:text-zinc-400">{book.name}</span>
-              <span className="text-[11px] font-bold text-sand-600 dark:text-zinc-500">{book.chapterCount} {book.chapterCount === 1 ? "chapter" : "chapters"}</span>
-            </button>
-          );
-        }
+        if (!verses) return null;
         const chapters = shelfChapters(book.name, book.chapterCount, entities, now);
         const lastTouched = chapters.reduce((last, chapter) => (chapter.known ? chapter.chapter : last), 0);
         const cut = book.chapterCount > LONG_BOOK && !opened.has(book.name) ? Math.max(ROW * 2, Math.ceil((lastTouched + 1) / ROW) * ROW) : book.chapterCount;
@@ -47,7 +40,7 @@ export function MemorizedBooksList({ entities }: MemorizedBooksListProps) {
           <div key={book.name} className="grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 border-t border-sand-200 py-2.5 dark:border-zinc-900">
             <Link href={shelfHref(book.name)} className="flex min-w-0 flex-col gap-0.5 self-start">
               <span className="truncate text-[14px] font-extrabold leading-tight text-ink dark:text-zinc-100">{book.name}</span>
-              <span className="text-[11px] font-bold text-ink-muted">{verses ? `${verses} ${verses === 1 ? "verse" : "verses"}` : "Not started"}</span>
+              <span className="text-[11px] font-bold text-ink-muted">{verses} {verses === 1 ? "verse" : "verses"}</span>
             </Link>
             <div className="grid content-start grid-cols-7">
               {chapters.slice(0, cut).map((chapter) => {
